@@ -1,0 +1,70 @@
+node_modules/
+dist/
+.vite/
+*.log
+
+# Never commit a filled-in environment: it holds the database key, the Flowise
+# key and the admin password. .env.example is the one that travels.
+.env
+.env.local
+admin/.env
+
+# No media or weights belong in this repository.
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.mp4
+*.mov
+*.webm
+*.wav
+*.mp3
+*.flac
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.ply
+*.glb
+*.cube
+
+# This install's real URLs, keys and paths.
+install/install.env
+
+# Generated at install time from the modules that were installed.
+admin/src/modules.generated.tsx
+
+# Download logs from fetch-assets, started by install-module.
+install/logs/
+
+# Module panels. The source of each is admin-src/; install-module.ps1 copies it
+# into admin/src when the module is installed. A clean checkout has none of them,
+# which is what keeps the app bare until modules are chosen.
+admin/src/BeatsPanel.tsx
+admin/src/camera.ts
+admin/src/CameraPanel.tsx
+admin/src/CharactersPanel.tsx
+admin/src/ColorPalettePanel.tsx
+admin/src/ContextLoopPanel.tsx
+admin/src/DirectorPanel.tsx
+admin/src/DocumentsPanel.tsx
+admin/src/faceqa.ts
+admin/src/FaceQaPanel.tsx
+admin/src/HyWorldPanel.tsx
+admin/src/ImageEditPanel.tsx
+admin/src/LightingPanel.tsx
+admin/src/MinimaxVideoPanel.tsx
+admin/src/PostVoicePanel.tsx
+admin/src/PropsPanel.tsx
+admin/src/QwenCleanupPanel.tsx
+admin/src/ResolvePanel.tsx
+admin/src/ScorePanel.tsx
+admin/src/screenplay/
+admin/src/ToolsPanel.tsx
+admin/src/ui/CameraSurvey.tsx
+admin/src/ui/ShotCamera.tsx
+admin/src/ui/ShotCameraBadge.tsx
+admin/src/ui/WorstFrames.tsx
+admin/src/videoKinds.ts
+admin/src/WorldPanel.tsx

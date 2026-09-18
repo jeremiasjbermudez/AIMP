@@ -1,0 +1,317 @@
+[
+  {
+    "name": "1-Beat-Generator",
+    "file": "1-Beat-Generator.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 3
+  },
+  {
+    "name": "10-Qwen-Cleanup",
+    "file": "10-Qwen-Cleanup.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "11-MiniMax-Prompt-Enhancer",
+    "file": "11-MiniMax-Prompt-Enhancer.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "12-Character-Bible-Import",
+    "file": "12-Character-Bible-Import.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "13-Scene-Import",
+    "file": "13-Scene-Import.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "14-Screenplay-Assist",
+    "file": "14-Screenplay-Assist.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "15-Delete-Movie",
+    "file": "15-Delete-Movie.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "16-MiniMax-Extend",
+    "file": "16-MiniMax-Extend.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "17-MiniMax-Ref-To-Video",
+    "file": "17-MiniMax-Ref-To-Video.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "18-Post-Voice",
+    "file": "18-Post-Voice.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "19-Score-Generator",
+    "file": "19-Score-Generator.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "2-Trigger-Orchestration",
+    "file": "2-Trigger-Orchestration.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 4
+  },
+  {
+    "name": "20-Resolve-Deliver",
+    "file": "20-Resolve-Deliver.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "21-Resolve-Chat",
+    "file": "21-Resolve-Chat.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "22-Screenplay-Writer",
+    "file": "22-Screenplay-Writer.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "23-Character-Bible-Writer",
+    "file": "23-Character-Bible-Writer.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "24-Face-QA",
+    "file": "24-Face-QA.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "25-Character-QA-Shots",
+    "file": "25-Character-QA-Shots.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "26-Image-Edit",
+    "file": "26-Image-Edit.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "27-Pano-Prompt-From-Image",
+    "file": "27-Pano-Prompt-From-Image.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "28-Qwen-Image-Edit",
+    "file": "28-Qwen-Image-Edit.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "29-Delete-Asset",
+    "file": "29-Delete-Asset.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "3-Character-Generator",
+    "file": "3-Character-Generator.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 4
+  },
+  {
+    "name": "30-Score-Agent",
+    "file": "30-Score-Agent.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "31-Palette-Namer",
+    "file": "31-Palette-Namer.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "32-Apply-LUT",
+    "file": "32-Apply-LUT.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "34-Face-Fix",
+    "file": "34-Face-Fix.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "35-MiniMax-Video-to-Video",
+    "file": "35-MiniMax-Video-to-Video.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "36-Z-Image",
+    "file": "36-Z-Image.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "37-Prompt-World",
+    "file": "37-Prompt-World.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "38-HY-World",
+    "file": "38-HY-World.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "39-Director",
+    "file": "39-Director.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "4-Panoramic-Generator",
+    "file": "4-Panoramic-Generator.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 2
+  },
+  {
+    "name": "40-Character-Wardrobe",
+    "file": "40-Character-Wardrobe.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "41-Copy-Movie",
+    "file": "41-Copy-Movie.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "42-Shot-Breakdown",
+    "file": "42-Shot-Breakdown.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "43-Import-Breakdown",
+    "file": "43-Import-Breakdown.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "44-Image-Check",
+    "file": "44-Image-Check.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "45-Splat-Camera",
+    "file": "45-Splat-Camera.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "46-MiniMax-Control-To-Video",
+    "file": "46-MiniMax-Control-To-Video.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "5-3DGS-World-Builder",
+    "file": "5-3DGS-World-Builder.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 2
+  },
+  {
+    "name": "6-GS-Cleaner",
+    "file": "6-GS-Cleaner.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 2
+  },
+  {
+    "name": "7-MiniMax-Clip-Generator",
+    "file": "7-MiniMax-Clip-Generator.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 2
+  },
+  {
+    "name": "8-MiniMax-Image-To-Video",
+    "file": "8-MiniMax-Image-To-Video.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  },
+  {
+    "name": "9-MiniMax-Text-To-Video",
+    "file": "9-MiniMax-Text-To-Video.json",
+    "type": "AGENTFLOW",
+    "deployed": true,
+    "functionNodes": 1
+  }
+]

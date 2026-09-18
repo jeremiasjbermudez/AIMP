@@ -1,0 +1,218 @@
+/**
+ * Which language model everything uses, chosen from the header.
+ *
+ * Story work - parsing a script into beats, drafting, naming a colour - runs on
+ * a language model. That used to be set once at install time and baked into
+ * every flow, so changing it meant re-installing every module that calls one.
+ *
+ * Now the choice is a row in app_settings, every flow reads it as it calls, and
+ * this writes it. Switching model takes effect on the next run: no re-install,
+ * no restart.
+ *
+ * Profiles rather than one set of fields, because the useful case is having a
+ * local model and a hosted one and moving between them, not retyping a URL.
+ */
+import { useEffect, useState } from 'react'
+import { insforge } from '../insforge'
+import { Select } from './Select'
+
+export type LlmProfile = {
+  id: string
+  label: string
+  /** 'ollama' speaks Ollama's own API; 'openai' is anything OpenAI-compatible. */
+  provider: 'ollama' | 'openai'
+  url: string
+  model: string
+  /** Empty for a local server. */
+  apiKey?: string
+}
+
+type LlmSettings = { selected: string; profiles: LlmProfile[] }
+
+const EMPTY: LlmSettings = { selected: '', profiles: [] }
+
+/** A new profile's starting point, per provider. */
+function blank(provider: 'ollama' | 'openai'): Omit<LlmProfile, 'id'> {
+  return provider === 'ollama'
+    ? { label: '', provider, url: 'http://localhost:11434', model: '', apiKey: '' }
+    : { label: '', provider, url: 'https://api.openai.com', model: '', apiKey: '' }
+}
+
+export function ModelPicker() {
+  const [settings, setSettings] = useState<LlmSettings>(EMPTY)
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState(blank('ollama'))
+  const [note, setNote] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    let live = true
+    insforge.database
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'llm')
+      .limit(1)
+      .then(({ data }) => {
+        if (!live) return
+        const value = ((data ?? []) as { value: LlmSettings }[])[0]?.value
+        if (value?.profiles) setSettings({ selected: value.selected ?? '', profiles: value.profiles })
+      })
+    return () => {
+      live = false
+    }
+  }, [])
+
+  async function save(next: LlmSettings) {
+    setBusy(true)
+    setNote(null)
+    // Upsert by hand: one row, known key, and the table is tiny.
+    const { data } = await insforge.database.from('app_settings').select('key').eq('key', 'llm').limit(1)
+    const exists = ((data ?? []) as unknown[]).length > 0
+    const { error } = exists
+      ? await insforge.database.from('app_settings').update({ value: next }).eq('key', 'llm')
+      : await insforge.database.from('app_settings').insert([{ key: 'llm', value: next }])
+    setBusy(false)
+    if (error) {
+      setNote(error.message)
+      return false
+    }
+    setSettings(next)
+    return true
+  }
+
+  async function choose(id: string) {
+    if (id === '__add__') {
+      setOpen(true)
+      return
+    }
+    const ok = await save({ ...settings, selected: id })
+    if (ok) {
+      const chosen = settings.profiles.find((p) => p.id === id)
+      setNote(`Everything now uses ${chosen?.label ?? 'that model'}.`)
+    }
+  }
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault()
+    if (!draft.url.trim() || !draft.model.trim()) {
+      setNote('A URL and a model name are needed.')
+      return
+    }
+    const profile: LlmProfile = {
+      ...draft,
+      id: `${draft.provider}-${Date.now()}`,
+      label: draft.label.trim() || `${draft.model} (${draft.provider})`,
+      url: draft.url.trim().replace(/\/$/, ''),
+      model: draft.model.trim()
+    }
+    // A model added by hand is the one you want to use, so it is selected too.
+    const ok = await save({ selected: profile.id, profiles: [...settings.profiles, profile] })
+    if (ok) {
+      setOpen(false)
+      setDraft(blank('ollama'))
+      setNote(`Added ${profile.label}, and everything now uses it.`)
+    }
+  }
+
+  async function remove(id: string) {
+    const left = settings.profiles.filter((p) => p.id !== id)
+    await save({ selected: settings.selected === id ? (left[0]?.id ?? '') : settings.selected, profiles: left })
+  }
+
+  const items = [
+    ...settings.profiles.map((p) => ({ value: p.id, label: p.label })),
+    { value: '__add__', label: '+ Add a model…' }
+  ]
+
+  return (
+    <div className="model-picker">
+      <Select
+        value={settings.selected}
+        onValueChange={choose}
+        items={items}
+        placeholder={settings.profiles.length ? 'Choose a model' : 'Model: as installed'}
+      />
+      {settings.selected && !open && (
+        <button
+          type="button"
+          className="model-picker-remove"
+          title="Forget this model"
+          disabled={busy}
+          onClick={() => remove(settings.selected)}
+        >
+          ×
+        </button>
+      )}
+
+      {open && (
+        <form className="model-picker-form" onSubmit={add}>
+          <p className="empty">
+            Every flow that calls a language model uses this, from the next run. Nothing needs
+            re-installing.
+          </p>
+          <label className="empty">
+            Kind
+            <Select
+              value={draft.provider}
+              onValueChange={(v) => setDraft(blank(v === 'openai' ? 'openai' : 'ollama'))}
+              items={[
+                { value: 'ollama', label: 'Ollama (local)' },
+                { value: 'openai', label: 'OpenAI-compatible API' }
+              ]}
+            />
+          </label>
+          <label className="empty">
+            Name
+            <input
+              type="text"
+              value={draft.label}
+              placeholder="what to call it here"
+              onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+            />
+          </label>
+          <label className="empty">
+            URL
+            <input
+              type="text"
+              value={draft.url}
+              size={28}
+              onChange={(e) => setDraft({ ...draft, url: e.target.value })}
+            />
+          </label>
+          <label className="empty">
+            Model
+            <input
+              type="text"
+              value={draft.model}
+              placeholder={draft.provider === 'ollama' ? 'e.g. the name ollama list shows' : 'the provider’s model name'}
+              onChange={(e) => setDraft({ ...draft, model: e.target.value })}
+            />
+          </label>
+          {draft.provider === 'openai' && (
+            <label className="empty">
+              API key
+              <input
+                type="password"
+                value={draft.apiKey ?? ''}
+                onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })}
+              />
+            </label>
+          )}
+          <button type="submit" className="primary" disabled={busy}>
+            {busy ? 'Saving…' : 'Add and use it'}
+          </button>
+          <button type="button" disabled={busy} onClick={() => setOpen(false)}>
+            Cancel
+          </button>
+          {draft.provider === 'openai' && (
+            <p className="empty">
+              The key is stored in this project’s database, readable by anyone signed in to this
+              app. Fine on a machine only you reach; think twice anywhere else.
+            </p>
+          )}
+        </form>
+      )}
+      {note && <span className="empty">{note}</span>}
+    </div>
+  )
+}

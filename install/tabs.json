@@ -1,0 +1,276 @@
+[
+  {
+    "id": "screenplay",
+    "label": "Screenplay",
+    "hint": "Write and restructure acts, scenes and beats",
+    "icon": "FileText",
+    "module": "screenplay",
+    "component": "ScreenplayPanel",
+    "from": "./screenplay/ScreenplayPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "documents",
+    "label": "Documents",
+    "hint": "Screenplay and character bible files",
+    "icon": "FolderOpen",
+    "module": "screenplay",
+    "component": "DocumentsPanel",
+    "from": "./DocumentsPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "beats",
+    "label": "Beats",
+    "hint": "The beat rows everything downstream is built from",
+    "icon": "ListOrdered",
+    "module": "screenplay",
+    "component": "BeatsPanel",
+    "from": "./BeatsPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "characters",
+    "label": "Characters",
+    "hint": "Character bible and reference images",
+    "icon": "Users",
+    "module": "characters",
+    "component": "CharactersPanel",
+    "from": "./CharactersPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "props",
+    "label": "Props & Wardrobe",
+    "hint": "Reference sheets for props and costumes, so they stop changing shot to shot",
+    "icon": "Gem",
+    "module": "characters",
+    "component": "PropsPanel",
+    "from": "./PropsPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "director",
+    "label": "Director",
+    "hint": "Plan a shot list from the beats, then produce it in stages",
+    "icon": "Film",
+    "module": "director",
+    "component": "DirectorPanel",
+    "from": "./DirectorPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "camera",
+    "label": "Camera",
+    "hint": "Place each shot’s camera inside the scene’s 3D world and render its plate",
+    "icon": "CameraIcon",
+    "module": "camera",
+    "component": "CameraPanel",
+    "from": "./CameraPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "world",
+    "label": "Panoramas & Worlds",
+    "hint": "Location panoramas and 3D worlds",
+    "icon": "Mountain",
+    "module": "world",
+    "component": "WorldPanel",
+    "from": "./WorldPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "hyworld",
+    "label": "HY-World",
+    "hint": "Text, an image or a video into a navigable 3D world",
+    "icon": "Globe",
+    "module": "world",
+    "component": "HyWorldPanel",
+    "from": "./HyWorldPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "qwen",
+    "label": "Qwen Cleanup",
+    "hint": "Clean up a rendered image",
+    "icon": "Wand2",
+    "module": "imaging",
+    "component": "QwenCleanupPanel",
+    "from": "./QwenCleanupPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "imageedit",
+    "label": "Image Edit",
+    "hint": "Compose a shot from characters, locations and your own images",
+    "icon": "Layers",
+    "module": "imaging",
+    "component": "ImageEditPanel",
+    "from": "./ImageEditPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "palette",
+    "label": "Color Palette",
+    "hint": "Pull a look off a picture and grade toward it",
+    "icon": "Palette",
+    "module": "colour",
+    "component": "ColorPalettePanel",
+    "from": "./ColorPalettePanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "lighting",
+    "label": "Relight",
+    "hint": "Light a still before it moves - the clip inherits it",
+    "icon": "Lightbulb",
+    "module": "colour",
+    "component": "LightingPanel",
+    "from": "./LightingPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "i2v",
+    "label": "Image to Video",
+    "hint": "Animate from a first (and optional last) frame",
+    "icon": "Image",
+    "module": "video",
+    "component": "MinimaxVideoPanel",
+    "from": "./MinimaxVideoPanel",
+    "props": {
+      "kind": "i2v"
+    },
+    "takesMovie": true
+  },
+  {
+    "id": "t2v",
+    "label": "Text to Video",
+    "hint": "Generate from the prompt alone",
+    "icon": "Type",
+    "module": "video",
+    "component": "MinimaxVideoPanel",
+    "from": "./MinimaxVideoPanel",
+    "props": {
+      "kind": "t2v"
+    },
+    "takesMovie": true
+  },
+  {
+    "id": "shots",
+    "label": "Ref to Video",
+    "hint": "Generate from reference images you pick",
+    "icon": "Images",
+    "module": "video",
+    "component": "MinimaxVideoPanel",
+    "from": "./MinimaxVideoPanel",
+    "props": {
+      "kind": "ref"
+    },
+    "takesMovie": true
+  },
+  {
+    "id": "v2v",
+    "label": "Video to Video",
+    "hint": "Restyle or re-cast a clip you already have",
+    "icon": "Clapperboard",
+    "module": "video",
+    "component": "MinimaxVideoPanel",
+    "from": "./MinimaxVideoPanel",
+    "props": {
+      "kind": "v2v"
+    },
+    "takesMovie": true
+  },
+  {
+    "id": "control",
+    "label": "Control to Video",
+    "hint": "Drive a shot with a depth or pose video, e.g. rendered in Blender",
+    "icon": "Film",
+    "module": "video",
+    "component": "MinimaxVideoPanel",
+    "from": "./MinimaxVideoPanel",
+    "props": {
+      "kind": "control"
+    },
+    "takesMovie": true
+  },
+  {
+    "id": "postvoice",
+    "label": "Post Voice",
+    "hint": "Replace a voice after rendering, keeping music and sync",
+    "icon": "Mic",
+    "module": "audio",
+    "component": "PostVoicePanel",
+    "from": "./PostVoicePanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "score",
+    "label": "Score",
+    "hint": "Generate music once for a scene, to lay under the edit",
+    "icon": "Music",
+    "module": "audio",
+    "component": "ScorePanel",
+    "from": "./ScorePanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "faceqa",
+    "label": "Face QA",
+    "hint": "Score a clip against a character to find face drift",
+    "icon": "ScanFace",
+    "module": "faceqa",
+    "component": "FaceQaPanel",
+    "from": "./FaceQaPanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "resolve",
+    "label": "DaVinci Resolve",
+    "hint": "Send this movie to Resolve as a project, in screenplay order",
+    "icon": "Clapperboard",
+    "module": "delivery",
+    "component": "ResolvePanel",
+    "from": "./ResolvePanel",
+    "props": {},
+    "takesMovie": true
+  },
+  {
+    "id": "contextloop",
+    "label": "Context Loop",
+    "hint": "ComfyUI embedded, to try the MiniMax H3 Context Loop pack",
+    "icon": "Workflow",
+    "module": "director",
+    "component": "ContextLoopPanel",
+    "from": "./ContextLoopPanel",
+    "props": {},
+    "takesMovie": false
+  },
+  {
+    "id": "tools",
+    "label": "Tools",
+    "hint": "Break an existing film into its shots, and describe each one",
+    "icon": "Wrench",
+    "module": "tools",
+    "component": "ToolsPanel",
+    "from": "./ToolsPanel",
+    "props": {},
+    "takesMovie": true
+  }
+]

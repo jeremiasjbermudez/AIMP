@@ -1,0 +1,480 @@
+/* Neon HUD skin.
+ *
+ * Replaces the paint skin entirely. Deliberately UNLAYERED, for the same
+ * reason as before: theme.css and App.css sit in @layer blocks, and unlayered
+ * CSS outranks every layer, so this wins without a specificity war and without
+ * editing components.
+ *
+ * The look is geometric rather than organic - thin rules, cyan glow, clipped
+ * corners, HUD tick marks - so almost all of it is CSS. Only the two things CSS
+ * genuinely cannot draw are generated assets: the nebula field and the city
+ * skyline.
+ */
+
+/* ----------------------------------------------------------------- palette */
+:root,
+:root[data-theme='dark'],
+:root[data-theme='light'] {
+  --bg: #050a12;
+  --surface: #0a1420;
+  --surface-2: #0d1a29;
+  --surface-3: #14283c;
+  --line: #17334a;
+  --line-soft: #102436;
+
+  --text: #dceaf5;
+  --text-dim: #8fa9bf;
+  --text-faint: #5d7a92;
+
+  --accent: #22d3ee;
+  --accent-fg: #04141a;
+  --accent-soft: #06283a;
+
+  --action: #16b8d4;
+  --action-fg: #03161c;
+  --action-hover: #35e0f5;
+  --action-line: #22d3ee;
+
+  --danger: #f43f5e;
+  --danger-soft: #2a0b14;
+  --danger-line: #7a1730;
+  --ok: #2dd4bf;
+
+  --input-bg: #08131f;
+  --shadow-card: 0 2px 14px rgb(0 0 0 / 0.55);
+  --shadow-pop: 0 20px 48px -14px rgb(0 0 0 / 0.85);
+  --scrim: #000;
+
+  --shell-bg: #070e18;
+  --shell-text: #dceaf5;
+  --shell-dim: #8fa9bf;
+  --shell-line: #14283c;
+
+  /* Skin-only. */
+  --cyan: #22d3ee;
+  --cyan-dim: #0e7f96;
+  --magenta: #c04df9;
+  --glow: 0 0 12px rgb(34 211 238 / 0.55);
+  --ui: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* --------------------------------------------------------------- the field
+ * Nebula, then a dark scrim so text stays readable over its brighter ribbons.
+ * Fixed, so the field sits behind the app rather than scrolling with it.
+ */
+body {
+  background-color: #04080f;
+  background-image:
+    linear-gradient(rgb(4 8 15 / 0.52), rgb(4 8 15 / 0.68)),
+    url('/paint/nebula.png');
+  background-size: auto, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-attachment: fixed, fixed;
+  color: var(--text);
+  font-family: var(--ui);
+}
+
+.app,
+.content,
+main {
+  background: transparent;
+}
+
+/* -------------------------------------------------------------- the shell */
+.sidebar {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, rgb(7 14 24 / 0.92), rgb(4 8 15 / 0.96));
+  border-right: 1px solid rgb(23 51 74 / 0.9);
+}
+
+/* The city sits at the foot of the nav, behind it, fading up into the panel. */
+.sidebar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.75;
+  background: url('/paint/skyline.png') center bottom / cover no-repeat;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 38%);
+  mask-image: linear-gradient(to bottom, transparent, #000 38%);
+}
+
+.brand-name {
+  font-family: var(--ui);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  text-shadow: none;
+}
+
+.brand-mark {
+  background: conic-gradient(from 200deg, var(--cyan), var(--magenta), var(--cyan));
+  box-shadow: 0 0 18px rgb(34 211 238 / 0.5);
+}
+
+/* Nav items are outlined slabs, as in the reference - not bare text. */
+.side-nav button {
+  font-family: var(--ui);
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-dim);
+  background: rgb(10 20 32 / 0.72);
+  border: 1px solid rgb(23 51 74 / 0.85);
+  border-radius: 9px;
+  margin-bottom: 5px;
+}
+
+.side-nav button:hover:not(:disabled) {
+  color: var(--text);
+  border-color: rgb(34 211 238 / 0.5);
+  background: rgb(13 26 41 / 0.9);
+}
+
+/* Active: cyan outline plus the light bleeding off its right edge. */
+.side-nav button[aria-current='page'],
+.side-nav button.active,
+.side-nav button.is-active {
+  position: relative;
+  color: #eafcff;
+  background: linear-gradient(90deg, rgb(6 40 58 / 0.95), rgb(10 20 32 / 0.6));
+  border-color: var(--cyan);
+  box-shadow:
+    0 0 0 1px rgb(34 211 238 / 0.35),
+    0 0 22px rgb(34 211 238 / 0.35),
+    inset 0 0 20px rgb(34 211 238 / 0.12);
+}
+
+.side-nav button[aria-current='page']::after,
+.side-nav button.active::after,
+.side-nav button.is-active::after {
+  content: '';
+  position: absolute;
+  right: -26px;
+  top: 50%;
+  width: 26px;
+  height: 22px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, var(--cyan), transparent) left center / 100% 1px no-repeat,
+    linear-gradient(90deg, rgb(34 211 238 / 0.6), transparent) left top / 78% 1px no-repeat,
+    linear-gradient(90deg, rgb(34 211 238 / 0.6), transparent) left bottom / 78% 1px no-repeat;
+  filter: drop-shadow(0 0 6px rgb(34 211 238 / 0.85));
+}
+
+/* ------------------------------------------------------- section headers
+ * A thin instrument bar: a cyan status dot, a spaced-out label, and HUD
+ * telemetry filling the right-hand end. Nothing is painted or torn - this
+ * theme is drawn with rules and light.
+ */
+main h4 {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1.9rem 0 1rem;
+  padding: 0.55rem 1rem 0.55rem 0.95rem;
+  font-family: var(--ui);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #bfe4f2;
+  text-shadow: none;
+  background: linear-gradient(90deg, rgb(10 22 35 / 0.95), rgb(8 17 27 / 0.6) 62%, transparent);
+  border: 1px solid rgb(23 51 74 / 0.9);
+  border-radius: 7px;
+}
+
+/* The status dot. theme.css already sizes this pseudo-element at 5px, which
+   suits it here - it only needs recolouring and a glow. */
+main h4::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-right: 0.15rem;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 10px rgb(34 211 238 / 0.9);
+  vertical-align: middle;
+  position: static;
+  inset: auto;
+  filter: none;
+}
+
+/* Telemetry at the right end of each bar.
+ *
+ * Four variants cycled by nth-of-type. In the reference no two section bars
+ * carry the same readout - one has ticks, one a bar graph, one a digit block -
+ * and repeating a single pattern down the page is what makes a HUD read as
+ * wallpaper instead of instrumentation.
+ */
+main h4::after {
+  content: '';
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 180px;
+  height: 14px;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+/* 1: fine ticks, grouped. */
+main h4:nth-of-type(4n + 1)::after {
+  background:
+    repeating-linear-gradient(90deg, rgb(34 211 238 / 0.55) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(90deg, rgb(34 211 238 / 0.9) 0 1px, transparent 1px 30px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 40%);
+  mask-image: linear-gradient(90deg, transparent, #000 40%);
+}
+
+/* 2: a level meter, mostly filled. */
+main h4:nth-of-type(4n + 2)::after {
+  width: 150px;
+  height: 8px;
+  border: 1px solid rgb(34 211 238 / 0.5);
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgb(34 211 238 / 0.75) 0 72%, transparent 72%);
+  box-shadow: 0 0 10px rgb(34 211 238 / 0.25);
+}
+
+/* 3: a block of readout digits. */
+main h4:nth-of-type(4n + 3)::after {
+  width: 190px;
+  height: 12px;
+  background:
+    repeating-linear-gradient(90deg, rgb(34 211 238 / 0.65) 0 3px, transparent 3px 6px),
+    repeating-linear-gradient(0deg, rgb(34 211 238 / 0.4) 0 2px, transparent 2px 5px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+}
+
+/* 4: a sparse waveform. */
+main h4:nth-of-type(4n)::after {
+  width: 165px;
+  height: 14px;
+  background:
+    repeating-linear-gradient(90deg,
+      rgb(34 211 238 / 0.8) 0 2px, transparent 2px 9px,
+      rgb(34 211 238 / 0.35) 9px 11px, transparent 11px 21px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%);
+  mask-image: linear-gradient(90deg, transparent, #000 35%);
+}
+
+/* ---------------------------------------------------------- the page head */
+.page-head {
+  position: relative;
+  border-bottom: 1px solid rgb(23 51 74 / 0.8);
+}
+
+.page-head-text h1,
+.page-head-text h2 {
+  font-family: var(--ui);
+  font-size: 1.55rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: #eef7fd;
+  text-shadow: none;
+}
+
+/* The paint theme split the title so a word could take a second colour. This
+   theme wants one flat colour, so the split is made invisible. */
+.page-head-text h1 .tail,
+.page-head-text h2 .tail {
+  color: inherit;
+  transform: none;
+  text-shadow: none;
+}
+
+.page-head-icon {
+  background: conic-gradient(from 210deg, var(--cyan), var(--magenta) 55%, var(--cyan));
+  box-shadow: 0 0 22px rgb(34 211 238 / 0.45);
+  color: #04141a;
+}
+
+/* ---------------------------------------------------------------- surfaces */
+.beat-card,
+.movie-picker,
+.new-movie-form,
+.delete-confirm {
+  background: rgb(8 18 29 / 0.78);
+  border: 1px solid rgb(23 51 74 / 0.85);
+  border-radius: 10px;
+  backdrop-filter: blur(3px);
+}
+
+.badge {
+  font-family: var(--ui);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  background: rgb(6 40 58 / 0.8);
+  border: 1px solid rgb(34 211 238 / 0.35);
+  border-radius: 5px;
+  color: #a5e4f2;
+}
+
+/* ---------------------------------------------------------------- controls
+ * Filled cyan for the action, outlined for everything beside it.
+ */
+main button:not(:where(
+  .danger, .theme-toggle, .jobs-trigger, .ui-select, .caps-toggle, .ref-thumb,
+  .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
+  .edit-ref-actions button, .engine-tab, .ref-remove,
+  .grade-inline button, .grade-toggle,
+  .clip-thumb-card
+)) {
+  position: relative;
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+  padding: 0.46rem 1.1rem;
+  border: 1px solid var(--cyan);
+  border-radius: 7px;
+  background: linear-gradient(180deg, #2ee0f7, var(--action));
+  color: #032029;
+  text-shadow: none;
+  box-shadow: 0 0 16px rgb(34 211 238 / 0.35);
+  transform: none;
+  filter: none;
+}
+
+main button:not(:where(
+  .danger, .theme-toggle, .jobs-trigger, .ui-select, .caps-toggle, .ref-thumb,
+  .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
+  .edit-ref-actions button, .engine-tab, .ref-remove,
+  .grade-inline button, .grade-toggle,
+  .clip-thumb-card
+))::before,
+main button:not(:where(
+  .danger, .theme-toggle, .jobs-trigger, .ui-select, .caps-toggle, .ref-thumb,
+  .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
+  .edit-ref-actions button, .engine-tab, .ref-remove,
+  .grade-inline button, .grade-toggle,
+  .clip-thumb-card
+))::after {
+  /* The paint skin hung a blob and a drip here. Neither belongs now. */
+  content: none;
+}
+
+main button:not(:where(
+  .danger, .theme-toggle, .jobs-trigger, .ui-select, .caps-toggle, .ref-thumb,
+  .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
+  .edit-ref-actions button, .engine-tab, .ref-remove,
+  .grade-inline button, .grade-toggle,
+  .clip-thumb-card
+)):hover:not(:disabled) {
+  background: linear-gradient(180deg, #5cebff, #21cde6);
+  border-color: #7ff0ff;
+  box-shadow: 0 0 24px rgb(34 211 238 / 0.55);
+  transform: none;
+}
+
+main button.danger {
+  font-family: var(--ui);
+  font-weight: 600;
+  padding: 0.46rem 1.1rem;
+  border: 1px solid rgb(244 63 94 / 0.55);
+  border-radius: 7px;
+  background: rgb(58 12 26 / 0.85);
+  color: #ffdde3;
+  box-shadow: inset 0 0 18px rgb(244 63 94 / 0.1);
+}
+
+main button.danger::before {
+  content: none;
+}
+
+main button.danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  box-shadow: 0 0 18px rgb(244 63 94 / 0.3);
+}
+
+main button:disabled {
+  opacity: 0.45;
+  filter: none;
+}
+
+/* ------------------------------------------------------------ form fields */
+input,
+textarea,
+select,
+.ui-select {
+  font-family: var(--ui);
+  background: var(--input-bg);
+  border: 1px solid rgb(23 51 74 / 0.95);
+  border-radius: 7px;
+  color: var(--text);
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.ui-select:focus-visible {
+  border-color: var(--cyan);
+  outline: none;
+  box-shadow: 0 0 0 1px rgb(34 211 238 / 0.35), 0 0 18px rgb(34 211 238 / 0.22);
+}
+
+/* The big prompt box is the reference's hero field: a lit frame with the
+   top-right corner cut away. */
+.prompt-editor,
+textarea {
+  background: linear-gradient(180deg, rgb(8 24 36 / 0.9), rgb(6 16 26 / 0.9));
+  border-color: rgb(34 211 238 / 0.45);
+  box-shadow: inset 0 0 30px rgb(34 211 238 / 0.07);
+}
+
+.prompt-editor {
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
+}
+
+input[type='file']::file-selector-button {
+  font-family: var(--ui);
+  font-weight: 600;
+  margin-right: 0.7rem;
+  padding: 0.38rem 0.9rem;
+  border: 1px solid rgb(34 211 238 / 0.5);
+  border-radius: 6px;
+  background: rgb(9 45 62 / 0.9);
+  color: #d6f6ff;
+  cursor: pointer;
+  filter: none;
+}
+
+input[type='file']::file-selector-button:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 0 14px rgb(34 211 238 / 0.3);
+}
+
+/* ----------------------------------------------------------------- output */
+.clip-grid video,
+.clip-grid img,
+.edit-output,
+.shot-preview {
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px rgb(34 211 238 / 0.35),
+    0 0 26px rgb(0 0 0 / 0.6);
+}
+
+.error {
+  color: #ff8095;
+  text-shadow: none;
+}
+
+/* Nothing from the paint skin should survive into this one. */
+.paint-filters {
+  display: none;
+}

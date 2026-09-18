@@ -1,0 +1,16 @@
+[
+  {
+    "slug": "book-rag-search",
+    "name": "book-rag-search",
+    "description": "Embed a query via OpenRouter and match against book_chunks for a movie",
+    "module": "library",
+    "file": "book-rag-search/index.ts"
+  },
+  {
+    "slug": "create-movie",
+    "name": "create-movie",
+    "description": "",
+    "module": "core",
+    "file": "create-movie/index.ts"
+  }
+]

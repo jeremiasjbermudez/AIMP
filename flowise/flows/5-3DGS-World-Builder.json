@@ -1,0 +1,2695 @@
+{
+  "nodes": [
+    {
+      "id": "startAgentflow_0",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "type": "agentFlow",
+      "data": {
+        "id": "startAgentflow_0",
+        "label": "Start",
+        "version": 1.4,
+        "name": "startAgentflow",
+        "type": "Start",
+        "color": "#7EE787",
+        "hideInput": true,
+        "baseClasses": [
+          "Start"
+        ],
+        "category": "Agent Flows",
+        "description": "Starting point of the agentflow",
+        "inputParams": [
+          {
+            "label": "Input Type",
+            "name": "startInputType",
+            "type": "options",
+            "options": [
+              {
+                "label": "Chat Input",
+                "name": "chatInput",
+                "description": "Start the conversation with chat input"
+              },
+              {
+                "label": "Form Input",
+                "name": "formInput",
+                "description": "Start the workflow with form inputs",
+                "client": [
+                  "agentflowv2"
+                ]
+              },
+              {
+                "label": "Webhook Trigger",
+                "name": "webhookTrigger",
+                "description": "Trigger the workflow via an external webhook",
+                "client": [
+                  "agentflowv2"
+                ]
+              },
+              {
+                "label": "Schedule Input",
+                "name": "scheduleInput",
+                "description": "Start the workflow on a recurring schedule (cron)",
+                "client": [
+                  "agentflowv2"
+                ]
+              }
+            ],
+            "default": "chatInput"
+          },
+          {
+            "label": "Form Title",
+            "name": "formTitle",
+            "type": "string",
+            "placeholder": "Please Fill Out The Form",
+            "show": {
+              "startInputType": "formInput"
+            }
+          },
+          {
+            "label": "Form Description",
+            "name": "formDescription",
+            "type": "string",
+            "placeholder": "Complete all fields below to continue",
+            "show": {
+              "startInputType": "formInput"
+            }
+          },
+          {
+            "label": "Form Input Types",
+            "name": "formInputTypes",
+            "description": "Specify the type of form input",
+            "type": "array",
+            "show": {
+              "startInputType": "formInput"
+            },
+            "array": [
+              {
+                "label": "Type",
+                "name": "type",
+                "type": "options",
+                "options": [
+                  {
+                    "label": "String",
+                    "name": "string"
+                  },
+                  {
+                    "label": "Number",
+                    "name": "number"
+                  },
+                  {
+                    "label": "Boolean",
+                    "name": "boolean"
+                  },
+                  {
+                    "label": "Options",
+                    "name": "options"
+                  }
+                ],
+                "default": "string"
+              },
+              {
+                "label": "Label",
+                "name": "label",
+                "type": "string",
+                "placeholder": "Label for the input"
+              },
+              {
+                "label": "Variable Name",
+                "name": "name",
+                "type": "string",
+                "placeholder": "Variable name for the input (must be camel case)",
+                "description": "Variable name must be camel case. For example: firstName, lastName, etc."
+              },
+              {
+                "label": "Add Options",
+                "name": "addOptions",
+                "type": "array",
+                "show": {
+                  "formInputTypes[$index].type": "options"
+                },
+                "array": [
+                  {
+                    "label": "Option",
+                    "name": "option",
+                    "type": "string"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "label": "HTTP Method",
+            "name": "webhookMethod",
+            "type": "options",
+            "options": [
+              {
+                "label": "GET",
+                "name": "GET"
+              },
+              {
+                "label": "POST",
+                "name": "POST"
+              },
+              {
+                "label": "PUT",
+                "name": "PUT"
+              },
+              {
+                "label": "PATCH",
+                "name": "PATCH"
+              },
+              {
+                "label": "DELETE",
+                "name": "DELETE"
+              }
+            ],
+            "default": "POST",
+            "show": {
+              "startInputType": "webhookTrigger"
+            }
+          },
+          {
+            "label": "Content Type",
+            "name": "webhookContentType",
+            "type": "options",
+            "description": "Expected Content-Type of incoming requests. For application/x-www-form-urlencoded, if the entire payload is a JSON string in a \"payload\" field (e.g. GitHub webhooks), it is automatically parsed — use $webhook.body.* as normal.",
+            "options": [
+              {
+                "label": "application/json",
+                "name": "application/json"
+              },
+              {
+                "label": "application/x-www-form-urlencoded",
+                "name": "application/x-www-form-urlencoded"
+              }
+            ],
+            "default": "application/json",
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger"
+            }
+          },
+          {
+            "label": "Webhook URL",
+            "name": "webhookURL",
+            "type": "string",
+            "description": "Send a request to this URL to trigger the workflow",
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger"
+            }
+          },
+          {
+            "label": "Input Mode",
+            "name": "webhookInputMode",
+            "type": "options",
+            "description": "What this Start node passes as input to the rest of the flow when a webhook fires.",
+            "options": [
+              {
+                "label": "Custom Text",
+                "name": "text",
+                "description": "Pass a fixed string. Reference webhook fields with $webhook.body.* / $webhook.headers.* / $webhook.query.*"
+              },
+              {
+                "label": "No Input",
+                "name": "none",
+                "description": "Pass nothing. Use $webhook.* references inside downstream node configs to access the payload."
+              },
+              {
+                "label": "Full Webhook Payload",
+                "name": "payload",
+                "description": "Pass the full JSON-serialized webhook payload (body, headers, query). Useful for debugging; bloats LLM context."
+              }
+            ],
+            "default": "text",
+            "show": {
+              "startInputType": "webhookTrigger"
+            }
+          },
+          {
+            "label": "Custom Text",
+            "name": "webhookDefaultInput",
+            "type": "string",
+            "rows": 3,
+            "placeholder": "Answer user question: {{ $webhook.body.question }}",
+            "description": "Text passed to downstream nodes as the user input. Use {{ $webhook.body.* }}, {{ $webhook.headers.* }}, or {{ $webhook.query.* }} to interpolate fields from the incoming request.",
+            "optional": true,
+            "acceptVariable": true,
+            "show": {
+              "startInputType": "webhookTrigger",
+              "webhookInputMode": "text"
+            }
+          },
+          {
+            "label": "Verify request signature",
+            "name": "webhookEnableAuth",
+            "type": "boolean",
+            "description": "Reject incoming requests that do not include a valid signature. Turn this on if your sender (GitHub, Stripe, Slack, GitLab, etc.) signs each request with a shared secret, then generate a secret below and copy it to the sender. Leave off for testing or trusted networks.",
+            "default": false,
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger"
+            }
+          },
+          {
+            "label": "Webhook Secret",
+            "name": "webhookSecret",
+            "type": "string",
+            "description": "Click Generate Secret to create a random shared secret, then copy it into your sender so it can sign each request. Use Signature Header and Signature Type below to match how your sender delivers the signature.",
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger",
+              "webhookEnableAuth": true
+            }
+          },
+          {
+            "label": "Signature Header",
+            "name": "webhookSignatureHeader",
+            "type": "string",
+            "description": "The request header that carries the signature. e.g. x-hub-signature-256 for GitHub, stripe-signature for Stripe, x-gitlab-token for GitLab.",
+            "placeholder": "x-webhook-signature",
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger",
+              "webhookEnableAuth": true
+            }
+          },
+          {
+            "label": "Signature Type",
+            "name": "webhookSignatureType",
+            "type": "options",
+            "description": "How to verify the signature. HMAC-SHA256 for GitHub, Stripe, Slack (supports sha256=<hex> prefix automatically). Plain Token for GitLab-style plain secret comparison.",
+            "options": [
+              {
+                "label": "HMAC-SHA256",
+                "name": "hmac-sha256"
+              },
+              {
+                "label": "Plain Token",
+                "name": "plain-token"
+              }
+            ],
+            "default": "hmac-sha256",
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger",
+              "webhookEnableAuth": true
+            }
+          },
+          {
+            "label": "Response Mode",
+            "name": "webhookResponseMode",
+            "type": "options",
+            "description": "How Flowise replies to the incoming webhook request.",
+            "options": [
+              {
+                "label": "Synchronous",
+                "name": "sync",
+                "description": "Wait for the flow to finish and return the full result as JSON. Simple but blocks the caller; can time out for senders with short HTTP windows."
+              },
+              {
+                "label": "Asynchronous (callback)",
+                "name": "async",
+                "description": "Return 202 Accepted immediately and run the flow in the background. Set a Callback URL below to have the result POSTed there when the flow finishes; leave it blank for fire-and-forget. Best for senders with short HTTP timeouts."
+              },
+              {
+                "label": "Streaming (SSE)",
+                "name": "stream",
+                "description": "Return a Server-Sent Events stream so the caller sees tokens and agent steps as they happen. Best for custom callers (browsers using fetch+ReadableStream, internal services). NOT compatible with senders that expect a single quick response."
+              }
+            ],
+            "default": "sync",
+            "show": {
+              "startInputType": "webhookTrigger"
+            }
+          },
+          {
+            "label": "Callback URL",
+            "name": "callbackUrl",
+            "type": "string",
+            "description": "Optional. Flowise will POST the flow result to this URL when the flow finishes. Leave blank for fire-and-forget — the flow still runs in the background, but no callback is delivered.",
+            "placeholder": "https://example.com/flowise-callback",
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger",
+              "webhookResponseMode": "async"
+            }
+          },
+          {
+            "label": "Callback Secret",
+            "name": "callbackSecret",
+            "type": "string",
+            "description": "Optional. If set, outgoing callback POSTs are signed with HMAC-SHA256 and delivered as X-Flowise-Signature: sha256=<hex> so your callback endpoint can verify the request came from Flowise.",
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger",
+              "webhookResponseMode": "async"
+            }
+          },
+          {
+            "label": "Validate request shape",
+            "name": "webhookEnableValidation",
+            "type": "boolean",
+            "description": "Reject requests that are missing required headers, body fields, or query parameters declared below. Turn this on to enforce a request contract and catch bad requests early. Leave off to accept any payload and let the flow handle validation itself.",
+            "default": false,
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger"
+            }
+          },
+          {
+            "label": "Expected Query Parameters",
+            "name": "webhookQueryParams",
+            "description": "Declare expected query parameters. Leave empty to accept any.",
+            "type": "array",
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger",
+              "webhookEnableValidation": true
+            },
+            "array": [
+              {
+                "label": "Variable Name",
+                "name": "name",
+                "type": "string",
+                "placeholder": "e.g. page"
+              },
+              {
+                "label": "Required",
+                "name": "required",
+                "type": "boolean"
+              }
+            ]
+          },
+          {
+            "label": "Expected Body Parameters",
+            "name": "webhookBodyParams",
+            "description": "Define expected parameters in the webhook request body. Leave empty to accept any JSON body.",
+            "type": "array",
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger",
+              "webhookEnableValidation": true
+            },
+            "array": [
+              {
+                "label": "Variable Name",
+                "name": "name",
+                "type": "string",
+                "placeholder": "e.g. userId"
+              },
+              {
+                "label": "Type",
+                "name": "type",
+                "type": "options",
+                "options": [
+                  {
+                    "label": "String",
+                    "name": "string"
+                  },
+                  {
+                    "label": "Number",
+                    "name": "number"
+                  },
+                  {
+                    "label": "Boolean",
+                    "name": "boolean"
+                  },
+                  {
+                    "label": "Object",
+                    "name": "object",
+                    "hide": {
+                      "webhookContentType": "application/x-www-form-urlencoded"
+                    }
+                  },
+                  {
+                    "label": "Array[String]",
+                    "name": "array[string]",
+                    "hide": {
+                      "webhookContentType": "application/x-www-form-urlencoded"
+                    }
+                  },
+                  {
+                    "label": "Array[Number]",
+                    "name": "array[number]",
+                    "hide": {
+                      "webhookContentType": "application/x-www-form-urlencoded"
+                    }
+                  },
+                  {
+                    "label": "Array[Boolean]",
+                    "name": "array[boolean]",
+                    "hide": {
+                      "webhookContentType": "application/x-www-form-urlencoded"
+                    }
+                  },
+                  {
+                    "label": "Array[Object]",
+                    "name": "array[object]",
+                    "hide": {
+                      "webhookContentType": "application/x-www-form-urlencoded"
+                    }
+                  }
+                ],
+                "default": "string"
+              },
+              {
+                "label": "Required",
+                "name": "required",
+                "type": "boolean"
+              }
+            ]
+          },
+          {
+            "label": "Expected Headers",
+            "name": "webhookHeaderParams",
+            "description": "Declare expected request headers. Leave empty to accept any.",
+            "type": "array",
+            "optional": true,
+            "show": {
+              "startInputType": "webhookTrigger",
+              "webhookEnableValidation": true
+            },
+            "array": [
+              {
+                "label": "Header Name",
+                "name": "name",
+                "type": "string",
+                "placeholder": "e.g. x-github-event"
+              },
+              {
+                "label": "Required",
+                "name": "required",
+                "type": "boolean"
+              }
+            ]
+          },
+          {
+            "label": "Schedule Type",
+            "name": "scheduleType",
+            "type": "options",
+            "options": [
+              {
+                "label": "Visual Picker",
+                "name": "visualPicker",
+                "description": "Use a visual picker to select schedule options"
+              },
+              {
+                "label": "Cron Expression",
+                "name": "cronExpression",
+                "description": "Use a cron expression to define the schedule"
+              }
+            ],
+            "default": "visualPicker",
+            "show": {
+              "startInputType": "scheduleInput"
+            }
+          },
+          {
+            "label": "Cron Expression",
+            "name": "scheduleCronExpression",
+            "type": "string",
+            "placeholder": "0 9 * * 1-5",
+            "description": "Standard 5-field cron expression (minute hour day month weekday). Example: \"0 9 * * 1-5\" runs at 09:00 every weekday.",
+            "show": {
+              "startInputType": "scheduleInput",
+              "scheduleType": "cronExpression"
+            }
+          },
+          {
+            "label": "Frequency",
+            "name": "scheduleFrequency",
+            "type": "options",
+            "options": [
+              {
+                "label": "Hourly",
+                "name": "hourly",
+                "description": "Run every hour at the specified time"
+              },
+              {
+                "label": "Daily",
+                "name": "daily",
+                "description": "Run every day at the specified time"
+              },
+              {
+                "label": "Weekly",
+                "name": "weekly",
+                "description": "Run every week on the specified day and time"
+              },
+              {
+                "label": "Monthly",
+                "name": "monthly",
+                "description": "Run every month on the specified date and time"
+              }
+            ],
+            "show": {
+              "startInputType": "scheduleInput",
+              "scheduleType": "visualPicker"
+            }
+          },
+          {
+            "label": "On Minute",
+            "name": "scheduleOnMinute",
+            "type": "number",
+            "placeholder": "30",
+            "description": "Minute of the hour when the schedule should run (0-59). For example, \"30\" means the schedule will run at the 30th minute of the hour.",
+            "show": {
+              "startInputType": "scheduleInput",
+              "scheduleType": "visualPicker",
+              "scheduleFrequency": "hourly"
+            }
+          },
+          {
+            "label": "On Time",
+            "name": "scheduleOnTime",
+            "type": "timePicker",
+            "show": {
+              "startInputType": "scheduleInput",
+              "scheduleType": "visualPicker",
+              "scheduleFrequency": [
+                "daily",
+                "weekly",
+                "monthly"
+              ]
+            }
+          },
+          {
+            "label": "On Day of Week",
+            "name": "scheduleOnDayOfWeek",
+            "type": "weekDaysPicker",
+            "show": {
+              "startInputType": "scheduleInput",
+              "scheduleType": "visualPicker",
+              "scheduleFrequency": "weekly"
+            }
+          },
+          {
+            "label": "On Day of Month",
+            "name": "scheduleOnDayOfMonth",
+            "type": "monthDaysPicker",
+            "show": {
+              "startInputType": "scheduleInput",
+              "scheduleType": "visualPicker",
+              "scheduleFrequency": "monthly"
+            }
+          },
+          {
+            "label": "End Date",
+            "name": "scheduleEndDate",
+            "type": "datePicker",
+            "description": "Optional date after which the schedule will stop firing.",
+            "optional": true,
+            "show": {
+              "startInputType": "scheduleInput"
+            }
+          },
+          {
+            "label": "Timezone",
+            "name": "scheduleTimezone",
+            "type": "options",
+            "options": [
+              {
+                "label": "UTC",
+                "name": "UTC"
+              },
+              {
+                "label": "Africa/Abidjan",
+                "name": "Africa/Abidjan"
+              },
+              {
+                "label": "Africa/Accra",
+                "name": "Africa/Accra"
+              },
+              {
+                "label": "Africa/Addis_Ababa",
+                "name": "Africa/Addis_Ababa"
+              },
+              {
+                "label": "Africa/Algiers",
+                "name": "Africa/Algiers"
+              },
+              {
+                "label": "Africa/Asmera",
+                "name": "Africa/Asmera"
+              },
+              {
+                "label": "Africa/Bamako",
+                "name": "Africa/Bamako"
+              },
+              {
+                "label": "Africa/Bangui",
+                "name": "Africa/Bangui"
+              },
+              {
+                "label": "Africa/Banjul",
+                "name": "Africa/Banjul"
+              },
+              {
+                "label": "Africa/Bissau",
+                "name": "Africa/Bissau"
+              },
+              {
+                "label": "Africa/Blantyre",
+                "name": "Africa/Blantyre"
+              },
+              {
+                "label": "Africa/Brazzaville",
+                "name": "Africa/Brazzaville"
+              },
+              {
+                "label": "Africa/Bujumbura",
+                "name": "Africa/Bujumbura"
+              },
+              {
+                "label": "Africa/Cairo",
+                "name": "Africa/Cairo"
+              },
+              {
+                "label": "Africa/Casablanca",
+                "name": "Africa/Casablanca"
+              },
+              {
+                "label": "Africa/Ceuta",
+                "name": "Africa/Ceuta"
+              },
+              {
+                "label": "Africa/Conakry",
+                "name": "Africa/Conakry"
+              },
+              {
+                "label": "Africa/Dakar",
+                "name": "Africa/Dakar"
+              },
+              {
+                "label": "Africa/Dar_es_Salaam",
+                "name": "Africa/Dar_es_Salaam"
+              },
+              {
+                "label": "Africa/Djibouti",
+                "name": "Africa/Djibouti"
+              },
+              {
+                "label": "Africa/Douala",
+                "name": "Africa/Douala"
+              },
+              {
+                "label": "Africa/El_Aaiun",
+                "name": "Africa/El_Aaiun"
+              },
+              {
+                "label": "Africa/Freetown",
+                "name": "Africa/Freetown"
+              },
+              {
+                "label": "Africa/Gaborone",
+                "name": "Africa/Gaborone"
+              },
+              {
+                "label": "Africa/Harare",
+                "name": "Africa/Harare"
+              },
+              {
+                "label": "Africa/Johannesburg",
+                "name": "Africa/Johannesburg"
+              },
+              {
+                "label": "Africa/Juba",
+                "name": "Africa/Juba"
+              },
+              {
+                "label": "Africa/Kampala",
+                "name": "Africa/Kampala"
+              },
+              {
+                "label": "Africa/Khartoum",
+                "name": "Africa/Khartoum"
+              },
+              {
+                "label": "Africa/Kigali",
+                "name": "Africa/Kigali"
+              },
+              {
+                "label": "Africa/Kinshasa",
+                "name": "Africa/Kinshasa"
+              },
+              {
+                "label": "Africa/Lagos",
+                "name": "Africa/Lagos"
+              },
+              {
+                "label": "Africa/Libreville",
+                "name": "Africa/Libreville"
+              },
+              {
+                "label": "Africa/Lome",
+                "name": "Africa/Lome"
+              },
+              {
+                "label": "Africa/Luanda",
+                "name": "Africa/Luanda"
+              },
+              {
+                "label": "Africa/Lubumbashi",
+                "name": "Africa/Lubumbashi"
+              },
+              {
+                "label": "Africa/Lusaka",
+                "name": "Africa/Lusaka"
+              },
+              {
+                "label": "Africa/Malabo",
+                "name": "Africa/Malabo"
+              },
+              {
+                "label": "Africa/Maputo",
+                "name": "Africa/Maputo"
+              },
+              {
+                "label": "Africa/Maseru",
+                "name": "Africa/Maseru"
+              },
+              {
+                "label": "Africa/Mbabane",
+                "name": "Africa/Mbabane"
+              },
+              {
+                "label": "Africa/Mogadishu",
+                "name": "Africa/Mogadishu"
+              },
+              {
+                "label": "Africa/Monrovia",
+                "name": "Africa/Monrovia"
+              },
+              {
+                "label": "Africa/Nairobi",
+                "name": "Africa/Nairobi"
+              },
+              {
+                "label": "Africa/Ndjamena",
+                "name": "Africa/Ndjamena"
+              },
+              {
+                "label": "Africa/Niamey",
+                "name": "Africa/Niamey"
+              },
+              {
+                "label": "Africa/Nouakchott",
+                "name": "Africa/Nouakchott"
+              },
+              {
+                "label": "Africa/Ouagadougou",
+                "name": "Africa/Ouagadougou"
+              },
+              {
+                "label": "Africa/Porto-Novo",
+                "name": "Africa/Porto-Novo"
+              },
+              {
+                "label": "Africa/Sao_Tome",
+                "name": "Africa/Sao_Tome"
+              },
+              {
+                "label": "Africa/Tripoli",
+                "name": "Africa/Tripoli"
+              },
+              {
+                "label": "Africa/Tunis",
+                "name": "Africa/Tunis"
+              },
+              {
+                "label": "Africa/Windhoek",
+                "name": "Africa/Windhoek"
+              },
+              {
+                "label": "America/Adak",
+                "name": "America/Adak"
+              },
+              {
+                "label": "America/Anchorage",
+                "name": "America/Anchorage"
+              },
+              {
+                "label": "America/Anguilla",
+                "name": "America/Anguilla"
+              },
+              {
+                "label": "America/Antigua",
+                "name": "America/Antigua"
+              },
+              {
+                "label": "America/Araguaina",
+                "name": "America/Araguaina"
+              },
+              {
+                "label": "America/Argentina/La_Rioja",
+                "name": "America/Argentina/La_Rioja"
+              },
+              {
+                "label": "America/Argentina/Rio_Gallegos",
+                "name": "America/Argentina/Rio_Gallegos"
+              },
+              {
+                "label": "America/Argentina/Salta",
+                "name": "America/Argentina/Salta"
+              },
+              {
+                "label": "America/Argentina/San_Juan",
+                "name": "America/Argentina/San_Juan"
+              },
+              {
+                "label": "America/Argentina/San_Luis",
+                "name": "America/Argentina/San_Luis"
+              },
+              {
+                "label": "America/Argentina/Tucuman",
+                "name": "America/Argentina/Tucuman"
+              },
+              {
+                "label": "America/Argentina/Ushuaia",
+                "name": "America/Argentina/Ushuaia"
+              },
+              {
+                "label": "America/Aruba",
+                "name": "America/Aruba"
+              },
+              {
+                "label": "America/Asuncion",
+                "name": "America/Asuncion"
+              },
+              {
+                "label": "America/Bahia",
+                "name": "America/Bahia"
+              },
+              {
+                "label": "America/Bahia_Banderas",
+                "name": "America/Bahia_Banderas"
+              },
+              {
+                "label": "America/Barbados",
+                "name": "America/Barbados"
+              },
+              {
+                "label": "America/Belem",
+                "name": "America/Belem"
+              },
+              {
+                "label": "America/Belize",
+                "name": "America/Belize"
+              },
+              {
+                "label": "America/Blanc-Sablon",
+                "name": "America/Blanc-Sablon"
+              },
+              {
+                "label": "America/Boa_Vista",
+                "name": "America/Boa_Vista"
+              },
+              {
+                "label": "America/Bogota",
+                "name": "America/Bogota"
+              },
+              {
+                "label": "America/Boise",
+                "name": "America/Boise"
+              },
+              {
+                "label": "America/Buenos_Aires",
+                "name": "America/Buenos_Aires"
+              },
+              {
+                "label": "America/Cambridge_Bay",
+                "name": "America/Cambridge_Bay"
+              },
+              {
+                "label": "America/Campo_Grande",
+                "name": "America/Campo_Grande"
+              },
+              {
+                "label": "America/Cancun",
+                "name": "America/Cancun"
+              },
+              {
+                "label": "America/Caracas",
+                "name": "America/Caracas"
+              },
+              {
+                "label": "America/Catamarca",
+                "name": "America/Catamarca"
+              },
+              {
+                "label": "America/Cayenne",
+                "name": "America/Cayenne"
+              },
+              {
+                "label": "America/Cayman",
+                "name": "America/Cayman"
+              },
+              {
+                "label": "America/Chicago",
+                "name": "America/Chicago"
+              },
+              {
+                "label": "America/Chihuahua",
+                "name": "America/Chihuahua"
+              },
+              {
+                "label": "America/Ciudad_Juarez",
+                "name": "America/Ciudad_Juarez"
+              },
+              {
+                "label": "America/Coral_Harbour",
+                "name": "America/Coral_Harbour"
+              },
+              {
+                "label": "America/Cordoba",
+                "name": "America/Cordoba"
+              },
+              {
+                "label": "America/Costa_Rica",
+                "name": "America/Costa_Rica"
+              },
+              {
+                "label": "America/Coyhaique",
+                "name": "America/Coyhaique"
+              },
+              {
+                "label": "America/Creston",
+                "name": "America/Creston"
+              },
+              {
+                "label": "America/Cuiaba",
+                "name": "America/Cuiaba"
+              },
+              {
+                "label": "America/Curacao",
+                "name": "America/Curacao"
+              },
+              {
+                "label": "America/Danmarkshavn",
+                "name": "America/Danmarkshavn"
+              },
+              {
+                "label": "America/Dawson",
+                "name": "America/Dawson"
+              },
+              {
+                "label": "America/Dawson_Creek",
+                "name": "America/Dawson_Creek"
+              },
+              {
+                "label": "America/Denver",
+                "name": "America/Denver"
+              },
+              {
+                "label": "America/Detroit",
+                "name": "America/Detroit"
+              },
+              {
+                "label": "America/Dominica",
+                "name": "America/Dominica"
+              },
+              {
+                "label": "America/Edmonton",
+                "name": "America/Edmonton"
+              },
+              {
+                "label": "America/Eirunepe",
+                "name": "America/Eirunepe"
+              },
+              {
+                "label": "America/El_Salvador",
+                "name": "America/El_Salvador"
+              },
+              {
+                "label": "America/Fort_Nelson",
+                "name": "America/Fort_Nelson"
+              },
+              {
+                "label": "America/Fortaleza",
+                "name": "America/Fortaleza"
+              },
+              {
+                "label": "America/Glace_Bay",
+                "name": "America/Glace_Bay"
+              },
+              {
+                "label": "America/Godthab",
+                "name": "America/Godthab"
+              },
+              {
+                "label": "America/Goose_Bay",
+                "name": "America/Goose_Bay"
+              },
+              {
+                "label": "America/Grand_Turk",
+                "name": "America/Grand_Turk"
+              },
+              {
+                "label": "America/Grenada",
+                "name": "America/Grenada"
+              },
+              {
+                "label": "America/Guadeloupe",
+                "name": "America/Guadeloupe"
+              },
+              {
+                "label": "America/Guatemala",
+                "name": "America/Guatemala"
+              },
+              {
+                "label": "America/Guayaquil",
+                "name": "America/Guayaquil"
+              },
+              {
+                "label": "America/Guyana",
+                "name": "America/Guyana"
+              },
+              {
+                "label": "America/Halifax",
+                "name": "America/Halifax"
+              },
+              {
+                "label": "America/Havana",
+                "name": "America/Havana"
+              },
+              {
+                "label": "America/Hermosillo",
+                "name": "America/Hermosillo"
+              },
+              {
+                "label": "America/Indiana/Knox",
+                "name": "America/Indiana/Knox"
+              },
+              {
+                "label": "America/Indiana/Marengo",
+                "name": "America/Indiana/Marengo"
+              },
+              {
+                "label": "America/Indiana/Petersburg",
+                "name": "America/Indiana/Petersburg"
+              },
+              {
+                "label": "America/Indiana/Tell_City",
+                "name": "America/Indiana/Tell_City"
+              },
+              {
+                "label": "America/Indiana/Vevay",
+                "name": "America/Indiana/Vevay"
+              },
+              {
+                "label": "America/Indiana/Vincennes",
+                "name": "America/Indiana/Vincennes"
+              },
+              {
+                "label": "America/Indiana/Winamac",
+                "name": "America/Indiana/Winamac"
+              },
+              {
+                "label": "America/Indianapolis",
+                "name": "America/Indianapolis"
+              },
+              {
+                "label": "America/Inuvik",
+                "name": "America/Inuvik"
+              },
+              {
+                "label": "America/Iqaluit",
+                "name": "America/Iqaluit"
+              },
+              {
+                "label": "America/Jamaica",
+                "name": "America/Jamaica"
+              },
+              {
+                "label": "America/Jujuy",
+                "name": "America/Jujuy"
+              },
+              {
+                "label": "America/Juneau",
+                "name": "America/Juneau"
+              },
+              {
+                "label": "America/Kentucky/Monticello",
+                "name": "America/Kentucky/Monticello"
+              },
+              {
+                "label": "America/Kralendijk",
+                "name": "America/Kralendijk"
+              },
+              {
+                "label": "America/La_Paz",
+                "name": "America/La_Paz"
+              },
+              {
+                "label": "America/Lima",
+                "name": "America/Lima"
+              },
+              {
+                "label": "America/Los_Angeles",
+                "name": "America/Los_Angeles"
+              },
+              {
+                "label": "America/Louisville",
+                "name": "America/Louisville"
+              },
+              {
+                "label": "America/Lower_Princes",
+                "name": "America/Lower_Princes"
+              },
+              {
+                "label": "America/Maceio",
+                "name": "America/Maceio"
+              },
+              {
+                "label": "America/Managua",
+                "name": "America/Managua"
+              },
+              {
+                "label": "America/Manaus",
+                "name": "America/Manaus"
+              },
+              {
+                "label": "America/Marigot",
+                "name": "America/Marigot"
+              },
+              {
+                "label": "America/Martinique",
+                "name": "America/Martinique"
+              },
+              {
+                "label": "America/Matamoros",
+                "name": "America/Matamoros"
+              },
+              {
+                "label": "America/Mazatlan",
+                "name": "America/Mazatlan"
+              },
+              {
+                "label": "America/Mendoza",
+                "name": "America/Mendoza"
+              },
+              {
+                "label": "America/Menominee",
+                "name": "America/Menominee"
+              },
+              {
+                "label": "America/Merida",
+                "name": "America/Merida"
+              },
+              {
+                "label": "America/Metlakatla",
+                "name": "America/Metlakatla"
+              },
+              {
+                "label": "America/Mexico_City",
+                "name": "America/Mexico_City"
+              },
+              {
+                "label": "America/Miquelon",
+                "name": "America/Miquelon"
+              },
+              {
+                "label": "America/Moncton",
+                "name": "America/Moncton"
+              },
+              {
+                "label": "America/Monterrey",
+                "name": "America/Monterrey"
+              },
+              {
+                "label": "America/Montevideo",
+                "name": "America/Montevideo"
+              },
+              {
+                "label": "America/Montserrat",
+                "name": "America/Montserrat"
+              },
+              {
+                "label": "America/Nassau",
+                "name": "America/Nassau"
+              },
+              {
+                "label": "America/New_York",
+                "name": "America/New_York"
+              },
+              {
+                "label": "America/Nome",
+                "name": "America/Nome"
+              },
+              {
+                "label": "America/Noronha",
+                "name": "America/Noronha"
+              },
+              {
+                "label": "America/North_Dakota/Beulah",
+                "name": "America/North_Dakota/Beulah"
+              },
+              {
+                "label": "America/North_Dakota/Center",
+                "name": "America/North_Dakota/Center"
+              },
+              {
+                "label": "America/North_Dakota/New_Salem",
+                "name": "America/North_Dakota/New_Salem"
+              },
+              {
+                "label": "America/Ojinaga",
+                "name": "America/Ojinaga"
+              },
+              {
+                "label": "America/Panama",
+                "name": "America/Panama"
+              },
+              {
+                "label": "America/Paramaribo",
+                "name": "America/Paramaribo"
+              },
+              {
+                "label": "America/Phoenix",
+                "name": "America/Phoenix"
+              },
+              {
+                "label": "America/Port-au-Prince",
+                "name": "America/Port-au-Prince"
+              },
+              {
+                "label": "America/Port_of_Spain",
+                "name": "America/Port_of_Spain"
+              },
+              {
+                "label": "America/Porto_Velho",
+                "name": "America/Porto_Velho"
+              },
+              {
+                "label": "America/Puerto_Rico",
+                "name": "America/Puerto_Rico"
+              },
+              {
+                "label": "America/Punta_Arenas",
+                "name": "America/Punta_Arenas"
+              },
+              {
+                "label": "America/Rankin_Inlet",
+                "name": "America/Rankin_Inlet"
+              },
+              {
+                "label": "America/Recife",
+                "name": "America/Recife"
+              },
+              {
+                "label": "America/Regina",
+                "name": "America/Regina"
+              },
+              {
+                "label": "America/Resolute",
+                "name": "America/Resolute"
+              },
+              {
+                "label": "America/Rio_Branco",
+                "name": "America/Rio_Branco"
+              },
+              {
+                "label": "America/Santarem",
+                "name": "America/Santarem"
+              },
+              {
+                "label": "America/Santiago",
+                "name": "America/Santiago"
+              },
+              {
+                "label": "America/Santo_Domingo",
+                "name": "America/Santo_Domingo"
+              },
+              {
+                "label": "America/Sao_Paulo",
+                "name": "America/Sao_Paulo"
+              },
+              {
+                "label": "America/Scoresbysund",
+                "name": "America/Scoresbysund"
+              },
+              {
+                "label": "America/Sitka",
+                "name": "America/Sitka"
+              },
+              {
+                "label": "America/St_Barthelemy",
+                "name": "America/St_Barthelemy"
+              },
+              {
+                "label": "America/St_Johns",
+                "name": "America/St_Johns"
+              },
+              {
+                "label": "America/St_Kitts",
+                "name": "America/St_Kitts"
+              },
+              {
+                "label": "America/St_Lucia",
+                "name": "America/St_Lucia"
+              },
+              {
+                "label": "America/St_Thomas",
+                "name": "America/St_Thomas"
+              },
+              {
+                "label": "America/St_Vincent",
+                "name": "America/St_Vincent"
+              },
+              {
+                "label": "America/Swift_Current",
+                "name": "America/Swift_Current"
+              },
+              {
+                "label": "America/Tegucigalpa",
+                "name": "America/Tegucigalpa"
+              },
+              {
+                "label": "America/Thule",
+                "name": "America/Thule"
+              },
+              {
+                "label": "America/Tijuana",
+                "name": "America/Tijuana"
+              },
+              {
+                "label": "America/Toronto",
+                "name": "America/Toronto"
+              },
+              {
+                "label": "America/Tortola",
+                "name": "America/Tortola"
+              },
+              {
+                "label": "America/Vancouver",
+                "name": "America/Vancouver"
+              },
+              {
+                "label": "America/Whitehorse",
+                "name": "America/Whitehorse"
+              },
+              {
+                "label": "America/Winnipeg",
+                "name": "America/Winnipeg"
+              },
+              {
+                "label": "America/Yakutat",
+                "name": "America/Yakutat"
+              },
+              {
+                "label": "Antarctica/Casey",
+                "name": "Antarctica/Casey"
+              },
+              {
+                "label": "Antarctica/Davis",
+                "name": "Antarctica/Davis"
+              },
+              {
+                "label": "Antarctica/DumontDUrville",
+                "name": "Antarctica/DumontDUrville"
+              },
+              {
+                "label": "Antarctica/Macquarie",
+                "name": "Antarctica/Macquarie"
+              },
+              {
+                "label": "Antarctica/Mawson",
+                "name": "Antarctica/Mawson"
+              },
+              {
+                "label": "Antarctica/McMurdo",
+                "name": "Antarctica/McMurdo"
+              },
+              {
+                "label": "Antarctica/Palmer",
+                "name": "Antarctica/Palmer"
+              },
+              {
+                "label": "Antarctica/Rothera",
+                "name": "Antarctica/Rothera"
+              },
+              {
+                "label": "Antarctica/Syowa",
+                "name": "Antarctica/Syowa"
+              },
+              {
+                "label": "Antarctica/Troll",
+                "name": "Antarctica/Troll"
+              },
+              {
+                "label": "Antarctica/Vostok",
+                "name": "Antarctica/Vostok"
+              },
+              {
+                "label": "Arctic/Longyearbyen",
+                "name": "Arctic/Longyearbyen"
+              },
+              {
+                "label": "Asia/Aden",
+                "name": "Asia/Aden"
+              },
+              {
+                "label": "Asia/Almaty",
+                "name": "Asia/Almaty"
+              },
+              {
+                "label": "Asia/Amman",
+                "name": "Asia/Amman"
+              },
+              {
+                "label": "Asia/Anadyr",
+                "name": "Asia/Anadyr"
+              },
+              {
+                "label": "Asia/Aqtau",
+                "name": "Asia/Aqtau"
+              },
+              {
+                "label": "Asia/Aqtobe",
+                "name": "Asia/Aqtobe"
+              },
+              {
+                "label": "Asia/Ashgabat",
+                "name": "Asia/Ashgabat"
+              },
+              {
+                "label": "Asia/Atyrau",
+                "name": "Asia/Atyrau"
+              },
+              {
+                "label": "Asia/Baghdad",
+                "name": "Asia/Baghdad"
+              },
+              {
+                "label": "Asia/Bahrain",
+                "name": "Asia/Bahrain"
+              },
+              {
+                "label": "Asia/Baku",
+                "name": "Asia/Baku"
+              },
+              {
+                "label": "Asia/Bangkok",
+                "name": "Asia/Bangkok"
+              },
+              {
+                "label": "Asia/Barnaul",
+                "name": "Asia/Barnaul"
+              },
+              {
+                "label": "Asia/Beirut",
+                "name": "Asia/Beirut"
+              },
+              {
+                "label": "Asia/Bishkek",
+                "name": "Asia/Bishkek"
+              },
+              {
+                "label": "Asia/Brunei",
+                "name": "Asia/Brunei"
+              },
+              {
+                "label": "Asia/Calcutta",
+                "name": "Asia/Calcutta"
+              },
+              {
+                "label": "Asia/Chita",
+                "name": "Asia/Chita"
+              },
+              {
+                "label": "Asia/Colombo",
+                "name": "Asia/Colombo"
+              },
+              {
+                "label": "Asia/Damascus",
+                "name": "Asia/Damascus"
+              },
+              {
+                "label": "Asia/Dhaka",
+                "name": "Asia/Dhaka"
+              },
+              {
+                "label": "Asia/Dili",
+                "name": "Asia/Dili"
+              },
+              {
+                "label": "Asia/Dubai",
+                "name": "Asia/Dubai"
+              },
+              {
+                "label": "Asia/Dushanbe",
+                "name": "Asia/Dushanbe"
+              },
+              {
+                "label": "Asia/Famagusta",
+                "name": "Asia/Famagusta"
+              },
+              {
+                "label": "Asia/Gaza",
+                "name": "Asia/Gaza"
+              },
+              {
+                "label": "Asia/Hebron",
+                "name": "Asia/Hebron"
+              },
+              {
+                "label": "Asia/Hong_Kong",
+                "name": "Asia/Hong_Kong"
+              },
+              {
+                "label": "Asia/Hovd",
+                "name": "Asia/Hovd"
+              },
+              {
+                "label": "Asia/Irkutsk",
+                "name": "Asia/Irkutsk"
+              },
+              {
+                "label": "Asia/Jakarta",
+                "name": "Asia/Jakarta"
+              },
+              {
+                "label": "Asia/Jayapura",
+                "name": "Asia/Jayapura"
+              },
+              {
+                "label": "Asia/Jerusalem",
+                "name": "Asia/Jerusalem"
+              },
+              {
+                "label": "Asia/Kabul",
+                "name": "Asia/Kabul"
+              },
+              {
+                "label": "Asia/Kamchatka",
+                "name": "Asia/Kamchatka"
+              },
+              {
+                "label": "Asia/Karachi",
+                "name": "Asia/Karachi"
+              },
+              {
+                "label": "Asia/Katmandu",
+                "name": "Asia/Katmandu"
+              },
+              {
+                "label": "Asia/Khandyga",
+                "name": "Asia/Khandyga"
+              },
+              {
+                "label": "Asia/Krasnoyarsk",
+                "name": "Asia/Krasnoyarsk"
+              },
+              {
+                "label": "Asia/Kuala_Lumpur",
+                "name": "Asia/Kuala_Lumpur"
+              },
+              {
+                "label": "Asia/Kuching",
+                "name": "Asia/Kuching"
+              },
+              {
+                "label": "Asia/Kuwait",
+                "name": "Asia/Kuwait"
+              },
+              {
+                "label": "Asia/Macau",
+                "name": "Asia/Macau"
+              },
+              {
+                "label": "Asia/Magadan",
+                "name": "Asia/Magadan"
+              },
+              {
+                "label": "Asia/Makassar",
+                "name": "Asia/Makassar"
+              },
+              {
+                "label": "Asia/Manila",
+                "name": "Asia/Manila"
+              },
+              {
+                "label": "Asia/Muscat",
+                "name": "Asia/Muscat"
+              },
+              {
+                "label": "Asia/Nicosia",
+                "name": "Asia/Nicosia"
+              },
+              {
+                "label": "Asia/Novokuznetsk",
+                "name": "Asia/Novokuznetsk"
+              },
+              {
+                "label": "Asia/Novosibirsk",
+                "name": "Asia/Novosibirsk"
+              },
+              {
+                "label": "Asia/Omsk",
+                "name": "Asia/Omsk"
+              },
+              {
+                "label": "Asia/Oral",
+                "name": "Asia/Oral"
+              },
+              {
+                "label": "Asia/Phnom_Penh",
+                "name": "Asia/Phnom_Penh"
+              },
+              {
+                "label": "Asia/Pontianak",
+                "name": "Asia/Pontianak"
+              },
+              {
+                "label": "Asia/Pyongyang",
+                "name": "Asia/Pyongyang"
+              },
+              {
+                "label": "Asia/Qatar",
+                "name": "Asia/Qatar"
+              },
+              {
+                "label": "Asia/Qostanay",
+                "name": "Asia/Qostanay"
+              },
+              {
+                "label": "Asia/Qyzylorda",
+                "name": "Asia/Qyzylorda"
+              },
+              {
+                "label": "Asia/Rangoon",
+                "name": "Asia/Rangoon"
+              },
+              {
+                "label": "Asia/Riyadh",
+                "name": "Asia/Riyadh"
+              },
+              {
+                "label": "Asia/Saigon",
+                "name": "Asia/Saigon"
+              },
+              {
+                "label": "Asia/Sakhalin",
+                "name": "Asia/Sakhalin"
+              },
+              {
+                "label": "Asia/Samarkand",
+                "name": "Asia/Samarkand"
+              },
+              {
+                "label": "Asia/Seoul",
+                "name": "Asia/Seoul"
+              },
+              {
+                "label": "Asia/Shanghai",
+                "name": "Asia/Shanghai"
+              },
+              {
+                "label": "Asia/Singapore",
+                "name": "Asia/Singapore"
+              },
+              {
+                "label": "Asia/Srednekolymsk",
+                "name": "Asia/Srednekolymsk"
+              },
+              {
+                "label": "Asia/Taipei",
+                "name": "Asia/Taipei"
+              },
+              {
+                "label": "Asia/Tashkent",
+                "name": "Asia/Tashkent"
+              },
+              {
+                "label": "Asia/Tbilisi",
+                "name": "Asia/Tbilisi"
+              },
+              {
+                "label": "Asia/Tehran",
+                "name": "Asia/Tehran"
+              },
+              {
+                "label": "Asia/Thimphu",
+                "name": "Asia/Thimphu"
+              },
+              {
+                "label": "Asia/Tokyo",
+                "name": "Asia/Tokyo"
+              },
+              {
+                "label": "Asia/Tomsk",
+                "name": "Asia/Tomsk"
+              },
+              {
+                "label": "Asia/Ulaanbaatar",
+                "name": "Asia/Ulaanbaatar"
+              },
+              {
+                "label": "Asia/Urumqi",
+                "name": "Asia/Urumqi"
+              },
+              {
+                "label": "Asia/Ust-Nera",
+                "name": "Asia/Ust-Nera"
+              },
+              {
+                "label": "Asia/Vientiane",
+                "name": "Asia/Vientiane"
+              },
+              {
+                "label": "Asia/Vladivostok",
+                "name": "Asia/Vladivostok"
+              },
+              {
+                "label": "Asia/Yakutsk",
+                "name": "Asia/Yakutsk"
+              },
+              {
+                "label": "Asia/Yekaterinburg",
+                "name": "Asia/Yekaterinburg"
+              },
+              {
+                "label": "Asia/Yerevan",
+                "name": "Asia/Yerevan"
+              },
+              {
+                "label": "Atlantic/Azores",
+                "name": "Atlantic/Azores"
+              },
+              {
+                "label": "Atlantic/Bermuda",
+                "name": "Atlantic/Bermuda"
+              },
+              {
+                "label": "Atlantic/Canary",
+                "name": "Atlantic/Canary"
+              },
+              {
+                "label": "Atlantic/Cape_Verde",
+                "name": "Atlantic/Cape_Verde"
+              },
+              {
+                "label": "Atlantic/Faeroe",
+                "name": "Atlantic/Faeroe"
+              },
+              {
+                "label": "Atlantic/Madeira",
+                "name": "Atlantic/Madeira"
+              },
+              {
+                "label": "Atlantic/Reykjavik",
+                "name": "Atlantic/Reykjavik"
+              },
+              {
+                "label": "Atlantic/South_Georgia",
+                "name": "Atlantic/South_Georgia"
+              },
+              {
+                "label": "Atlantic/St_Helena",
+                "name": "Atlantic/St_Helena"
+              },
+              {
+                "label": "Atlantic/Stanley",
+                "name": "Atlantic/Stanley"
+              },
+              {
+                "label": "Australia/Adelaide",
+                "name": "Australia/Adelaide"
+              },
+              {
+                "label": "Australia/Brisbane",
+                "name": "Australia/Brisbane"
+              },
+              {
+                "label": "Australia/Broken_Hill",
+                "name": "Australia/Broken_Hill"
+              },
+              {
+                "label": "Australia/Darwin",
+                "name": "Australia/Darwin"
+              },
+              {
+                "label": "Australia/Eucla",
+                "name": "Australia/Eucla"
+              },
+              {
+                "label": "Australia/Hobart",
+                "name": "Australia/Hobart"
+              },
+              {
+                "label": "Australia/Lindeman",
+                "name": "Australia/Lindeman"
+              },
+              {
+                "label": "Australia/Lord_Howe",
+                "name": "Australia/Lord_Howe"
+              },
+              {
+                "label": "Australia/Melbourne",
+                "name": "Australia/Melbourne"
+              },
+              {
+                "label": "Australia/Perth",
+                "name": "Australia/Perth"
+              },
+              {
+                "label": "Australia/Sydney",
+                "name": "Australia/Sydney"
+              },
+              {
+                "label": "Europe/Amsterdam",
+                "name": "Europe/Amsterdam"
+              },
+              {
+                "label": "Europe/Andorra",
+                "name": "Europe/Andorra"
+              },
+              {
+                "label": "Europe/Astrakhan",
+                "name": "Europe/Astrakhan"
+              },
+              {
+                "label": "Europe/Athens",
+                "name": "Europe/Athens"
+              },
+              {
+                "label": "Europe/Belgrade",
+                "name": "Europe/Belgrade"
+              },
+              {
+                "label": "Europe/Berlin",
+                "name": "Europe/Berlin"
+              },
+              {
+                "label": "Europe/Bratislava",
+                "name": "Europe/Bratislava"
+              },
+              {
+                "label": "Europe/Brussels",
+                "name": "Europe/Brussels"
+              },
+              {
+                "label": "Europe/Bucharest",
+                "name": "Europe/Bucharest"
+              },
+              {
+                "label": "Europe/Budapest",
+                "name": "Europe/Budapest"
+              },
+              {
+                "label": "Europe/Busingen",
+                "name": "Europe/Busingen"
+              },
+              {
+                "label": "Europe/Chisinau",
+                "name": "Europe/Chisinau"
+              },
+              {
+                "label": "Europe/Copenhagen",
+                "name": "Europe/Copenhagen"
+              },
+              {
+                "label": "Europe/Dublin",
+                "name": "Europe/Dublin"
+              },
+              {
+                "label": "Europe/Gibraltar",
+                "name": "Europe/Gibraltar"
+              },
+              {
+                "label": "Europe/Guernsey",
+                "name": "Europe/Guernsey"
+              },
+              {
+                "label": "Europe/Helsinki",
+                "name": "Europe/Helsinki"
+              },
+              {
+                "label": "Europe/Isle_of_Man",
+                "name": "Europe/Isle_of_Man"
+              },
+              {
+                "label": "Europe/Istanbul",
+                "name": "Europe/Istanbul"
+              },
+              {
+                "label": "Europe/Jersey",
+                "name": "Europe/Jersey"
+              },
+              {
+                "label": "Europe/Kaliningrad",
+                "name": "Europe/Kaliningrad"
+              },
+              {
+                "label": "Europe/Kiev",
+                "name": "Europe/Kiev"
+              },
+              {
+                "label": "Europe/Kirov",
+                "name": "Europe/Kirov"
+              },
+              {
+                "label": "Europe/Lisbon",
+                "name": "Europe/Lisbon"
+              },
+              {
+                "label": "Europe/Ljubljana",
+                "name": "Europe/Ljubljana"
+              },
+              {
+                "label": "Europe/London",
+                "name": "Europe/London"
+              },
+              {
+                "label": "Europe/Luxembourg",
+                "name": "Europe/Luxembourg"
+              },
+              {
+                "label": "Europe/Madrid",
+                "name": "Europe/Madrid"
+              },
+              {
+                "label": "Europe/Malta",
+                "name": "Europe/Malta"
+              },
+              {
+                "label": "Europe/Mariehamn",
+                "name": "Europe/Mariehamn"
+              },
+              {
+                "label": "Europe/Minsk",
+                "name": "Europe/Minsk"
+              },
+              {
+                "label": "Europe/Monaco",
+                "name": "Europe/Monaco"
+              },
+              {
+                "label": "Europe/Moscow",
+                "name": "Europe/Moscow"
+              },
+              {
+                "label": "Europe/Oslo",
+                "name": "Europe/Oslo"
+              },
+              {
+                "label": "Europe/Paris",
+                "name": "Europe/Paris"
+              },
+              {
+                "label": "Europe/Podgorica",
+                "name": "Europe/Podgorica"
+              },
+              {
+                "label": "Europe/Prague",
+                "name": "Europe/Prague"
+              },
+              {
+                "label": "Europe/Riga",
+                "name": "Europe/Riga"
+              },
+              {
+                "label": "Europe/Rome",
+                "name": "Europe/Rome"
+              },
+              {
+                "label": "Europe/Samara",
+                "name": "Europe/Samara"
+              },
+              {
+                "label": "Europe/San_Marino",
+                "name": "Europe/San_Marino"
+              },
+              {
+                "label": "Europe/Sarajevo",
+                "name": "Europe/Sarajevo"
+              },
+              {
+                "label": "Europe/Saratov",
+                "name": "Europe/Saratov"
+              },
+              {
+                "label": "Europe/Simferopol",
+                "name": "Europe/Simferopol"
+              },
+              {
+                "label": "Europe/Skopje",
+                "name": "Europe/Skopje"
+              },
+              {
+                "label": "Europe/Sofia",
+                "name": "Europe/Sofia"
+              },
+              {
+                "label": "Europe/Stockholm",
+                "name": "Europe/Stockholm"
+              },
+              {
+                "label": "Europe/Tallinn",
+                "name": "Europe/Tallinn"
+              },
+              {
+                "label": "Europe/Tirane",
+                "name": "Europe/Tirane"
+              },
+              {
+                "label": "Europe/Ulyanovsk",
+                "name": "Europe/Ulyanovsk"
+              },
+              {
+                "label": "Europe/Vaduz",
+                "name": "Europe/Vaduz"
+              },
+              {
+                "label": "Europe/Vatican",
+                "name": "Europe/Vatican"
+              },
+              {
+                "label": "Europe/Vienna",
+                "name": "Europe/Vienna"
+              },
+              {
+                "label": "Europe/Vilnius",
+                "name": "Europe/Vilnius"
+              },
+              {
+                "label": "Europe/Volgograd",
+                "name": "Europe/Volgograd"
+              },
+              {
+                "label": "Europe/Warsaw",
+                "name": "Europe/Warsaw"
+              },
+              {
+                "label": "Europe/Zagreb",
+                "name": "Europe/Zagreb"
+              },
+              {
+                "label": "Europe/Zurich",
+                "name": "Europe/Zurich"
+              },
+              {
+                "label": "Indian/Antananarivo",
+                "name": "Indian/Antananarivo"
+              },
+              {
+                "label": "Indian/Chagos",
+                "name": "Indian/Chagos"
+              },
+              {
+                "label": "Indian/Christmas",
+                "name": "Indian/Christmas"
+              },
+              {
+                "label": "Indian/Cocos",
+                "name": "Indian/Cocos"
+              },
+              {
+                "label": "Indian/Comoro",
+                "name": "Indian/Comoro"
+              },
+              {
+                "label": "Indian/Kerguelen",
+                "name": "Indian/Kerguelen"
+              },
+              {
+                "label": "Indian/Mahe",
+                "name": "Indian/Mahe"
+              },
+              {
+                "label": "Indian/Maldives",
+                "name": "Indian/Maldives"
+              },
+              {
+                "label": "Indian/Mauritius",
+                "name": "Indian/Mauritius"
+              },
+              {
+                "label": "Indian/Mayotte",
+                "name": "Indian/Mayotte"
+              },
+              {
+                "label": "Indian/Reunion",
+                "name": "Indian/Reunion"
+              },
+              {
+                "label": "Pacific/Apia",
+                "name": "Pacific/Apia"
+              },
+              {
+                "label": "Pacific/Auckland",
+                "name": "Pacific/Auckland"
+              },
+              {
+                "label": "Pacific/Bougainville",
+                "name": "Pacific/Bougainville"
+              },
+              {
+                "label": "Pacific/Chatham",
+                "name": "Pacific/Chatham"
+              },
+              {
+                "label": "Pacific/Easter",
+                "name": "Pacific/Easter"
+              },
+              {
+                "label": "Pacific/Efate",
+                "name": "Pacific/Efate"
+              },
+              {
+                "label": "Pacific/Enderbury",
+                "name": "Pacific/Enderbury"
+              },
+              {
+                "label": "Pacific/Fakaofo",
+                "name": "Pacific/Fakaofo"
+              },
+              {
+                "label": "Pacific/Fiji",
+                "name": "Pacific/Fiji"
+              },
+              {
+                "label": "Pacific/Funafuti",
+                "name": "Pacific/Funafuti"
+              },
+              {
+                "label": "Pacific/Galapagos",
+                "name": "Pacific/Galapagos"
+              },
+              {
+                "label": "Pacific/Gambier",
+                "name": "Pacific/Gambier"
+              },
+              {
+                "label": "Pacific/Guadalcanal",
+                "name": "Pacific/Guadalcanal"
+              },
+              {
+                "label": "Pacific/Guam",
+                "name": "Pacific/Guam"
+              },
+              {
+                "label": "Pacific/Honolulu",
+                "name": "Pacific/Honolulu"
+              },
+              {
+                "label": "Pacific/Kiritimati",
+                "name": "Pacific/Kiritimati"
+              },
+              {
+                "label": "Pacific/Kosrae",
+                "name": "Pacific/Kosrae"
+              },
+              {
+                "label": "Pacific/Kwajalein",
+                "name": "Pacific/Kwajalein"
+              },
+              {
+                "label": "Pacific/Majuro",
+                "name": "Pacific/Majuro"
+              },
+              {
+                "label": "Pacific/Marquesas",
+                "name": "Pacific/Marquesas"
+              },
+              {
+                "label": "Pacific/Midway",
+                "name": "Pacific/Midway"
+              },
+              {
+                "label": "Pacific/Nauru",
+                "name": "Pacific/Nauru"
+              },
+              {
+                "label": "Pacific/Niue",
+                "name": "Pacific/Niue"
+              },
+              {
+                "label": "Pacific/Norfolk",
+                "name": "Pacific/Norfolk"
+              },
+              {
+                "label": "Pacific/Noumea",
+                "name": "Pacific/Noumea"
+              },
+              {
+                "label": "Pacific/Pago_Pago",
+                "name": "Pacific/Pago_Pago"
+              },
+              {
+                "label": "Pacific/Palau",
+                "name": "Pacific/Palau"
+              },
+              {
+                "label": "Pacific/Pitcairn",
+                "name": "Pacific/Pitcairn"
+              },
+              {
+                "label": "Pacific/Ponape",
+                "name": "Pacific/Ponape"
+              },
+              {
+                "label": "Pacific/Port_Moresby",
+                "name": "Pacific/Port_Moresby"
+              },
+              {
+                "label": "Pacific/Rarotonga",
+                "name": "Pacific/Rarotonga"
+              },
+              {
+                "label": "Pacific/Saipan",
+                "name": "Pacific/Saipan"
+              },
+              {
+                "label": "Pacific/Tahiti",
+                "name": "Pacific/Tahiti"
+              },
+              {
+                "label": "Pacific/Tarawa",
+                "name": "Pacific/Tarawa"
+              },
+              {
+                "label": "Pacific/Tongatapu",
+                "name": "Pacific/Tongatapu"
+              },
+              {
+                "label": "Pacific/Truk",
+                "name": "Pacific/Truk"
+              },
+              {
+                "label": "Pacific/Wake",
+                "name": "Pacific/Wake"
+              },
+              {
+                "label": "Pacific/Wallis",
+                "name": "Pacific/Wallis"
+              }
+            ],
+            "default": "UTC",
+            "description": "IANA timezone. Defaults to UTC.",
+            "optional": true,
+            "show": {
+              "startInputType": "scheduleInput"
+            }
+          },
+          {
+            "label": "Schedule Input Mode",
+            "name": "scheduleInputMode",
+            "type": "options",
+            "description": "How the schedule should invoke this flow on each fire.",
+            "options": [
+              {
+                "label": "Default Text Input",
+                "name": "text",
+                "description": "Pass a fixed text string as the question on every fire"
+              },
+              {
+                "label": "Form Input",
+                "name": "form",
+                "description": "Pass default values for the form fields below on every fire"
+              },
+              {
+                "label": "No Input",
+                "name": "none",
+                "description": "Fire with no input."
+              }
+            ],
+            "default": "text",
+            "show": {
+              "startInputType": "scheduleInput"
+            }
+          },
+          {
+            "label": "Default Input",
+            "name": "scheduleDefaultInput",
+            "type": "string",
+            "placeholder": "Run the daily report",
+            "description": "Default question/input passed to the flow when it is triggered by the scheduler.",
+            "rows": 4,
+            "show": {
+              "startInputType": "scheduleInput",
+              "scheduleInputMode": "text"
+            }
+          },
+          {
+            "label": "Form Fields",
+            "name": "scheduleFormInputTypes",
+            "description": "Define the typed fields this scheduled flow receives on each fire.",
+            "type": "array",
+            "show": {
+              "startInputType": "scheduleInput",
+              "scheduleInputMode": "form"
+            },
+            "array": [
+              {
+                "label": "Type",
+                "name": "type",
+                "type": "options",
+                "options": [
+                  {
+                    "label": "String",
+                    "name": "string"
+                  },
+                  {
+                    "label": "Number",
+                    "name": "number"
+                  },
+                  {
+                    "label": "Boolean",
+                    "name": "boolean"
+                  },
+                  {
+                    "label": "Options",
+                    "name": "options"
+                  }
+                ],
+                "default": "string"
+              },
+              {
+                "label": "Label",
+                "name": "label",
+                "type": "string",
+                "placeholder": "Label for the input"
+              },
+              {
+                "label": "Variable Name",
+                "name": "name",
+                "type": "string",
+                "placeholder": "Variable name for the input (must be camel case)",
+                "description": "Variable name must be camel case. For example: firstName, lastName, etc."
+              },
+              {
+                "label": "Add Options",
+                "name": "addOptions",
+                "type": "array",
+                "show": {
+                  "scheduleFormInputTypes[$index].type": "options"
+                },
+                "array": [
+                  {
+                    "label": "Option",
+                    "name": "option",
+                    "type": "string"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "label": "Default Form Values",
+            "name": "scheduleFormDefaults",
+            "type": "json",
+            "description": "Default values for the form fields above, as a JSON object keyed by variable name. Example: { \"team\": \"engineering\", \"metric\": \"p95\" }",
+            "optional": true,
+            "show": {
+              "startInputType": "scheduleInput",
+              "scheduleInputMode": "form"
+            }
+          },
+          {
+            "label": "Ephemeral Memory",
+            "name": "startEphemeralMemory",
+            "type": "boolean",
+            "description": "Start fresh for every execution without past chat history",
+            "optional": true
+          },
+          {
+            "label": "Flow State",
+            "name": "startState",
+            "description": "Runtime state during the execution of the workflow",
+            "type": "array",
+            "optional": true,
+            "array": [
+              {
+                "label": "Key",
+                "name": "key",
+                "type": "string",
+                "placeholder": "Foo"
+              },
+              {
+                "label": "Value",
+                "name": "value",
+                "type": "string",
+                "placeholder": "Bar",
+                "optional": true
+              }
+            ]
+          },
+          {
+            "label": "Persist State",
+            "name": "startPersistState",
+            "type": "boolean",
+            "description": "Persist the state in the same session",
+            "optional": true
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "startInputType": "chatInput"
+        },
+        "outputAnchors": [],
+        "outputs": {},
+        "selected": false
+      },
+      "width": 300,
+      "height": 100,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 0,
+        "y": 0
+      },
+      "dragging": false
+    },
+    {
+      "id": "customFunctionAgentflow_0",
+      "position": {
+        "x": 300,
+        "y": 0
+      },
+      "type": "agentFlow",
+      "data": {
+        "id": "customFunctionAgentflow_0",
+        "label": "Resolve Movie & Scope",
+        "version": 1.1,
+        "name": "customFunctionAgentflow",
+        "type": "CustomFunction",
+        "color": "#E4B7FF",
+        "baseClasses": [
+          "CustomFunction"
+        ],
+        "category": "Agent Flows",
+        "description": "Execute custom function",
+        "inputParams": [
+          {
+            "label": "Input Variables",
+            "name": "customFunctionInputVariables",
+            "description": "Input variables can be used in the function with prefix $. For example: $foo",
+            "type": "array",
+            "optional": true,
+            "acceptVariable": true,
+            "array": [
+              {
+                "label": "Variable Name",
+                "name": "variableName",
+                "type": "string"
+              },
+              {
+                "label": "Variable Value",
+                "name": "variableValue",
+                "type": "string",
+                "acceptVariable": true
+              }
+            ]
+          },
+          {
+            "label": "Javascript Function",
+            "name": "customFunctionJavascriptFunction",
+            "type": "code",
+            "codeExample": "/*\n* You can use any libraries imported in Flowise\n* You can use properties specified in Input Variables with the prefix $. For example: $foo\n* You can get default flow config: $flow.sessionId, $flow.chatId, $flow.chatflowId, $flow.input, $flow.state\n* You can get global variables: $vars.<variable-name>\n* Must return a string value at the end of function\n*/\n\nconst fetch = require('node-fetch');\nconst url = 'https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current_weather=true';\nconst options = {\n    method: 'GET',\n    headers: {\n        'Content-Type': 'application/json'\n    }\n};\ntry {\n    const response = await fetch(url, options);\n    const text = await response.text();\n    return text;\n} catch (error) {\n    console.error(error);\n    return '';\n}",
+            "description": "The function to execute. Must return a string or an object that can be converted to a string."
+          },
+          {
+            "label": "Update Flow State",
+            "name": "customFunctionUpdateState",
+            "description": "Update runtime state during the execution of the workflow",
+            "type": "array",
+            "optional": true,
+            "acceptVariable": true,
+            "array": [
+              {
+                "label": "Key",
+                "name": "key",
+                "type": "asyncOptions",
+                "loadMethod": "listRuntimeStateKeys"
+              },
+              {
+                "label": "Value",
+                "name": "value",
+                "type": "string",
+                "acceptVariable": true,
+                "acceptNodeOutputAsVariable": true
+              }
+            ]
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "customFunctionInputVariables": [
+            {
+              "variableName": "insforgeUrl",
+              "variableValue": "<set at install time>"
+            },
+            {
+              "variableName": "insforgeApiKey",
+              "variableValue": "<set at install time>"
+            }
+          ],
+          "customFunctionJavascriptFunction": "const raw = ($flow.input || '').toString();\nconst force = /--force\\b/i.test(raw);\n\n// ------------------------------------------------------------ build options\n//\n// How hard the world builder should look at the room. The defaults are what it\n// has always done - no exploration at all - so every existing caller (\"A1S2\",\n// \"A1S2 --force\") behaves exactly as before and nothing had to be changed to\n// keep working.\n//\n// Why this matters: with exploration off, WorldStereo only expands along the\n// base trajectory set. It never travels to the corners, so no view ever\n// constrains the gaussians there and a camera placed in one renders smear. The\n// A1S2 rebuild with nav + anchor scans on took the fused geometry from 1 MB to\n// 20 MB and came back sharp from every bearing.\n//\n// Read as flags so the whole contract stays a string, like every other flow\n// here: \"A1S2 --force --quality detailed --anchors 3 --max-traj 20\".\nconst numFlag = (name, fallback) => {\n  const m = new RegExp('--' + name + '[= ]+(\\\\d+)', 'i').exec(raw);\n  return m ? parseInt(m[1], 10) : fallback;\n};\nconst qualityMatch = /--quality[= ]+(fast|standard|detailed|exhaustive)/i.exec(raw);\nconst quality = qualityMatch ? qualityMatch[1].toLowerCase() : 'standard';\n\n// Presets, in what they cost rather than what they promise. Trajectories are\n// the expensive axis: every one is a run of WorldStereo generations plus the\n// WorldMirror reconstructions that follow, so max_trajectories is the dial that\n// decides whether this is twenty minutes or three hours.\nconst PRESETS = {\n  fast:       { nav: false, detail: false, anchors: 0, maxTraj: 4,  steps: 5001 },\n  standard:   { nav: true,  detail: false, anchors: 3, maxTraj: 14, steps: 5001 },\n  detailed:   { nav: true,  detail: true,  anchors: 4, maxTraj: 28, steps: 9001 },\n  exhaustive: { nav: true,  detail: true,  anchors: 6, maxTraj: 0,  steps: 15001 }\n};\nconst preset = PRESETS[quality] || PRESETS.standard;\n\n// Anything named explicitly wins over the preset, so \"--quality fast --anchors 5\"\n// means what it says instead of silently keeping the preset's 0.\n// \"--resume\" continues training the scene's EXISTING world from the checkpoint\n// its last build saved, instead of training from scratch. Trajectories that\n// already exist are reused (that cache is by folder), new ones are expanded,\n// and the trainer picks up where it stopped - same coordinate frame, so the\n// floor plan and every shot camera placed in the old splat still hold. With\n// --resume, --steps means how many MORE steps (default 2000), not the total.\nconst resume = /--resume\\b/i.test(raw);\n\nconst build = {\n  quality,\n  resume,\n  navTraj: /--no-nav\\b/i.test(raw) ? false : /--nav\\b/i.test(raw) ? true : preset.nav,\n  detailTraj: /--no-detail\\b/i.test(raw) ? false : /--detail\\b/i.test(raw) ? true : preset.detail,\n  anchors: numFlag('anchors', preset.anchors),\n  maxTraj: numFlag('max-traj', preset.maxTraj),\n  steps: numFlag('steps', resume ? 2001 : preset.steps),\n  detailObjects: numFlag('detail-objects', 6),\n  seed: numFlag('seed', 1),\n  // \"--workspace <name>\" builds into an EXISTING workspace folder instead of\n  // the derived Act/Scene/location name. Needed when a world was explored\n  // under another name and its trajectories, floor plan and cameras all live\n  // there: rebuilding under the derived name would start a different world\n  // from scratch and leave every camera pointing at the old one.\n  workspace: (/--workspace[= ]+([A-Za-z0-9_-]+)/i.exec(raw) || [])[1] || null,\n  // \"--panorama <path under C:/ComfyUI2>\" builds from THAT image instead of\n  // the scene's newest panorama record. A world's trajectory cache is keyed\n  // on the panorama it was built from; if the record has since been replaced\n  // (A1S2's was re-uploaded after its world was explored) the newest record\n  // is a different picture, the cache misses, and the rebuild silently makes\n  // a different world. The workspace's own panorama.png is the truth for it.\n  panorama: (/--panorama[= ]+(\\S+)/i.exec(raw) || [])[1] || null\n};\n\nlet act, sceneNumber;\nconst actSceneMatch = /^A(\\d+)S(\\d+)/i.exec(raw.trim());\nif (actSceneMatch) {\n  act = parseInt(actSceneMatch[1], 10);\n  sceneNumber = parseInt(actSceneMatch[2], 10);\n} else {\n  const bare = /(\\d+)/.exec(raw.replace(/--\\w+\\s*/gi, ''));\n  sceneNumber = bare ? parseInt(bare[1], 10) : null;\n}\nif (!sceneNumber) {\n  return { error: 'Could not parse a scene number from input. Expected \"A1S2\" or a bare scene number like \"2\", optionally with --force.' };\n}\n\nconst axios = require('axios');\nconst insforgeUrl = $insforgeUrl;\nconst insforgeApiKey = $insforgeApiKey;\nconst authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };\n\nconst activeRes = await axios.get(`${insforgeUrl}/api/database/records/movies`, {\n  params: { is_active: 'eq.true', select: 'id,bucket_name,title,slug' },\n  headers: authHeaders\n});\nconst activeMovies = activeRes.data || [];\nif (activeMovies.length === 0) {\n  return { error: 'No active movie set. Select one in the pipeline-admin app first.' };\n}\nif (activeMovies.length > 1) {\n  return { error: `Found ${activeMovies.length} active movies - this should be impossible.` };\n}\nconst movieId = activeMovies[0].id;\nconst bucketName = activeMovies[0].bucket_name;\nconst movieTitle = activeMovies[0].title;\nconst movieSlug = activeMovies[0].slug;\n\nif (act == null) {\n  const sceneRes = await axios.get(`${insforgeUrl}/api/database/records/scenes`, {\n    params: { movie_id: `eq.${movieId}`, scene_number: `eq.${sceneNumber}`, select: 'act_number', limit: 1 },\n    headers: authHeaders\n  });\n  const scene = (sceneRes.data || [])[0];\n  if (!scene) {\n    return { error: `No scene row found with scene_number ${sceneNumber} for this movie in the scenes table. Add it first, or check the scene number.` };\n  }\n  act = scene.act_number;\n}\n\n// World Builder reconstructs FROM a scene's own panorama - it can't run\n// before Panoramic-Generator has produced one.\nconst panoRes = await axios.get(`${insforgeUrl}/api/database/records/scene_panos`, {\n  params: { movie_id: `eq.${movieId}`, act_number: `eq.${act}`, scene_number: `eq.${sceneNumber}`, select: 'image_path' },\n  headers: authHeaders\n});\nconst pano = build.panorama ? { image_path: build.panorama } : (panoRes.data || [])[0];\nif (!pano) {\n  return { error: `No panorama exists yet for A${act}S${sceneNumber}. Run 4-Panoramic-Generator for this scene first.` };\n}\n\n// Location name for the workspace folder now comes from the scenes table\n// directly, instead of being re-derived from a beat's location field.\nconst sceneRes2 = await axios.get(`${insforgeUrl}/api/database/records/scenes`, {\n  params: { movie_id: `eq.${movieId}`, act_number: `eq.${act}`, scene_number: `eq.${sceneNumber}`, select: 'location_name', limit: 1 },\n  headers: authHeaders\n});\nconst locationRaw = ((sceneRes2.data || [])[0] || {}).location_name || '';\nconst locationSlug = locationRaw\n  .replace(/[^A-Za-z0-9]+/g, ' ')\n  .split(/\\s+/)\n  .filter(Boolean)\n  .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())\n  .join('') || 'Unknown';\n\nreturn { movieId, movieTitle, movieSlug, bucketName, act, sceneNumber, force, panoImagePath: pano.image_path, locationSlug, build };\n"
+        },
+        "outputAnchors": [],
+        "outputs": {},
+        "selected": false
+      },
+      "width": 300,
+      "height": 100,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 300,
+        "y": 0
+      },
+      "dragging": false
+    },
+    {
+      "id": "customFunctionAgentflow_1",
+      "position": {
+        "x": 700,
+        "y": 0
+      },
+      "type": "agentFlow",
+      "data": {
+        "id": "customFunctionAgentflow_1",
+        "label": "Build 3D World",
+        "version": 1.1,
+        "name": "customFunctionAgentflow",
+        "type": "CustomFunction",
+        "color": "#E4B7FF",
+        "baseClasses": [
+          "CustomFunction"
+        ],
+        "category": "Agent Flows",
+        "description": "Execute custom function",
+        "inputParams": [
+          {
+            "label": "Input Variables",
+            "name": "customFunctionInputVariables",
+            "description": "Input variables can be used in the function with prefix $. For example: $foo",
+            "type": "array",
+            "optional": true,
+            "acceptVariable": true,
+            "array": [
+              {
+                "label": "Variable Name",
+                "name": "variableName",
+                "type": "string"
+              },
+              {
+                "label": "Variable Value",
+                "name": "variableValue",
+                "type": "string",
+                "acceptVariable": true
+              }
+            ]
+          },
+          {
+            "label": "Javascript Function",
+            "name": "customFunctionJavascriptFunction",
+            "type": "code",
+            "codeExample": "/*\n* You can use any libraries imported in Flowise\n* You can use properties specified in Input Variables with the prefix $. For example: $foo\n* You can get default flow config: $flow.sessionId, $flow.chatId, $flow.chatflowId, $flow.input, $flow.state\n* You can get global variables: $vars.<variable-name>\n* Must return a string value at the end of function\n*/\n\nconst fetch = require('node-fetch');\nconst url = 'https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current_weather=true';\nconst options = {\n    method: 'GET',\n    headers: {\n        'Content-Type': 'application/json'\n    }\n};\ntry {\n    const response = await fetch(url, options);\n    const text = await response.text();\n    return text;\n} catch (error) {\n    console.error(error);\n    return '';\n}",
+            "description": "The function to execute. Must return a string or an object that can be converted to a string."
+          },
+          {
+            "label": "Update Flow State",
+            "name": "customFunctionUpdateState",
+            "description": "Update runtime state during the execution of the workflow",
+            "type": "array",
+            "optional": true,
+            "acceptVariable": true,
+            "array": [
+              {
+                "label": "Key",
+                "name": "key",
+                "type": "asyncOptions",
+                "loadMethod": "listRuntimeStateKeys"
+              },
+              {
+                "label": "Value",
+                "name": "value",
+                "type": "string",
+                "acceptVariable": true,
+                "acceptNodeOutputAsVariable": true
+              }
+            ]
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "customFunctionInputVariables": [
+            {
+              "variableName": "resolveOutput",
+              "variableValue": "{{ customFunctionAgentflow_0.output.content }}"
+            },
+            {
+              "variableName": "insforgeUrl",
+              "variableValue": "<set at install time>"
+            },
+            {
+              "variableName": "insforgeApiKey",
+              "variableValue": "<set at install time>"
+            },
+            {
+              "variableName": "comfyUrl",
+              "variableValue": "<set at install time>"
+            }
+          ],
+          "customFunctionJavascriptFunction": "const resolved = JSON.parse($resolveOutput);\nif (resolved.error) return { action: 'error', reason: resolved.error };\n\nconst { movieId, movieSlug, act, sceneNumber, force, panoImagePath, locationSlug } = resolved;\n\n// How hard to look at the room. The resolver turns --quality and the individual\n// flags into this; absent it (an older caller, a hand-run) the defaults are the\n// behaviour this flow has always had, so nothing changes for anyone who does\n// not ask for more.\nconst build = resolved.build || {\n  quality: 'legacy', navTraj: false, detailTraj: false, anchors: 0,\n  maxTraj: 0, steps: 5001, detailObjects: 6, seed: 1\n};\n\nconst axios = require('axios');\nconst insforgeUrl = $insforgeUrl;\nconst insforgeApiKey = $insforgeApiKey;\nconst comfyUrl = $comfyUrl;\nconst authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };\nconst sleep = (ms) => new Promise((res) => setTimeout(res, ms));\n\nconst waitFor = async (pid, maxTries, everyMs) => {\n  for (let k = 0; k < maxTries; k++) {\n    await sleep(everyMs);\n    try {\n      const h = await axios.get(comfyUrl + '/history/' + pid);\n      const rec = h.data && h.data[pid];\n      if (rec && rec.status && rec.status.status_str) return rec;\n    } catch (e) {}\n  }\n  return null;\n};\n\nasync function upsertSplat(patch) {\n  const existingRes = await axios.get(`${insforgeUrl}/api/database/records/scene_splats`, {\n    params: { movie_id: `eq.${movieId}`, act_number: `eq.${act}`, scene_number: `eq.${sceneNumber}`, select: 'id' },\n    headers: authHeaders\n  });\n  const existing = (existingRes.data || [])[0];\n  if (existing) {\n    await axios.patch(`${insforgeUrl}/api/database/records/scene_splats`, patch, {\n      params: { id: `eq.${existing.id}` },\n      headers: { ...authHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' }\n    });\n  } else {\n    await axios.post(`${insforgeUrl}/api/database/records/scene_splats`, { movie_id: movieId, act_number: act, scene_number: sceneNumber, ...patch }, {\n      headers: { ...authHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' }\n    });\n  }\n}\n\n// An explicit --workspace wins: it names the folder the trajectories, floor\n// plan and cameras were made in, and the point of a rebuild is to improve\n// THAT world, not to start another beside it.\nconst workspaceName = (build.workspace && String(build.workspace)) || ('Act' + act + 'Scene' + sceneNumber + locationSlug);\nconst rootDir = 'C:/ComfyUI2/output/' + movieSlug + '/hyworld2_worldgen';\nconst finalPlyName = workspaceName + '_point_cloud_5000.ply';\nconst plyDir = movieSlug + '/hyworld2_worldgen/' + workspaceName + '/gs_results/ply';\nconst finalPlyPath = 'C:/ComfyUI2/output/' + plyDir + '/' + finalPlyName;\n\nconst existingRes = await axios.get(`${insforgeUrl}/api/database/records/scene_splats`, {\n  params: { movie_id: `eq.${movieId}`, act_number: `eq.${act}`, scene_number: `eq.${sceneNumber}`, select: 'id,ply_path,workspace_name' },\n  headers: authHeaders\n});\nconst existing = (existingRes.data || [])[0];\n// --resume continues the recorded world. It needs one to continue, and it\n// overwrites that world's ply with the continued one, so it is treated like\n// --force from here on: the old ply is backed up first, never destroyed.\nconst resume = Boolean(build.resume);\n// Without --workspace the name is derived, and continuing a derived name that\n// is not the recorded world would train the wrong folder (or none). With an\n// explicit --workspace the operator has named the world; the trainer itself\n// refuses if that folder holds no checkpoint.\nif (resume && !build.workspace && !existing) {\n  return { action: 'error', reason: `--resume needs an existing world for A${act}S${sceneNumber} and there is none. Build it first, or name the workspace with --workspace.`, sceneNumber, act };\n}\nif (resume && !build.workspace && existing && existing.workspace_name && existing.workspace_name !== workspaceName) {\n  return { action: 'error', reason: `--resume would continue workspace ${workspaceName} but the recorded world is ${existing.workspace_name}. Pass --workspace ${existing.workspace_name}.`, sceneNumber, act };\n}\nif (existing && !force && !resume) {\n  return { action: 'skipped', reason: 'splat already exists for this scene - use --force to rebuild (existing .ply is backed up first, never destroyed)', sceneNumber, act, plyPath: existing.ply_path };\n}\n\nlet backupPath = null;\n// A backup protects the file this build will OVERWRITE. When the build targets\n// a different workspace than the recorded splat lives in (--workspace), that\n// file is not touched at all, so renaming it away is not protection - it is\n// moving another world's ply into this one's folder. Skip it.\nconst sameWorkspace = !existing || !existing.workspace_name || existing.workspace_name === workspaceName;\nif (existing && (force || resume) && sameWorkspace) {\n  backupPath = finalPlyPath.replace(/\\.ply$/, '_backup_' + Date.now() + '.ply');\n  const backupGraph = { '1': { class_type: 'RenameFile', inputs: { source_path: existing.ply_path, dest_path: backupPath } } };\n  const br = await axios.post(comfyUrl + '/prompt', { prompt: backupGraph });\n  const bpid = br.data && br.data.prompt_id;\n  if (!bpid) return { action: 'error', reason: 'Forced retrain aborted: could not enqueue backup of the existing splat. Nothing was touched.' };\n  const brec = await waitFor(bpid, 600, 2000);\n  if (!brec || brec.status.status_str === 'error') {\n    return { action: 'error', reason: 'Forced retrain aborted: backup of existing splat failed or did not finish within 20 minutes (ComfyUI busy?). Nothing was overwritten.', details: brec && brec.status && brec.status.messages };\n  }\n}\n\n// Which panorama this world was built from. A workspace's trajectory cache is\n// keyed on it, so building into an EXISTING workspace (--workspace, which is\n// what a resume always does) has to use that workspace's own panorama.png -\n// the scene's record may since have been replaced by a different picture, and\n// then every cached trajectory misses and the build quietly makes a new world.\n// An explicit --panorama still wins.\nconst panoRel = build.panorama || !build.workspace\n  ? panoImagePath\n  : 'output/' + movieSlug + '/hyworld2_worldgen/' + workspaceName + '/panorama.png';\nconst srcPanoAbs = 'C:/ComfyUI2/' + panoRel;\nconst flatPanoName = movieSlug + '_scene' + sceneNumber + '_panorama.png';\nconst copyGraph = {\n  '1': { class_type: 'JWImageLoadRGB', inputs: { path: srcPanoAbs } },\n  '2': { class_type: 'JWImageSaveToPath', inputs: { image: ['1', 0], path: 'C:/ComfyUI2/input/' + flatPanoName, overwrite: 'true' } }\n};\nconst cr = await axios.post(comfyUrl + '/prompt', { prompt: copyGraph });\nconst cpid = cr.data && cr.data.prompt_id;\nif (!cpid) return { action: 'error', reason: 'Stage failed: could not enqueue copy of the panorama into the flat input root.' };\nconst crec = await waitFor(cpid, 30, 2000);\nif (!crec || crec.status.status_str === 'error') {\n  return { action: 'error', reason: `Stage failed: copy graph errored - does ${srcPanoAbs} actually exist?`, details: crec && crec.status && crec.status.messages };\n}\n\nconst wf = {\n  '45': { class_type: 'HYWorld2MemoryAlignment', inputs: { worldmirror_batch: ['820', 3], raw_splats: ['835', 5], ply_data: ['835', 0], mode: 'align_and_export', downsampled_pts: 2000000, debug_mode: false } },\n  '822': { class_type: 'HYWorld2Workspace', inputs: { panorama: ['1', 0], workspace_name: workspaceName, root_dir: rootDir, scene_dir: '', scene_type: 'unknown', result_name: 'worldstereo-memory-dmd' } },\n  '830': { class_type: 'HYWorld2MemoryBank', inputs: { workspace: ['822', 0], trajectory_set: ['834', 0], image_width: 0, image_height: 0, nframe: 0, max_reference: 8, align_nframe: 8, downsampled_pts: 2000000, kb_anomaly_percentile: 90 } },\n  '817': { class_type: 'VNCCS_LoadWorldStereoLightModel', inputs: { model: 'Memory DMD Light INT4', offload_mode: 'sequential_cpu_offload', device: 'cuda' } },\n  '834': { class_type: 'HYWorld2Trajectories', inputs: { workspace: ['822', 0], seed: build.seed, scene_type: 'auto', additional_nav_traj: build.navTraj, extreme_detail_traj: build.detailTraj, detail_object_limit: build.detailObjects, qwen_model_id: 'Qwen3-VL-4B-Instruct', qwen_quantization: '4-bit (VRAM-friendly)', qwen_max_image_edge: 768, apply_anchor_scan: build.anchors > 0, anchor_scan_topk: Math.max(1, build.anchors) } },\n  '820': { class_type: 'HYWorld2PrepareWorldMirrorBatch', inputs: { memory_bank: ['833', 0] } },\n  '835': { class_type: 'VNCCS_WorldMirrorV2_3D', inputs: { model: ['10', 0], images: ['820', 0], camera_intrinsics: ['820', 2], camera_poses: ['820', 1], target_size: 840, offload_scheme: 'none', low_vram_mode: true, apply_sky_mask: false, debug_log: false, enable_splat_upsample: true, splat_upsample_scale: 0.003, splat_upsample_scale_mode: 'depth_adaptive', splat_upsample_depth_scale_strength: 1, splat_upsample_depth_scale_max: 3, splat_upsample_voxel_prune: true, splat_upsample_voxel_size: 0.0015, splat_upsample_max_points: 5000000, splat_upsample_cap_far_bias: 1.75, splat_camera_source: 'camera_inputs' } },\n  '833': { class_type: 'HYWorld2WorldExpansion', inputs: { workspace: ['822', 0], memory_bank: ['830', 0], trajectory_set: ['834', 0], model: ['817', 0], qwen_model_id: 'Qwen3-VL-4B-Instruct', qwen_quantization: '4-bit (VRAM-friendly)', qwen_attention_mode: 'auto', qwen_max_image_edge: 768, qwen_max_new_tokens: 512, qwen_keep_model_loaded: true, qwen_frame_count: 4, seed: build.seed, max_trajectories: build.maxTraj } },\n  '10': { class_type: 'VNCCS_LoadWorldMirrorV2Model', inputs: { device: 'cuda', precision: 'fp8' } },\n  '13': { class_type: 'HYWorld2GSData', inputs: { workspace: ['822', 0], memory_bank: ['45', 0], mode: 'build', result_name: 'worldstereo-memory-dmd', out_name: 'gs_data', save_normal: true, split_sky: true, split_align: false } },\n  '837': { class_type: 'HYWorld2Train3DGS', inputs: { gs_data: ['13', 0], train_sampling_preset: 'standard', batch_size: 1, patch_size: 'Full', max_steps: build.steps, save_steps: String(build.steps), eval_steps: String(build.steps), ply_steps: String(build.steps), downsample_pts_num: 2000001, save_ply: true, disable_video: true, disable_viewer: true, depth_loss: true, normal_loss: true, sky_depth_from_pcd: false, use_scale_regularization: true, use_mask_gaussian: true, mask_export_stochastic: true, mask_export_anchor_protection: false, use_anchor_protection: true, do_prune: false, prune_opacity_threshold: 0.01, antialiased: true, normalize_world_space: true, export_mesh: true, strategy_refine_start_iter: 150, strategy_refine_stop_iter: 750, strategy_refine_every: 100, strategy_refine_scale2d_stop_iter: 750, strategy_reset_every: 99990, strategy_grow_grad2d: 0.0001, strategy_prune_scale3d: 0.1, convert_ply_to_worldmirror_preview_basis: false, resume_ckpt: resume ? 'latest' : '' } },\n  '1': { class_type: 'LoadImage', inputs: { image: flatPanoName } },\n  '15': { class_type: 'VNCCS_BackgroundPreview', inputs: { ply_path: ['837', 0], camera_poses: ['837', 1], camera_intrinsics: ['837', 2], coordinate_basis: 'hyworld2_worldgen' } },\n  '900': { class_type: 'RenameFile', inputs: { source_path: ['837', 0], dest_path: finalPlyPath } }\n};\n\nawait axios.post(comfyUrl + '/free', { unload_models: true, free_memory: true });\nconst r = await axios.post(comfyUrl + '/prompt', { prompt: wf });\nconst pid = r.data && r.data.prompt_id;\nif (!pid) return { action: 'error', reason: 'World build enqueue failed', details: (r.data && r.data.node_errors) || r.data };\n\n// A build is 50 minutes on A1S2 and hours at higher quality. Returning\n// 'pending' at 25 minutes left every longer build unrecorded: the ply was\n// renamed in place but scene_splats never learned of it. Wait as long as a\n// build can take; 'pending' is the fallback, not the normal path.\nconst rec = await waitFor(pid, 2880, 5000);\nif (!rec) return { action: 'pending', reason: 'World build still running past the poll window', promptId: pid };\nif (rec.status.status_str === 'error') return { action: 'error', reason: 'World build failed in ComfyUI', details: rec.status.messages, promptId: pid };\n\nawait upsertSplat({ workspace_name: workspaceName, ply_path: finalPlyPath, backup_path: backupPath, prompt_id: pid });\n// Floor plans render their plates from the ply they recorded. A plan made on\n// this world must follow the world to its new file, or the Camera tab keeps\n// rendering the previous training. (A resume keeps the frame, so the plan's\n// landmarks stay valid; a from-scratch rebuild changes the frame and the plan\n// needs a new survey, but pointing it at the live ply is still right.)\nawait axios.patch(`${insforgeUrl}/api/database/records/scene_floor_plans`, { ply_path: finalPlyPath }, {\n  params: { movie_id: `eq.${movieId}`, act_number: `eq.${act}`, scene_number: `eq.${sceneNumber}`, world_name: `eq.${workspaceName}` },\n  headers: { ...authHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' }\n});\n\nreturn {\n  action: resume ? 'resumed' : force && backupPath ? 'rebuilt' : 'generated',\n  sceneNumber,\n  act,\n  workspaceName,\n  plyPath: finalPlyPath,\n  backupPath,\n  promptId: pid\n};\n"
+        },
+        "outputAnchors": [],
+        "outputs": {},
+        "selected": false
+      },
+      "width": 300,
+      "height": 100,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 700,
+        "y": 0
+      },
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "startAgentflow_0",
+      "sourceHandle": "startAgentflow_0-output-startAgentflow",
+      "target": "customFunctionAgentflow_0",
+      "targetHandle": "customFunctionAgentflow_0-input-customFunction",
+      "type": "agentFlow",
+      "id": "startAgentflow_0-customFunctionAgentflow_0"
+    },
+    {
+      "source": "customFunctionAgentflow_0",
+      "sourceHandle": "customFunctionAgentflow_0-output-customFunction",
+      "target": "customFunctionAgentflow_1",
+      "targetHandle": "customFunctionAgentflow_1-input-customFunction",
+      "type": "agentFlow",
+      "id": "customFunctionAgentflow_0-customFunctionAgentflow_1"
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 0.7
+  }
+}

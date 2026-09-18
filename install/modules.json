@@ -1,0 +1,809 @@
+{
+  "$comment": [
+    "The module map. One entry per installable feature. The installers read this;",
+    "nothing else decides what a module owns.",
+    "",
+    "tables  - created by the module schema.sql, dropped by its uninstall",
+    "flows   - {source, name, env}: the node file to build from, the name to",
+    "          register it under, and the admin .env variable to write its id",
+    "          into. env null means the flow is not triggered from the browser.",
+    "          Two entries may share a source: one node can serve two flows.",
+    "panels  - admin source files copied in, and the tabs they contribute",
+    "packs   - ComfyUI custom node packs that must be present",
+    "models  - what the module loads on the render host",
+    "linksTo - modules this one has an optional foreign key into. Installing one of them re-applies this module's schema so the link is added then.",
+    "modelFiles - the model files this module's graphs load, by name. Read out of the flow sources, so it cannot drift from what they ask for. The installer looks for each under <ComfyUI>/models and says which are missing.",
+    "needs   - modules that must be installed first"
+  ],
+  "core": {
+    "title": "Core",
+    "summary": "The database, the Flowise instance, the render host and the admin shell. Installs no feature tabs: it is what every module is installed into.",
+    "tables": [
+      "movies",
+      "prompt_log",
+      "movie_frames",
+      "movie_reference_images",
+      "installed_modules",
+      "app_settings"
+    ],
+    "flows": [
+      {
+        "source": "_copy_movie_node.js",
+        "name": "41-Copy-Movie",
+        "env": "VITE_COPY_MOVIE_ID"
+      },
+      {
+        "source": "_delete_movie_node.js",
+        "name": "15-Delete-Movie",
+        "env": "VITE_DELETE_MOVIE_ID"
+      },
+      {
+        "source": "_delete_asset_node.js",
+        "name": "29-Delete-Asset",
+        "env": "VITE_DELETE_ASSET_ID"
+      },
+      {
+        "source": "_install_module_node.js",
+        "name": "47-Install-Module",
+        "env": "VITE_INSTALL_MODULE_ID"
+      }
+    ],
+    "panels": [],
+    "packs": [],
+    "models": [],
+    "needs": [],
+    "sharedUi": [
+      "ui/Select.tsx",
+      "ui/ImageSelect.tsx",
+      "ui/ImagePreview.tsx",
+      "ui/ThemeToggle.tsx",
+      "ui/LoraPicker.tsx",
+      "ui/WriterChat.tsx",
+      "ui/FramePicker.tsx",
+      "ui/ClipThumbPicker.tsx",
+      "ui/PaintFilters.tsx",
+      "insforge.ts",
+      "session.ts",
+      "flowise.ts",
+      "storage.ts",
+      "frames.ts",
+      "imageSources.ts",
+      "timing.ts",
+      "dialogue.ts",
+      "ComfyJobsPanel.tsx",
+      "assets.ts",
+      "grade.ts",
+      "lut.ts",
+      "ui/GradeControl.tsx",
+      "ui/FaceFixControl.tsx",
+      "ui/LightControl.tsx",
+      "palettes.ts",
+      "lighting.ts",
+      "ui/SplatViewer.tsx",
+      "ui/PanoViewer.tsx",
+      "cameraIntent.ts",
+      "splatOrientation.ts"
+    ]
+  },
+  "screenplay": {
+    "title": "Screenplay & structure",
+    "summary": "Write or import a script, break it into acts, scenes and beats, and keep that structure editable. Everything downstream hangs off these rows.",
+    "tables": [
+      "scenes",
+      "beats",
+      "screenplay_chunks",
+      "documents"
+    ],
+    "flows": [
+      {
+        "source": "_beat_generator",
+        "name": "1-Beat-Generator",
+        "env": null
+      },
+      {
+        "source": "_scene_import_node.js",
+        "name": "13-Scene-Import",
+        "env": "VITE_SCENE_IMPORT_ID"
+      },
+      {
+        "source": "_screenplay_assist_node.js",
+        "name": "14-Screenplay-Assist",
+        "env": "VITE_SCREENPLAY_ASSIST_ID"
+      },
+      {
+        "source": "_screenplay_writer_node.js",
+        "name": "22-Screenplay-Writer",
+        "env": "VITE_SCREENPLAY_WRITER_ID"
+      },
+      {
+        "source": "_import_breakdown_node.js",
+        "name": "43-Import-Breakdown",
+        "env": "VITE_IMPORT_BREAKDOWN_ID"
+      },
+      {
+        "source": "_shot_breakdown_node.js",
+        "name": "42-Shot-Breakdown",
+        "env": "VITE_SHOT_BREAKDOWN_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "screenplay",
+        "files": [
+          "screenplay/"
+        ]
+      },
+      {
+        "tab": "documents",
+        "files": [
+          "DocumentsPanel.tsx"
+        ]
+      },
+      {
+        "tab": "beats",
+        "files": [
+          "BeatsPanel.tsx"
+        ]
+      }
+    ],
+    "packs": [],
+    "models": [
+      "ollama: a text model for parsing and drafting"
+    ],
+    "needs": [
+      "core"
+    ]
+  },
+  "characters": {
+    "title": "Characters & props",
+    "summary": "Every person and object that has to look the same in every shot: reference sheets, wardrobe, and the identity references the image and video models are given.",
+    "tables": [
+      "characters",
+      "character_images",
+      "movie_props"
+    ],
+    "flows": [
+      {
+        "source": "_chargen_resolver_node.js",
+        "name": "3-Character-Generator",
+        "env": "VITE_CHARACTER_GENERATOR_ID"
+      },
+      {
+        "source": "_character_bible_import_node.js",
+        "name": "12-Character-Bible-Import",
+        "env": "VITE_CHARACTER_BIBLE_IMPORT_ID"
+      },
+      {
+        "source": "_character_bible_writer_node.js",
+        "name": "23-Character-Bible-Writer",
+        "env": "VITE_CHARACTER_BIBLE_WRITER_ID"
+      },
+      {
+        "source": "_character_qa_shots_node.js",
+        "name": "25-Character-QA-Shots",
+        "env": "VITE_CHARACTER_QA_SHOTS_ID"
+      },
+      {
+        "source": "_character_wardrobe_node.js",
+        "name": "40-Character-Wardrobe",
+        "env": "VITE_CHARACTER_WARDROBE_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "characters",
+        "files": [
+          "CharactersPanel.tsx"
+        ]
+      },
+      {
+        "tab": "props",
+        "files": [
+          "PropsPanel.tsx"
+        ]
+      }
+    ],
+    "packs": [
+      "comfyui_segment_anything"
+    ],
+    "models": [
+      "diffusion_models: the image generator",
+      "loras: per-character identity LoRAs (trained, optional)"
+    ],
+    "needs": [
+      "core",
+      "screenplay"
+    ],
+    "modelFiles": [
+      "flux-2-klein-9b.safetensors",
+      "flux2-vae.safetensors",
+      "qwen_3_8b_fp8mixed.safetensors"
+    ]
+  },
+  "imaging": {
+    "title": "Image generation & editing",
+    "summary": "Compose or correct a still from references and a description. Also the cleanup pass that turns a rough render into a usable picture.",
+    "tables": [
+      "image_edits",
+      "qwen_cleanups"
+    ],
+    "flows": [
+      {
+        "source": "_image_edit_node.js",
+        "name": "26-Image-Edit",
+        "env": "VITE_IMAGE_EDIT_ID"
+      },
+      {
+        "source": "_qwen_image_edit_node.js",
+        "name": "28-Qwen-Image-Edit",
+        "env": "VITE_QWEN_IMAGE_EDIT_ID"
+      },
+      {
+        "source": "_qwen_cleanup_node.js",
+        "name": "10-Qwen-Cleanup",
+        "env": "VITE_QWEN_CLEANUP_ID"
+      },
+      {
+        "source": "_z_image_node.js",
+        "name": "36-Z-Image",
+        "env": "VITE_Z_IMAGE_ID"
+      },
+      {
+        "source": "_image_check_node.js",
+        "name": "44-Image-Check",
+        "env": "VITE_IMAGE_CHECK_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "imageedit",
+        "files": [
+          "ImageEditPanel.tsx"
+        ]
+      },
+      {
+        "tab": "qwen",
+        "files": [
+          "QwenCleanupPanel.tsx"
+        ]
+      }
+    ],
+    "packs": [],
+    "models": [
+      "diffusion_models: the editing model",
+      "vae, text_encoders: its encoders",
+      "loras: acceleration"
+    ],
+    "needs": [
+      "core"
+    ],
+    "modelFiles": [
+      "Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors",
+      "Qwen-Image-Edit-F2P.safetensors",
+      "Sharp.safetensors",
+      "ae.safetensors",
+      "flux-2-klein-9b.safetensors",
+      "flux2-vae.safetensors",
+      "qwen-image/qwen_image_vae.safetensors",
+      "qwen/qwen_2.5_vl_7b.safetensors",
+      "qwen_3_4b.safetensors",
+      "qwen_3_8b_fp8mixed.safetensors",
+      "qwen_image_edit_2511_bf16.safetensors",
+      "z_image_turbo_bf16.safetensors"
+    ]
+  },
+  "world": {
+    "title": "Locations & 3D worlds",
+    "summary": "A 360-degree panorama of a location, and the navigable Gaussian-splat world built from it, which is what cameras are later placed inside.",
+    "tables": [
+      "scene_panos",
+      "scene_splats",
+      "hyworlds",
+      "prompt_worlds"
+    ],
+    "flows": [
+      {
+        "source": "_panoramic_generator_node.js",
+        "name": "4-Panoramic-Generator",
+        "env": "VITE_PANORAMIC_GENERATOR_ID"
+      },
+      {
+        "source": "_world_builder_node.js",
+        "name": "5-3DGS-World-Builder",
+        "env": "VITE_WORLD_BUILDER_ID"
+      },
+      {
+        "source": "_gs_cleaner_node.js",
+        "name": "6-GS-Cleaner",
+        "env": "VITE_GS_CLEANER_ID"
+      },
+      {
+        "source": "_hyworld_node.js",
+        "name": "38-HY-World",
+        "env": "VITE_HYWORLD_ID"
+      },
+      {
+        "source": "_prompt_world_node.js",
+        "name": "37-Prompt-World",
+        "env": "VITE_PROMPT_WORLD_ID"
+      },
+      {
+        "source": "_pano_prompt_node.js",
+        "name": "27-Pano-Prompt-From-Image",
+        "env": "VITE_PANO_PROMPT_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "world",
+        "files": [
+          "WorldPanel.tsx"
+        ]
+      },
+      {
+        "tab": "hyworld",
+        "files": [
+          "HyWorldPanel.tsx"
+        ]
+      }
+    ],
+    "packs": [
+      "ComfyUI_HYWorld2",
+      "panorama-stickers",
+      "comfyui-gsplat-room-viewer",
+      "comfyui-rename-file",
+      "comfyui-various"
+    ],
+    "models": [
+      "the panorama generator",
+      "WorldStereo Light",
+      "WorldMirror",
+      "a vision-language model for scene parsing"
+    ],
+    "needs": [
+      "core",
+      "screenplay"
+    ],
+    "optional": [
+      "library"
+    ],
+    "modelFiles": [
+      "HY-Pano-2.0-Qwen_pytorch_lora_weights.safetensors",
+      "Qwen-Image-Edit-2509_fp8_e4m3fn.safetensors",
+      "flux-2-klein-9B-360-erp-outpaint-lora_V1.safetensors",
+      "flux-2-klein-9b.safetensors",
+      "flux2-vae.safetensors",
+      "panorama-v2-qwen-image-2512_15.safetensors",
+      "qwen-image/qwen_image_vae.safetensors",
+      "qwen/qwen_2.5_vl_7b.safetensors",
+      "qwen_3_8b_fp8mixed.safetensors",
+      "qwen_image_edit_2511_bf16.safetensors"
+    ]
+  },
+  "camera": {
+    "title": "Cameras & plates",
+    "summary": "Place a camera inside a built world by intent rather than coordinates, render the plate it sees, and sharpen the world at that angle.",
+    "tables": [
+      "scene_floor_plans",
+      "shot_cameras",
+      "camera_plates",
+      "camera_presets"
+    ],
+    "flows": [
+      {
+        "source": "_splat_camera_node.js",
+        "name": "45-Splat-Camera",
+        "env": "VITE_SPLAT_CAMERA_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "camera",
+        "files": [
+          "CameraPanel.tsx",
+          "ui/ShotCamera.tsx",
+          "ui/CameraSurvey.tsx"
+        ]
+      }
+    ],
+    "packs": [
+      "ComfyUI_HYWorld2"
+    ],
+    "models": [
+      "none of its own; it renders from a trained splat"
+    ],
+    "needs": [
+      "core",
+      "world",
+      "director"
+    ]
+  },
+  "director": {
+    "title": "Director & shot lists",
+    "summary": "Turn beats into a shot list, decide what each shot is for and who is in it, and generate the opening frame of each.",
+    "tables": [
+      "director_plans",
+      "director_shots",
+      "shots"
+    ],
+    "flows": [
+      {
+        "source": "_director_node.js",
+        "name": "39-Director",
+        "env": "VITE_DIRECTOR_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "director",
+        "files": [
+          "DirectorPanel.tsx",
+          "ui/ShotCameraBadge.tsx"
+        ]
+      },
+      {
+        "tab": "contextloop",
+        "files": [
+          "ContextLoopPanel.tsx"
+        ]
+      }
+    ],
+    "packs": [
+      "ComfyUI-MiniMaxH3-Context-Loop"
+    ],
+    "models": [
+      "the video model's reference conditioning",
+      "a text model for planning"
+    ],
+    "needs": [
+      "core",
+      "screenplay",
+      "characters"
+    ],
+    "linksTo": [
+      "video"
+    ]
+  },
+  "video": {
+    "title": "Video generation",
+    "summary": "Every route from a still or a description to a moving clip with sound: from a frame, from text, from references, from an existing clip, or driven by a depth or pose video.",
+    "tables": [
+      "minimax_clips"
+    ],
+    "flows": [
+      {
+        "source": "_minimax_av_node.js",
+        "name": "8-MiniMax-Image-To-Video",
+        "env": "VITE_MINIMAX_I2V_ID"
+      },
+      {
+        "source": "_minimax_av_node.js",
+        "name": "9-MiniMax-Text-To-Video",
+        "env": "VITE_MINIMAX_T2V_ID"
+      },
+      {
+        "source": "_minimax_ref_node.js",
+        "name": "17-MiniMax-Ref-To-Video",
+        "env": "VITE_MINIMAX_REF_ID"
+      },
+      {
+        "source": "_minimax_v2v_node.js",
+        "name": "35-MiniMax-Video-to-Video",
+        "env": "VITE_MINIMAX_V2V_ID"
+      },
+      {
+        "source": "_minimax_control_node.js",
+        "name": "46-MiniMax-Control-To-Video",
+        "env": "VITE_MINIMAX_CONTROL_ID"
+      },
+      {
+        "source": "_minimax_extend_node.js",
+        "name": "16-MiniMax-Extend",
+        "env": "VITE_MINIMAX_EXTEND_ID"
+      },
+      {
+        "source": "_prompt_enhancer_node.js",
+        "name": "11-MiniMax-Prompt-Enhancer",
+        "env": "VITE_PROMPT_ENHANCER_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "i2v",
+        "files": [
+          "MinimaxVideoPanel.tsx",
+          "videoKinds.ts",
+          "camera.ts"
+        ]
+      },
+      {
+        "tab": "t2v",
+        "files": []
+      },
+      {
+        "tab": "shots",
+        "files": []
+      },
+      {
+        "tab": "v2v",
+        "files": []
+      },
+      {
+        "tab": "control",
+        "files": []
+      }
+    ],
+    "packs": [
+      "comfyui-videohelpersuite",
+      "comfyui-kjnodes",
+      "ComfyUI-Spectrum-MiniMax-H3",
+      "ComfyUI-H3-FunControl",
+      "ComfyUI-H3-Motion-Context-MultiRef"
+    ],
+    "models": [
+      "the video model, both its bases",
+      "its video and audio VAEs",
+      "its text encoder",
+      "the control adapter (for the control tab)"
+    ],
+    "needs": [
+      "core"
+    ],
+    "linksTo": [
+      "director"
+    ],
+    "modelFiles": [
+      "minimax_h3_audio_vae_fp32.safetensors",
+      "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "minimax_h3_fun_controlnet_union_pruned_bf16.safetensors",
+      "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors",
+      "minimax_h3_video_vae_fp16.safetensors",
+      "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+    ]
+  },
+  "faceqa": {
+    "title": "Face QA & repair",
+    "summary": "Score a rendered clip against a character's references to find identity drift, and repaint a face in place when it has drifted.",
+    "tables": [],
+    "flows": [
+      {
+        "source": "_face_qa_node.js",
+        "name": "24-Face-QA",
+        "env": "VITE_FACE_QA_ID"
+      },
+      {
+        "source": "_face_fix_node.js",
+        "name": "34-Face-Fix",
+        "env": "VITE_FACE_FIX_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "faceqa",
+        "files": [
+          "FaceQaPanel.tsx",
+          "faceqa.ts",
+          "ui/WorstFrames.tsx"
+        ]
+      }
+    ],
+    "packs": [
+      "comfyui_segment_anything",
+      "comfyui-videohelpersuite"
+    ],
+    "models": [
+      "a face embedding model",
+      "a detector and a segmenter",
+      "an inpainting model"
+    ],
+    "needs": [
+      "core",
+      "characters",
+      "video"
+    ],
+    "modelFiles": [
+      "flux-2-klein-9b.safetensors",
+      "flux2-vae.safetensors",
+      "qwen_3_8b_fp8mixed.safetensors",
+      "sam_hq_vit_l (1.25GB)"
+    ]
+  },
+  "colour": {
+    "title": "Colour & lighting",
+    "summary": "Pull a look off a picture and grade toward it, and light a still before it moves so the clip inherits the lighting.",
+    "tables": [
+      "color_palettes",
+      "lighting_presets",
+      "lighting_preset_previews"
+    ],
+    "flows": [
+      {
+        "source": "_palette_namer_node.js",
+        "name": "31-Palette-Namer",
+        "env": "VITE_PALETTE_NAMER_ID"
+      },
+      {
+        "source": "_apply_lut_node.js",
+        "name": "32-Apply-LUT",
+        "env": "VITE_APPLY_LUT_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "palette",
+        "files": [
+          "ColorPalettePanel.tsx"
+        ]
+      },
+      {
+        "tab": "lighting",
+        "files": [
+          "LightingPanel.tsx"
+        ]
+      }
+    ],
+    "packs": [],
+    "models": [
+      "the image editing model, for relighting"
+    ],
+    "needs": [
+      "core",
+      "imaging"
+    ]
+  },
+  "audio": {
+    "title": "Score & voice",
+    "summary": "Generate a music cue for a scene, and replace a voice on a finished clip while keeping the music and the sync.",
+    "tables": [
+      "scores",
+      "score_styles",
+      "voice_replacements"
+    ],
+    "flows": [
+      {
+        "source": "_score_node.js",
+        "name": "19-Score-Generator",
+        "env": "VITE_SCORE_ID"
+      },
+      {
+        "source": "_score_agent_node.js",
+        "name": "30-Score-Agent",
+        "env": "VITE_SCORE_AGENT_ID"
+      },
+      {
+        "source": "_post_voice_node.js",
+        "name": "18-Post-Voice",
+        "env": "VITE_POST_VOICE_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "score",
+        "files": [
+          "ScorePanel.tsx"
+        ]
+      },
+      {
+        "tab": "postvoice",
+        "files": [
+          "PostVoicePanel.tsx"
+        ]
+      }
+    ],
+    "packs": [],
+    "models": [
+      "a music model and its audio VAE",
+      "a speech model"
+    ],
+    "needs": [
+      "core"
+    ],
+    "linksTo": [
+      "video"
+    ],
+    "modelFiles": [
+      "ace_1.5_vae.safetensors",
+      "ace_step_1.5_turbo_aio.safetensors",
+      "acestep_v1.5_xl_sft_bf16.safetensors",
+      "minimax_music3_dav.safetensors",
+      "minimax_music3_dit_fp16.safetensors",
+      "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+      "qwen_0.6b_ace15.safetensors",
+      "qwen_1.7b_ace15.safetensors"
+    ]
+  },
+  "delivery": {
+    "title": "Editorial hand-off",
+    "summary": "Send the finished clips to an editor as a project in screenplay order, rather than as a folder of files.",
+    "tables": [],
+    "flows": [
+      {
+        "source": "_resolve_node.js",
+        "name": "20-Resolve-Deliver",
+        "env": "VITE_RESOLVE_ID"
+      },
+      {
+        "source": "_resolve_chat_node.js",
+        "name": "21-Resolve-Chat",
+        "env": "VITE_RESOLVE_CHAT_ID"
+      }
+    ],
+    "panels": [
+      {
+        "tab": "resolve",
+        "files": [
+          "ResolvePanel.tsx"
+        ]
+      }
+    ],
+    "packs": [],
+    "models": [],
+    "needs": [
+      "core",
+      "video"
+    ]
+  },
+  "tools": {
+    "title": "Housekeeping",
+    "summary": "Copy a project, delete a project or a single asset, and watch what the render host is doing.",
+    "tables": [],
+    "flows": [],
+    "panels": [
+      {
+        "tab": "tools",
+        "files": [
+          "ToolsPanel.tsx"
+        ]
+      }
+    ],
+    "packs": [],
+    "models": [],
+    "needs": [
+      "core",
+      "screenplay"
+    ]
+  },
+  "orchestration": {
+    "title": "Run it end to end",
+    "summary": "One trigger that walks a scope of the script and runs each stage in order, instead of pressing the buttons by hand.",
+    "tables": [],
+    "flows": [
+      {
+        "source": "_trigger_orchestration",
+        "name": "2-Trigger-Orchestration",
+        "env": "VITE_TRIGGER_ORCHESTRATOR_ID"
+      }
+    ],
+    "panels": [],
+    "packs": [],
+    "models": [],
+    "needs": [
+      "core",
+      "screenplay",
+      "characters",
+      "world"
+    ]
+  },
+  "library": {
+    "title": "Reference library (optional)",
+    "summary": "A searchable store of source text - a novel, a treatment, research - that location and character descriptions can fall back on when the script itself is thin.",
+    "tables": [
+      "book_chunks"
+    ],
+    "flows": [],
+    "panels": [],
+    "packs": [],
+    "models": [
+      "an embedding model, served by the text host"
+    ],
+    "needs": [
+      "core"
+    ],
+    "postgresExtensions": [
+      "vector"
+    ],
+    "handWrittenSchema": true,
+    "note": "The live database holds the search function but not its table; schema.sql reconstructs the table from the columns that function reads."
+  }
+}

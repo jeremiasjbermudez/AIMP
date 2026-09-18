@@ -1,0 +1,564 @@
+/* Joker skin.
+ *
+ * Deliberately UNLAYERED. theme.css and App.css live in @layer blocks, and
+ * unlayered CSS outranks every layer regardless of order - so this file wins
+ * without a specificity war and without editing a single component. Everything
+ * here hangs off class names that already exist in the markup.
+ *
+ * All texture is generated: SVG data URIs for the wall, the graffiti and the
+ * torn banner edges. No image files, nothing to lose track of, and the colours
+ * stay tied to the tokens below.
+ */
+
+.paint-filters {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------- palette */
+:root,
+:root[data-theme='dark'],
+:root[data-theme='light'] {
+  --bg: #0a0a0c;
+  --surface: #131318;
+  --surface-2: #1a1a21;
+  --surface-3: #24242e;
+  --line: #2e2e3a;
+  --line-soft: #22222b;
+
+  --text: #ece9f1;
+  --text-dim: #a49bb5;
+  --text-faint: #6f6880;
+
+  /* Joker purple for structure, acid green for anything you press. */
+  --accent: #a855f7;
+  --accent-fg: #0a0a0c;
+  --accent-soft: #2a1440;
+
+  --action: #3f9142;
+  --action-fg: #08160a;
+  --action-hover: #4fb554;
+  --action-line: #5cc961;
+
+  --danger: #c8102e;
+  --danger-soft: #2a0a10;
+  --danger-line: #6b1220;
+  --ok: #4fb554;
+
+  --input-bg: #0f0f14;
+  --shadow-card: 0 2px 10px rgb(0 0 0 / 0.5);
+  --shadow-pop: 0 18px 40px -12px rgb(0 0 0 / 0.8);
+  --scrim: #000;
+
+  --shell-bg: #0c0c10;
+  --shell-text: #ece9f1;
+  --shell-dim: #a49bb5;
+  --shell-line: #2a2a34;
+
+  /* Skin-only tokens. */
+  --joker-green: #6ee36e;
+  --joker-purple: #7b2fa8;
+  --joker-purple-lit: #b45cf0;
+  --joker-blood: #b3122a;
+  --paint: 'Permanent Marker', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------------ the wall
+ * A photographed grunge wall, not a gradient. The first pass used CSS blooms
+ * and read as flat dark purple; the point of the mockup is that the whole app
+ * sits on a real surface with peeling paint and water stains.
+ *
+ * Layered, front to back: HA graffiti, a dark scrim to keep text legible over
+ * the wall's lighter patches, then the wall itself. Everything is fixed, so
+ * the surface stays put while content scrolls over it.
+ */
+body {
+  background-color: #08080a;
+  background-image:
+    url('/paint/ha.png'),
+    linear-gradient(rgb(6 6 8 / 0.36), rgb(6 6 8 / 0.52)),
+    url('/paint/wall.png');
+  background-size: 410px 410px, auto, cover;
+  background-repeat: repeat, no-repeat, no-repeat;
+  background-position: center top, center, center center;
+  background-attachment: fixed, fixed, fixed;
+  color: var(--text);
+}
+
+/* Panels sit on the wall rather than hiding it. */
+.app,
+.content,
+main {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------- the sidebar */
+.sidebar {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, rgb(20 8 30 / 0.94), rgb(8 8 10 / 0.96));
+  border-right: 1px solid rgb(123 47 168 / 0.45);
+}
+
+/* Two real splatters thrown down the sidebar, in the two house colours. They
+   sit behind the nav and take no clicks. */
+.sidebar::before,
+.sidebar::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.sidebar::before {
+  top: 7%;
+  right: -26%;
+  width: 165px;
+  height: 165px;
+  opacity: 0.34;
+  background: var(--joker-green);
+  -webkit-mask: url('/paint/splatter-big.png') center / contain no-repeat;
+  mask: url('/paint/splatter-big.png') center / contain no-repeat;
+  transform: rotate(-14deg);
+}
+
+.sidebar::after {
+  bottom: 6%;
+  left: -22%;
+  width: 220px;
+  height: 220px;
+  opacity: 0.38;
+  background: var(--joker-purple-lit);
+  -webkit-mask: url('/paint/splatter-big.png') center / contain no-repeat;
+  mask: url('/paint/splatter-big.png') center / contain no-repeat;
+  transform: rotate(128deg);
+}
+
+.brand-name {
+  font-family: var(--paint);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  color: var(--joker-green);
+  text-shadow: 0 0 14px rgb(110 227 110 / 0.35);
+}
+
+.brand-mark {
+  background: linear-gradient(135deg, var(--joker-purple-lit), var(--joker-green));
+  box-shadow: 0 0 16px rgb(180 92 240 / 0.5);
+}
+
+.side-nav button {
+  font-family: var(--paint);
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  border-radius: 8px;
+}
+
+.side-nav button:hover:not(:disabled) {
+  color: var(--joker-green);
+  background: rgb(110 227 110 / 0.07);
+}
+
+/* The active tab is outlined in wet purple rather than filled, so the wall
+   still shows through and it reads as marked up rather than replaced. */
+.side-nav button[aria-current='page'],
+.side-nav button.active,
+.side-nav button.is-active {
+  color: #fff;
+  background: rgb(123 47 168 / 0.3);
+  box-shadow:
+    inset 0 0 0 1.5px var(--joker-purple-lit),
+    0 0 18px rgb(180 92 240 / 0.4);
+}
+
+/* -------------------------------------------------------- section banners
+ * Full-bleed painted strips. In the mockup these run nearly edge to edge and
+ * the label sits ON the strip in red - they are the loudest structural element
+ * on the page, not a heading with a background.
+ *
+ * The strip is a photographed purple band used as a colour background rather
+ * than a tinted mask: it carries its own halftone, scuffs and rivets, and a
+ * single-channel mask would throw all of that away.
+ */
+main h4 {
+  position: relative;
+  isolation: isolate;
+  margin: 2.6rem 0 1.2rem;
+  padding: 0.72rem 1.2rem 0.72rem 1.5rem;
+  font-family: var(--paint);
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  /* Red on purple, as in the mockup - it reads as spray over the strip. */
+  color: #ff4d5e;
+  text-shadow:
+    0 0 12px rgb(200 16 46 / 0.55),
+    0 2px 4px rgb(0 0 0 / 0.85);
+  background: transparent;
+  border: 0;
+}
+
+/* The strip. Pulled wider than the text column so it runs to the edges. */
+main h4::before {
+  content: '';
+  position: absolute;
+  /* width/height MUST be reset. theme.css already styles this pseudo-element
+     as a 5px bullet dot, and an explicit size beats inset - so without these
+     the strip rendered as a 5x5 speck and the banners looked like plain text. */
+  width: auto;
+  height: auto;
+  min-width: 0;
+  border-radius: 0;
+  inset: 0 -2.5rem 0 -1.5rem;
+  z-index: -2;
+  background: url('/paint/banner.png') center / 100% 100% no-repeat;
+  filter: drop-shadow(0 5px 14px rgb(0 0 0 / 0.75));
+}
+
+/* Blood thrown across one end, alternating side so the page has rhythm
+   rather than a repeating stamp. */
+main h4::after {
+  content: '';
+  position: absolute;
+  right: -1rem;
+  top: -0.5rem;
+  width: 104px;
+  height: 88px;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background: var(--joker-blood);
+  -webkit-mask: url('/paint/blood.png') center top / contain no-repeat;
+  mask: url('/paint/blood.png') center top / contain no-repeat;
+}
+
+main h4:nth-of-type(even)::after {
+  right: auto;
+  left: 42%;
+  transform: scaleX(-1);
+  opacity: 0.34;
+}
+
+/* The red bullet that starts each strip. */
+main h4 > :first-child,
+main h4 {
+  vertical-align: middle;
+}
+
+/* ----------------------------------------------------------- the page head */
+.page-head {
+  position: relative;
+  isolation: isolate;
+  border-bottom: 1px solid rgb(123 47 168 / 0.4);
+}
+
+/* One wide smear dragged behind the title - the loud moment on every page. */
+.page-head::before {
+  content: '';
+  position: absolute;
+  left: -3%;
+  top: -30%;
+  width: 520px;
+  height: 190px;
+  z-index: -1;
+  opacity: 0.34;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--joker-green), var(--joker-purple-lit));
+  -webkit-mask: url('/paint/smear.png') left center / contain no-repeat;
+  mask: url('/paint/smear.png') left center / contain no-repeat;
+}
+
+.page-head-text h2,
+.page-head-text h1 {
+  font-family: var(--paint);
+  /* Big. In the mockup the page name is the hero, painted across the top -
+     not a 1.5rem heading with a colour on it. */
+  font-size: clamp(2rem, 4.2vw, 3.4rem);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--joker-green);
+  text-shadow:
+    0 0 26px rgb(110 227 110 / 0.45),
+    0 4px 0 rgb(0 0 0 / 0.6),
+    0 0 2px rgb(0 0 0 / 0.9);
+}
+
+/* Every other word in purple, to match the two-tone lettering in the mockup. */
+.page-head-text h2 .tail,
+.page-head-text h1 .tail,
+.page-head-text h2 em,
+.page-head-text h1 em {
+  font-style: normal;
+  display: inline-block;
+  /* Sits a touch lower and turned, the way a second colour goes on by hand. */
+  transform: rotate(-1.5deg) translateY(2px);
+  color: var(--joker-purple-lit);
+  text-shadow:
+    0 0 26px rgb(180 92 240 / 0.5),
+    0 4px 0 rgb(0 0 0 / 0.6);
+}
+
+.page-head-icon {
+  background: linear-gradient(135deg, rgb(123 47 168 / 0.9), rgb(180 92 240 / 0.7));
+  box-shadow: 0 0 18px rgb(180 92 240 / 0.45);
+  color: #fff;
+}
+
+/* Paint running down from under the header strip. */
+.movie-picker {
+  position: relative;
+}
+
+.movie-picker::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -26px;
+  height: 30px;
+  z-index: 1;
+  opacity: 0.5;
+  pointer-events: none;
+  background: var(--joker-purple);
+  -webkit-mask: url('/paint/drips.png') center top / 100% 100% no-repeat;
+  mask: url('/paint/drips.png') center top / 100% 100% no-repeat;
+}
+
+/* ---------------------------------------------------------------- surfaces */
+.beat-card,
+.movie-picker,
+.new-movie-form,
+.delete-confirm {
+  background: rgb(19 19 24 / 0.82);
+  border: 1px solid rgb(123 47 168 / 0.28);
+  backdrop-filter: blur(2px);
+}
+
+.badge {
+  font-family: var(--paint);
+  letter-spacing: 0.05em;
+  background: rgb(123 47 168 / 0.28);
+  border-color: rgb(180 92 240 / 0.4);
+  color: #dcc9f5;
+}
+
+/* ---------------------------------------------------------------- controls
+ * Action buttons are thrown paint. The label sits on a real painted blob,
+ * tinted green; `paint-edge` warps the edge so repeats of the same asset do
+ * not line up visibly, and the drip hangs off the bottom.
+ */
+main button:not(:where(
+  .danger, .theme-toggle, .jobs-trigger, .ui-select, .caps-toggle, .ref-thumb,
+  .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
+  .edit-ref-actions button, .engine-tab, .ref-remove,
+  .grade-inline button, .grade-toggle,
+  .clip-thumb-card
+)) {
+  position: relative;
+  isolation: isolate;
+  font-family: var(--paint);
+  letter-spacing: 0.04em;
+  padding: 0.55rem 1.35rem 0.6rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #f2fff2;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
+  box-shadow: none;
+}
+
+main button:not(:where(
+  .danger, .theme-toggle, .jobs-trigger, .ui-select, .caps-toggle, .ref-thumb,
+  .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
+  .edit-ref-actions button, .engine-tab, .ref-remove,
+  .grade-inline button, .grade-toggle,
+  .clip-thumb-card
+))::before {
+  content: '';
+  position: absolute;
+  inset: -0.35rem -0.7rem -0.6rem;
+  z-index: -1;
+  background: linear-gradient(150deg, var(--action-hover), var(--action) 70%, #2c6b2f);
+  border-radius: 12px 14px 11px 15px / 13px 11px 15px 12px;
+  filter: url(#paint-edge) drop-shadow(0 3px 8px rgb(0 0 0 / 0.55));
+}
+
+main button:not(:where(
+  .danger, .theme-toggle, .jobs-trigger, .ui-select, .caps-toggle, .ref-thumb,
+  .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
+  .edit-ref-actions button, .engine-tab, .ref-remove,
+  .grade-inline button, .grade-toggle,
+  .clip-thumb-card
+)):hover:not(:disabled) {
+  color: #fff;
+}
+
+main button:not(:where(
+  .danger, .theme-toggle, .jobs-trigger, .ui-select, .caps-toggle, .ref-thumb,
+  .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
+  .edit-ref-actions button, .engine-tab, .ref-remove,
+  .grade-inline button, .grade-toggle,
+  .clip-thumb-card
+)):hover:not(:disabled)::before {
+  background: linear-gradient(150deg, var(--joker-green), var(--action-hover) 75%, var(--action));
+  filter: url(#paint-edge) drop-shadow(0 0 18px rgb(110 227 110 / 0.6));
+}
+
+/* Destructive is the same paint, thrown in blood red. */
+main button.danger {
+  position: relative;
+  isolation: isolate;
+  font-family: var(--paint);
+  padding: 0.55rem 1.35rem 0.6rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #ffeef0;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+}
+
+main button.danger::before {
+  content: '';
+  position: absolute;
+  inset: -0.35rem -0.7rem -0.6rem;
+  z-index: -1;
+  background: linear-gradient(150deg, #e02742, var(--joker-blood) 72%, #6d0d1b);
+  border-radius: 13px 11px 15px 12px / 12px 15px 11px 14px;
+  /* A different filter, so the two never share an outline silhouette. */
+  filter: url(#paint-edge-rough) drop-shadow(0 3px 8px rgb(0 0 0 / 0.55));
+}
+
+main button:disabled::before {
+  filter: url(#paint-edge) grayscale(0.55);
+  opacity: 0.5;
+}
+
+input,
+textarea,
+select,
+.ui-select {
+  background: var(--input-bg);
+  border-color: rgb(123 47 168 / 0.35);
+  color: var(--text);
+}
+
+input:focus,
+textarea:focus,
+.ui-select:focus-visible {
+  border-color: var(--joker-purple-lit);
+  outline-color: var(--joker-purple-lit);
+}
+
+/* Video and image results get a wet paint frame rather than a grey border. */
+.clip-grid video,
+.clip-grid img,
+.edit-output,
+.shot-preview {
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 2px rgb(110 227 110 / 0.55),
+    0 0 22px rgb(0 0 0 / 0.7);
+}
+
+.error {
+  color: #ff6b7f;
+  text-shadow: 0 0 10px rgb(200 16 46 / 0.4);
+}
+
+/* Reduced motion: the tilt and lift are decorative, so drop them. */
+@media (prefers-reduced-motion: reduce) {
+  main button {
+    transform: none !important;
+  }
+}
+
+/* ------------------------------------------------------- native file inputs
+ * "Choose File" is the browser's own button inside the input, so none of the
+ * button rules above can reach it - it needs ::file-selector-button. Left
+ * unstyled it was the one flat grey-green rectangle on the page.
+ */
+input[type='file'] {
+  color: var(--text-dim);
+}
+
+input[type='file']::file-selector-button {
+  font-family: var(--paint);
+  letter-spacing: 0.03em;
+  margin-right: 0.8rem;
+  padding: 0.4rem 1rem 0.45rem;
+  border: 0;
+  border-radius: 11px 13px 10px 14px / 12px 10px 14px 11px;
+  background: linear-gradient(150deg, var(--action-hover), var(--action) 72%, #2c6b2f);
+  color: #eafbea;
+  cursor: pointer;
+  filter: url(#paint-edge) drop-shadow(0 2px 6px rgb(0 0 0 / 0.5));
+}
+
+input[type='file']::file-selector-button:hover {
+  background: linear-gradient(150deg, var(--joker-green), var(--action-hover) 78%, var(--action));
+}
+
+/* --------------------------------------------------- thrown about the page
+ * A few splashes in the content area itself. Without them the paint stops at
+ * the sidebar and the banners, and the middle of the page reads as an ordinary
+ * dark form on a textured wall.
+ */
+main {
+  position: relative;
+  isolation: isolate;
+}
+
+main::before,
+main::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+main::before {
+  top: 2%;
+  right: -3%;
+  width: 260px;
+  height: 260px;
+  opacity: 0.22;
+  background: var(--joker-green);
+  transform: rotate(24deg);
+  -webkit-mask: url('/paint/splatter-big.png') center / contain no-repeat;
+  mask: url('/paint/splatter-big.png') center / contain no-repeat;
+}
+
+main::after {
+  top: 46%;
+  left: -4%;
+  width: 190px;
+  height: 190px;
+  opacity: 0.16;
+  background: var(--joker-purple-lit);
+  transform: rotate(-38deg);
+  -webkit-mask: url('/paint/splatter-small.png') center / contain no-repeat;
+  mask: url('/paint/splatter-small.png') center / contain no-repeat;
+}
+
+/* Green running off the brand mark, as in the mockup. */
+.brand {
+  position: relative;
+}
+
+.brand::after {
+  content: '';
+  position: absolute;
+  left: 0.2rem;
+  top: 1.6rem;
+  width: 74px;
+  height: 54px;
+  z-index: -1;
+  opacity: 0.5;
+  pointer-events: none;
+  background: var(--joker-green);
+  -webkit-mask: url('/paint/drips.png') center top / contain no-repeat;
+  mask: url('/paint/drips.png') center top / contain no-repeat;
+}

@@ -1,0 +1,1271 @@
+/* The original stylesheet, demoted to the bottom of the cascade.
+ *
+ * Cascade layers rank BELOW unlayered CSS, so while this file was unlayered it
+ * silently outranked every rule in theme.css - the new design system was being
+ * overridden by the old one and the redesign looked like a repaint. Wrapping it
+ * in `legacy` inverts that: theme.css now wins, and anything here that the
+ * design system has no opinion on still applies underneath.
+ *
+ * The order statement must come before Tailwind establishes its own, which is
+ * why it lives here - this file loads first.
+ */
+@layer legacy, theme, base, components, utilities;
+
+@layer legacy {
+  .app {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+    font-family: system-ui, sans-serif;
+    color: var(--color-text);
+    text-align: left;
+  }
+
+  /* Sticky so the stage you are on, and the movie you are on, stay visible while
+     a long panel scrolls. */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 0 0.9rem;
+    margin-bottom: 0;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-surface-2);
+  }
+
+  header h1 {
+    font-size: 1.15rem;
+    letter-spacing: 0.01em;
+    margin: 0;
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+
+  header h1::before {
+    content: '';
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    margin-right: 0.6rem;
+    border-radius: 2px;
+    background: var(--color-accent);
+    vertical-align: middle;
+  }
+
+  select {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.95rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-3);
+    border-radius: 4px;
+  }
+
+  .movie-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .movie-picker > button {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.9rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-3);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .new-movie-form {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .new-movie-form input {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.95rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-3);
+    border-radius: 4px;
+    width: 160px;
+  }
+
+  .new-movie-form button {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.9rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-3);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .tabs {
+    position: sticky;
+    top: 3.55rem;
+    z-index: 19;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.7rem 0 0.55rem;
+    margin-bottom: 1.5rem;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .tabs button {
+    padding: 0.35rem 0.7rem;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: none;
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: var(--color-text-dim);
+    white-space: nowrap;
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+
+  .tabs button:hover {
+    background: var(--color-surface);
+    color: var(--color-text-dim);
+  }
+
+  .tabs button.active {
+    background: var(--color-accent-soft);
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .tabs button.active {
+    border-color: var(--color-accent);
+  }
+
+  .upload-form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .upload-form button {
+    padding: 0.45rem 1rem;
+    cursor: pointer;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-3);
+    border-radius: 4px;
+  }
+
+  .upload-form button:hover:not(:disabled) {
+    border-color: var(--color-accent);
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--color-line);
+    font-size: 0.9rem;
+    color: var(--color-text-dim);
+  }
+
+  .data-table td {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--color-line);
+    font-size: 0.9rem;
+    color: var(--color-text);
+  }
+
+  /* The shot list: seven short columns and one long one. The short ones are
+     pinned so "What happens" takes whatever is left, and the numbers are
+     tabular so the eye can run down them. (The table carried a class with no
+     CSS at all, so it had no padding: shot 10 of scene 2 read as "102".) */
+  .director-shots {
+    table-layout: fixed;
+  }
+
+  .director-shots th,
+  .director-shots td {
+    vertical-align: top;
+    font-size: 0.85rem;
+  }
+
+  .director-shots .col-num,
+  .director-shots .col-scene,
+  .director-shots .col-len {
+    width: 3.2rem;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .director-shots .col-num {
+    width: 2.6rem;
+    color: var(--color-text-dim);
+  }
+
+  .director-shots .col-type,
+  .director-shots .col-cont,
+  .director-shots .col-status {
+    width: 6rem;
+    white-space: nowrap;
+    color: var(--color-text-dim);
+  }
+
+  .director-shots .col-cast {
+    width: 10rem;
+    font-size: 0.8rem;
+  }
+
+  /* A scene change is the one structural break in a flat list of shots. */
+  .director-shots tbody tr.scene-start td {
+    border-top: 2px solid var(--color-line);
+  }
+
+  .director-shots summary {
+    cursor: pointer;
+  }
+
+  /* The prompts are what actually gets sent to the renderer, so they are set
+     like the prompt editor rather than like prose. */
+  .director-shots details p {
+    margin: 0.4rem 0 0;
+    font-family: ui-monospace, monospace;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .actions button {
+    margin-right: 0.4rem;
+    cursor: pointer;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-3);
+    border-radius: 4px;
+    padding: 0.3rem 0.6rem;
+  }
+
+  .actions .danger {
+    color: var(--color-danger);
+    border-color: var(--color-danger-line);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(79, 168, 255, 0.15);
+    color: var(--color-accent);
+    font-size: 0.78rem;
+    margin: 0.1rem 0.25rem 0.1rem 0;
+  }
+
+  .error {
+    color: var(--color-danger);
+  }
+
+  .empty {
+    color: var(--color-text-dim);
+  }
+
+  .preview {
+    margin-top: 1.5rem;
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .preview-header button {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-3);
+    border-radius: 4px;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+  }
+
+  .preview img {
+    max-width: 100%;
+    display: block;
+  }
+
+  /* ComfyUI embedded. Tall on purpose: a node graph in a 400px box is unusable,
+     and this is the whole point of the tab rather than a preview beside text. */
+  .comfy-frame {
+    display: block;
+    width: 100%;
+    height: 78vh;
+    min-height: 520px;
+    margin-top: 0.8rem;
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    background: var(--color-bg);
+  }
+
+  .preview iframe {
+    width: 100%;
+    height: 400px;
+    border: none;
+    background: #fff;
+    /* The app runs dark, so without this the frame inherits dark UA text colours
+       and renders white text on the white background above. */
+    color-scheme: light;
+  }
+
+  .preview-text {
+    margin: 0;
+    padding: 0.9rem 1rem;
+    max-height: 420px;
+    overflow: auto;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .beats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .beat-card {
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    background: var(--color-surface);
+  }
+
+  .beat-card-header {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    cursor: pointer;
+    flex-wrap: wrap;
+  }
+
+  .beat-code {
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+
+  .beat-location {
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .beat-lines {
+    color: var(--color-text-dim);
+    font-size: 0.85rem;
+    margin-left: auto;
+  }
+
+  .beat-summary {
+    margin: 0.5rem 0;
+    color: var(--color-text-dim);
+  }
+
+  .beat-tags {
+    margin-bottom: 0.25rem;
+  }
+
+  .beat-detail {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--color-surface-3);
+  }
+
+  .beat-detail h4 {
+    margin: 0.6rem 0 0.25rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-dim);
+  }
+
+  .beat-detail ul {
+    margin: 0;
+    padding-left: 1.2rem;
+    color: var(--color-text);
+  }
+
+  .beat-detail .dialogue li {
+    margin-bottom: 0.3rem;
+  }
+
+  .raw-text {
+    font-family: ui-monospace, monospace;
+    font-size: 0.82rem;
+    white-space: pre-wrap;
+    background: var(--color-bg);
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    color: var(--color-text-dim);
+    border: 1px solid var(--color-surface-2);
+  }
+
+  .characters-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .character-card {
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    background: var(--color-surface);
+  }
+
+  .character-card-header {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .character-name {
+    font-weight: 700;
+    color: var(--color-text);
+    font-size: 1.05rem;
+  }
+
+  .badge.unresolved {
+    background: rgba(255, 107, 107, 0.15);
+    color: var(--color-danger);
+  }
+
+  .character-descriptor {
+    margin: 0.5rem 0 0.2rem;
+    color: var(--color-text-dim);
+  }
+
+  .character-clothing {
+    margin: 0 0 0.5rem;
+    color: var(--color-text-dim);
+    font-size: 0.9rem;
+  }
+
+  .lora-form {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px dashed var(--color-surface-3);
+  }
+
+  .lora-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--color-text-dim);
+  }
+
+  .lora-form input {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-3);
+    border-radius: 4px;
+  }
+
+  .lora-form input[type='text'] {
+    width: 320px;
+  }
+
+  .lora-form input[type='number'] {
+    width: 80px;
+  }
+
+  .lora-form button {
+    padding: 0.45rem 1rem;
+    cursor: pointer;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-3);
+    border-radius: 4px;
+  }
+
+  .lora-form button:hover:not(:disabled) {
+    border-color: var(--color-accent);
+  }
+
+  .run-status-ok {
+    color: var(--color-ok);
+  }
+
+  .ref-image-row {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 0.6rem;
+  }
+
+  .ref-thumb {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    background: var(--color-surface);
+    border: 2px solid var(--color-surface-3);
+    border-radius: 6px;
+    padding: 0.4rem;
+    cursor: pointer;
+  }
+
+  .ref-thumb.selected {
+    border-color: var(--color-accent);
+  }
+
+  .ref-thumb img {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .shot-columns {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin: 0.75rem 0;
+  }
+
+  .shot-columns > div {
+    flex: 1;
+    min-width: 240px;
+  }
+
+  .shot-preview {
+    max-width: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--color-line);
+  }
+
+  .prompt-editor {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem 0.75rem;
+    font-family: ui-monospace, monospace;
+    font-size: 0.85rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-surface-2);
+    border-radius: 6px;
+    margin: 0.5rem 0;
+  }
+
+  .motion-request {
+    display: block;
+    width: 100%;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    font: inherit;
+    box-sizing: border-box;
+  }
+
+  /* Smaller than .shot-preview so a list of takes stays scannable side by side. */
+  .take-preview {
+    display: block;
+    max-width: 320px;
+    width: 100%;
+    margin: 0.4rem 0 0.8rem;
+    border-radius: 6px;
+    border: 1px solid var(--color-line);
+  }
+
+  /* --- Screenplay builder --- */
+  .screenplay-act {
+    margin: 1.2rem 0;
+    border-left: 2px solid var(--color-line);
+    padding-left: 0.9rem;
+  }
+  .screenplay-act-header {
+    margin: 0 0 0.6rem;
+    color: var(--color-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+  }
+  .screenplay-scene {
+    margin-bottom: 0.9rem;
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .screenplay-scene-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.7rem;
+    background: var(--color-surface);
+    flex-wrap: wrap;
+  }
+  .screenplay-count {
+    margin-left: auto;
+    color: var(--color-text-faint);
+    font-size: 0.75rem;
+  }
+  .screenplay-beat {
+    border-top: 1px solid var(--color-surface-2);
+  }
+  .screenplay-beat-header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.5rem 0.7rem;
+    background: none;
+    border: none;
+    color: var(--color-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .screenplay-beat-header:hover { background: var(--color-surface); }
+  .screenplay-beat-summary {
+    flex: 1;
+    color: var(--color-text-dim);
+    font-size: 0.85rem;
+  }
+  .screenplay-beat-body {
+    padding: 0.2rem 0.9rem 0.8rem;
+    border-top: 1px solid var(--color-surface-2);
+  }
+  .screenplay-dialogue {
+    margin: 0.3rem 0;
+    font-size: 0.85rem;
+    color: var(--color-text-dim);
+  }
+
+  .screenplay-toolbar {
+    display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;
+    margin-bottom: 0.8rem;
+  }
+  .screenplay-toolbar h3 { margin: 0; }
+  .screenplay-empty { padding: 1.2rem 0; }
+  .screenplay-tools { margin-left: auto; display: flex; gap: 0.25rem; }
+  .screenplay-tools button {
+    background: var(--color-surface-2); color: var(--color-text-dim); border: 1px solid var(--color-surface-3);
+    border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.75rem; cursor: pointer;
+  }
+  .screenplay-tools button:hover { background: var(--color-line); color: var(--color-text); }
+  .screenplay-tools button.danger { color: var(--color-danger); }
+  .screenplay-scene-header select,
+  .screenplay-scene-header input {
+    background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-line);
+    border-radius: 4px; padding: 0.25rem 0.4rem; font: inherit; font-size: 0.82rem;
+  }
+  .screenplay-location { flex: 1; min-width: 8rem; text-transform: uppercase; }
+  .screenplay-time { width: 7rem; text-transform: uppercase; }
+  .screenplay-beat-bar { display: flex; align-items: center; gap: 0.4rem; padding-right: 0.5rem; }
+  .screenplay-beat-toggle {
+    display: flex; align-items: center; gap: 0.55rem; flex: 1;
+    padding: 0.45rem 0.7rem; background: none; border: none;
+    color: var(--color-text); font: inherit; text-align: left; cursor: pointer;
+  }
+  .screenplay-beat-toggle:hover { background: var(--color-surface); }
+  .screenplay-beat-body label { display: block; margin: 0.5rem 0; font-size: 0.78rem; color: var(--color-text-dim); }
+  .screenplay-beat-body textarea,
+  .screenplay-beat-body > label > input {
+    display: block; width: 100%; margin-top: 0.25rem; box-sizing: border-box;
+    background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-line);
+    border-radius: 4px; padding: 0.45rem; font: inherit; font-size: 0.85rem;
+  }
+  .screenplay-sublabel { font-size: 0.78rem; color: var(--color-text-dim); }
+  .screenplay-dialogue-block { margin-top: 0.6rem; }
+  .screenplay-dialogue-row { display: flex; gap: 0.35rem; margin: 0.3rem 0; }
+  .screenplay-dialogue-row input {
+    background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-line);
+    border-radius: 4px; padding: 0.35rem; font: inherit; font-size: 0.82rem;
+  }
+  .screenplay-cue { width: 9rem; text-transform: uppercase; }
+  .screenplay-paren { width: 8rem; }
+  .screenplay-line { flex: 1; }
+  .screenplay-dialogue-row button {
+    background: var(--color-surface-2); color: var(--color-danger); border: 1px solid var(--color-surface-3);
+    border-radius: 4px; padding: 0 0.5rem; cursor: pointer;
+  }
+
+  .screenplay-writein {
+    border: 1px solid var(--color-line); border-radius: 6px;
+    padding: 0.6rem 0.8rem; margin-bottom: 1rem; background: var(--color-bg);
+  }
+  .screenplay-writein summary { cursor: pointer; color: var(--color-text-dim); font-size: 0.9rem; }
+  .screenplay-writein textarea {
+    display: block; width: 100%; box-sizing: border-box; margin: 0.5rem 0;
+    background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-line);
+    border-radius: 4px; padding: 0.6rem; font: inherit; font-size: 0.88rem;
+  }
+  .screenplay-finish {
+    margin-top: 1.5rem; border-top: 1px solid var(--color-line); padding-top: 0.9rem;
+  }
+  .screenplay-finish-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+  .screenplay-bible {
+    margin-top: 0.9rem; border: 1px solid var(--color-line); border-radius: 6px; padding: 0.7rem;
+  }
+  .screenplay-bible-row { margin-bottom: 0.7rem; }
+  .screenplay-bible-row textarea {
+    display: block; width: 100%; box-sizing: border-box; margin-top: 0.25rem;
+    background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-line);
+    border-radius: 4px; padding: 0.45rem; font: inherit; font-size: 0.84rem;
+  }
+  .screenplay-preview { margin-top: 0.8rem; }
+  .screenplay-preview summary { cursor: pointer; color: var(--color-text-dim); font-size: 0.82rem; }
+
+  button.danger {
+    background: var(--color-danger-soft); color: var(--color-danger); border: 1px solid var(--color-danger-line);
+  }
+  button.danger:hover:not(:disabled) { background: var(--color-danger-soft); color: var(--color-danger); }
+  .delete-confirm {
+    margin: 1rem 0; padding: 0.9rem 1.1rem;
+    border: 1px solid var(--color-danger-line); border-radius: 6px; background: var(--color-danger-soft);
+  }
+  .delete-confirm h3 { margin: 0 0 0.4rem; color: var(--color-danger); }
+  .delete-confirm ul { margin: 0.4rem 0 0.8rem 1.1rem; color: var(--color-text-dim); font-size: 0.86rem; }
+  .delete-confirm input {
+    background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-danger-line);
+    border-radius: 4px; padding: 0.4rem 0.5rem; font: inherit; margin-right: 0.5rem;
+  }
+
+  /* A file input styled as a button - the native control is unusable inline. */
+  .world-upload {
+    display: inline-block; cursor: pointer;
+    background: var(--color-surface-2); color: var(--color-text); border: 1px solid var(--color-surface-3);
+    border-radius: 4px; padding: 0.35rem 0.7rem; font-size: 0.85rem;
+  }
+  .world-upload:hover { background: var(--color-line); }
+  .world-upload input { display: none; }
+
+  .extra-ref { display: inline-flex; align-items: center; gap: 0.2rem; }
+  .extra-ref button { padding: 0 0.35rem; line-height: 1.4; }
+
+  .ref-pool { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.4rem 0; }
+  .ref-pool-item {
+    display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;
+    background: var(--color-surface); border: 1px solid var(--color-line); border-radius: 4px;
+    padding: 0.3rem 0.55rem; font-size: 0.8rem; color: var(--color-text-dim);
+  }
+  .ref-pool-item.selected { border-color: var(--color-accent); color: var(--color-text); background: var(--color-accent-soft); }
+
+  /* Reference to Video picker. .ref-thumb/.selected above are reused as-is; these
+     only add the grouping, the pick-order badge and the caption. */
+  .ref-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    margin-top: 0.6rem;
+  }
+
+  .ref-group {
+    margin-top: 0.6rem;
+  }
+
+  .ref-thumbs {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 0.4rem;
+  }
+
+  .ref-badge {
+    min-width: 1.4rem;
+    height: 1.4rem;
+    line-height: 1.4rem;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-bg);
+    background: transparent;
+  }
+
+  .ref-thumb.selected .ref-badge {
+    background: var(--color-accent);
+  }
+
+  .ref-caption {
+    font-size: 0.72rem;
+    color: var(--color-text-dim);
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Reference picker: big enough to actually judge an image by. */
+  .ref-thumbs .ref-thumb {
+    position: relative;
+    width: 200px;
+    padding: 0.5rem;
+  }
+
+  .ref-thumbs .ref-thumb img {
+    width: 184px;
+    height: 184px;
+    object-fit: contain;
+    background: var(--color-bg);
+  }
+
+  .ref-loading {
+    width: 184px;
+    height: 184px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-faint);
+    font-size: 0.8rem;
+    background: var(--color-bg);
+    border-radius: 4px;
+  }
+
+  .ref-thumbs .ref-badge {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+  }
+
+  /* Enlarge, without also toggling the pick. */
+  .ref-zoom {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    line-height: 1.6rem;
+    text-align: center;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.65);
+    color: var(--color-text);
+    font-size: 0.9rem;
+  }
+
+  .ref-zoom:hover {
+    background: var(--color-accent);
+    color: var(--color-bg);
+  }
+
+  .ref-thumbs .ref-caption {
+    max-width: 184px;
+  }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .lightbox-inner {
+    max-width: 92vw;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .lightbox-inner img {
+    max-width: 92vw;
+    max-height: 84vh;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+
+  .lightbox-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--color-text);
+    font-size: 0.85rem;
+  }
+
+  .ref-remove {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    line-height: 1.6rem;
+    text-align: center;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.65);
+    color: var(--color-text);
+    font-size: 0.85rem;
+  }
+
+  .ref-remove:hover {
+    background: var(--color-danger);
+    color: #fff;
+  }
+
+  /* Picked vs not has to read instantly - a thin border change does not. */
+  .ref-thumbs .ref-thumb {
+    opacity: 0.55;
+    transition: opacity 0.12s ease, border-color 0.12s ease;
+  }
+
+  .ref-thumbs .ref-thumb:hover {
+    opacity: 0.85;
+  }
+
+  .ref-thumbs .ref-thumb.selected {
+    opacity: 1;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 1px var(--color-accent) inset;
+  }
+
+  /* ComfyUI queue: a low-profile status light in the header that opens a menu.
+     Kept out of the page body so it never competes with the panel you are using. */
+  .jobs {
+    position: relative;
+  }
+
+  .jobs-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.6rem;
+    background: none;
+    border: 1px solid var(--color-line);
+    border-radius: 5px;
+    color: var(--color-text-dim);
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .jobs-trigger:hover {
+    background: var(--color-surface);
+    color: var(--color-text-dim);
+  }
+
+  .jobs-caret {
+    color: var(--color-text-faint);
+    font-size: 0.7rem;
+  }
+
+  .jobs-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+
+  .jobs-dot.idle {
+    background: var(--color-ok);
+  }
+
+  .jobs-dot.busy {
+    background: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(79, 168, 255, 0.18);
+  }
+
+  .jobs-dot.down {
+    background: var(--color-danger);
+  }
+
+  .jobs-menu {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    z-index: 40;
+    width: min(30rem, 80vw);
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 0.6rem 0.8rem 0.8rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-surface-3);
+    border-radius: 7px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    text-align: left;
+  }
+
+  .jobs-menu-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-faint);
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid var(--color-surface-2);
+    margin-bottom: 0.3rem;
+  }
+
+  .job {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--color-surface-2);
+    font-size: 0.82rem;
+  }
+
+  .job:last-of-type {
+    border-bottom: none;
+  }
+
+  .job-running {
+    color: var(--color-text);
+  }
+
+  .job-what {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.76rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 40%;
+  }
+
+  .job .empty {
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .job button {
+    margin-left: auto;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.78rem;
+  }
+
+  .jobs-menu .upload-form {
+    margin: 0.6rem 0 0;
+  }
+
+  .jobs-menu p {
+    font-size: 0.78rem;
+  }
+
+  /* Resolve chat. Deliberately shows the TOOL CALLS under each reply: the failure
+     mode of any tool-using model is reporting success on a call that failed. */
+  .resolve-chat {
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    background: var(--color-bg);
+    padding: 0.7rem 0.9rem;
+    max-height: 26rem;
+    overflow-y: auto;
+    margin-bottom: 0.8rem;
+  }
+
+  .chat-turn {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-surface-2);
+  }
+
+  .chat-turn:last-child {
+    border-bottom: none;
+  }
+
+  .chat-role {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-faint);
+    margin-bottom: 0.2rem;
+  }
+
+  .chat-user .chat-body {
+    color: var(--color-text-dim);
+  }
+
+  .chat-assistant .chat-body {
+    color: var(--color-text);
+  }
+
+  .chat-body {
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+  }
+
+  .chat-trace {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.45rem;
+  }
+
+  .chat-trace .badge {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.7rem;
+  }
+
+  .badge.chat-failed {
+    background: var(--color-danger-line);
+    color: var(--color-danger);
+  }
+
+  .chat-input {
+    flex: 1;
+    min-width: 20rem;
+  }
+
+  /* Resolve capability browser: what the agent can actually be asked to do. */
+  .caps-toggle {
+    background: none;
+    border: none;
+    color: var(--color-text);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .caps-results {
+    max-height: 24rem;
+    overflow-y: auto;
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    background: var(--color-bg);
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .caps-block {
+    margin-bottom: 0.8rem;
+  }
+
+  .caps-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--color-surface);
+    font-size: 0.82rem;
+  }
+
+  .caps-row:last-child {
+    border-bottom: none;
+  }
+
+  .caps-row code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+    color: var(--color-accent);
+    white-space: nowrap;
+  }
+
+  .caps-row .empty {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+}
+
+/* A control whose module is not installed: present, plainly inert, and saying
+   what would make it work. */
+.not-installed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.65;
+}
+.not-installed.is-inline { margin-right: 0.5rem; }
+.not-installed button { cursor: not-allowed; }
+.not-installed code { font-size: 0.85em; }
+
+/* Which language model everything uses. Sits in the header beside the project
+   picker: it is a global choice, and switching it is common. */
+.model-picker { display: inline-flex; align-items: center; gap: 0.4rem; position: relative; }
+.model-picker-remove {
+  border: none;
+  background: none;
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 1.1em;
+  line-height: 1;
+  padding: 0 0.2rem;
+}
+.model-picker-remove:hover { opacity: 1; }
+.model-picker-form {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.9rem;
+  min-width: 22rem;
+  border: 1px solid var(--line, #3a3a3a);
+  border-radius: 0.5rem;
+  background: var(--panel, #1c1c1c);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.model-picker-form label { display: flex; flex-direction: column; gap: 0.25rem; }
+
+/* Settings, reached from the gear in the header. */
+.settings-gear {
+  border: none;
+  background: none;
+  cursor: pointer;
+  opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem;
+  border-radius: 0.35rem;
+}
+.settings-gear:hover, .settings-gear.is-open { opacity: 1; background: var(--hover, rgba(255,255,255,0.08)); }
+/* Last in the header row, so it sits at the top right, and given a border so it
+   reads as a control rather than as decoration. */
+.settings-gear { margin-left: auto; border: 1px solid var(--line, #3a3a3a); }
+/* theme.css lays the header out with `order`: the theme toggle takes the free
+   space (margin-left:auto, order 2) and Delete movie follows it (order 3). An
+   unordered gear sat before both, splitting the free space with the toggle and
+   landing mid-row. Ordering it after them keeps it at the far right; the toggle
+   already supplies the push. And an explicit colour, because the icon draws in
+   currentColor and inherited one that vanishes on the dark header. */
+.movie-picker .settings-gear {
+  order: 4;
+  margin-left: 0;
+  color: var(--color-text);
+}
+.settings-page { max-width: 62rem; }
+.settings-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.settings-modules { display: grid; gap: 0.75rem; margin-bottom: 1.5rem; }
+.settings-module {
+  border: 1px solid var(--line, #3a3a3a);
+  border-radius: 0.5rem;
+  padding: 0.85rem 1rem;
+}
+.settings-module.is-busy { opacity: 0.6; }
+.settings-module-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.settings-module-head p { margin: 0.2rem 0 0; }
+.settings-more { border: none; background: none; cursor: pointer; opacity: 0.7; padding: 0.35rem 0 0; font-size: 0.85em; }
+.settings-detail { display: grid; grid-template-columns: 9rem 1fr; gap: 0.25rem 0.75rem; margin: 0.6rem 0 0; font-size: 0.9em; }
+.settings-detail dt { opacity: 0.65; }
+.settings-detail dd { margin: 0; }
+.settings-log pre { max-height: 18rem; overflow: auto; font-size: 0.82em; white-space: pre-wrap; }
