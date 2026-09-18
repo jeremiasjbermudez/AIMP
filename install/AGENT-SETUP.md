@@ -189,8 +189,13 @@ never paste it into a message.
 ```
 
 What it does: checks the tools, creates the base tables and the module registry, **deploys the
-core InsForge edge functions**, installs the admin app's dependencies, writes the service URLs into
-`admin/.env`, and generates an empty tab registry.
+core InsForge edge functions**, **registers the core Flowise flows** (Install-Module, Copy-Movie,
+Delete-Movie, Delete-Asset), installs the admin app's dependencies, writes the service URLs and the
+core flow ids into `admin/.env`, and generates an empty tab registry.
+
+The Install-Module flow is what the gear at the top right of the app calls. If the gear says
+`VITE_INSTALL_MODULE_ID is not set`, re-run this step (`.\core\03-core.ps1 -SkipNpm`) and restart
+the dev server. Flowise must be up with a valid key in `install.env`, or this step stops.
 
 The edge functions matter more than they sound: creating a project calls one of them. If the step
 reports it could not deploy `create-movie`, stop and report - the app will load and then fail at
