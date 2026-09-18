@@ -79,6 +79,51 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     setLog(out.log ?? null)
   }
 
+  /**
+   * Every available module, one request at a time, in the module map's order.
+   * Strictly sequential: two installers at once would both rewrite admin/.env
+   * and the tab registry. Installing one module can bring in others it needs,
+   * so the list is re-read after each and anything already there is skipped.
+   * Stops at the first failure and leaves the rest for another try.
+   */
+  async function installAll() {
+    const queue = modules.filter((m) => !m.installed)
+    if (!queue.length) return
+    const ok = window.confirm(
+      `Install all ${queue.length} available modules, one after another?\n\n` +
+        'Each one opens its own window to download its ComfyUI models and node packs. ' +
+        'Together they run to hundreds of gigabytes.'
+    )
+    if (!ok) return
+    setNote(null)
+    setLog(null)
+    let current = modules
+    const done: string[] = []
+    for (const [i, m] of queue.entries()) {
+      if (current.find((c) => c.name === m.name)?.installed) continue
+      setBusy(m.name)
+      setNote(`Installing ${i + 1} of ${queue.length}: ${m.title}…`)
+      const out = await call({ action: 'install', module: m.name })
+      if ('error' in out && out.error) {
+        setBusy(null)
+        setNote(
+          `${m.title} failed, so the install stopped there. ` +
+            (done.length ? `Installed before it: ${done.join(', ')}. ` : '') +
+            out.error
+        )
+        setLog(out.log ?? null)
+        if ('modules' in out && out.modules) setModules(out.modules)
+        return
+      }
+      current = out.modules ?? current
+      setModules(current)
+      setLog(out.log ?? null)
+      done.push(m.title)
+    }
+    setBusy(null)
+    setNote(`Installed ${done.length} module${done.length === 1 ? '' : 's'}. Restart the admin dev server to see the new tabs.`)
+  }
+
   const installed = modules.filter((m) => m.installed)
   const available = modules.filter((m) => !m.installed)
 
@@ -97,7 +142,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </button>
       </header>
 
-      {note && <p className={note.includes('not set') ? 'error' : 'empty'}>{note}</p>}
+      {note && <p className={/not set|failed/.test(note) ? 'error' : 'empty'}>{note}</p>}
       {log && (
         <details className="settings-log">
           <summary className="empty">What the installer said</summary>
@@ -144,6 +189,14 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           />
         ))}
       </div>
+
+      {available.length > 1 && (
+        <div className="settings-install-all">
+          <button type="button" className="primary" disabled={!!busy} onClick={installAll}>
+            {busy && busy !== 'list' ? 'Installing…' : `Install all (${available.length})`}
+          </button>
+        </div>
+      )}
 
       <p className="empty">
         Removing a module takes away its tabs and keeps its data. Dropping the tables is deliberate
