@@ -44,6 +44,12 @@ Write-Host ""
 
 $settings = [ordered]@{}
 Write-Host "-- Database (InsForge) --" -ForegroundColor Cyan
+# Docker inside WSL rather than on Windows: name the distribution, and every
+# docker command the installers run goes there. Blank when docker is on PATH.
+. (Join-Path $installRoot 'lib/docker-wsl.ps1')
+$wslDefault = if (-not (Get-Command docker -ErrorAction SilentlyContinue) -and (Get-Command wsl.exe -ErrorAction SilentlyContinue)) { 'Ubuntu-24.04' } else { '' }
+$settings.DOCKER_WSL_DISTRO = Ask 'DOCKER_WSL_DISTRO' 'WSL distribution Docker runs in (blank if docker is on PATH)' $wslDefault
+Enable-DockerThroughWsl $settings.DOCKER_WSL_DISTRO
 # Read from Docker, not guessed: InsForge's compose names containers after the
 # directory it was cloned into, so the name differs per install.
 $pgGuess = @(docker ps --format '{{.Names}}' 2>$null | Where-Object { $_ -like '*postgres*' })[0]

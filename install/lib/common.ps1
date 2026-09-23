@@ -49,6 +49,10 @@ $env:INSTALL_ROOT = $script:InstallRoot
 
 Import-InstallEnv
 
+# Docker inside WSL, when that is where InsForge runs (DOCKER_WSL_DISTRO).
+. (Join-Path $script:InstallRoot 'lib/docker-wsl.ps1')
+Enable-DockerThroughWsl $env:DOCKER_WSL_DISTRO
+
 function Get-ModuleMap {
     Get-Content (Join-Path $script:InstallRoot 'modules.json') -Raw | ConvertFrom-Json
 }
