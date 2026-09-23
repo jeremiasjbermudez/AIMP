@@ -9,6 +9,9 @@ Reads <take dir>/take.json and writes, beside it:
                           operator. Open it, press play, operate.
     take_manifest.json    every performer's position, heading, pose and eye point per
                           frame, and any warnings
+    take.glb              the same scene for the browser: the set and the performers'
+                          animation (glTF, Y up), for the camera setup page to play and
+                          frame cameras against
 
 A shot staged on a take (blender_stage.py with shot.take) uses these performers
 instead of placing a proxy on a mark, so every camera pass over one take sees the
@@ -282,6 +285,36 @@ w, h = (take['clock'].get('size') or [1344, 576])
 s.render.resolution_x, s.render.resolution_y = int(w), int(h)
 
 bpy.ops.wm.save_as_mainfile(filepath=str(TAKE_DIR / 'take.blend'), copy=False)
+
+# Eye points on every frame, in Blender's coordinates: the camera setup page aims and
+# moves cameras from these, and sends the resulting path back to be staged exactly.
+for pid, pm in manifest['performers'].items():
+    e = s.objects[pm['eyes']]
+    for row in pm['frames']:
+        s.frame_set(row['frame'])
+        p = e.matrix_world.translation
+        row['eyes'] = [round(p.x, 4), round(p.y, 4), round(p.z, 4)]
+s.frame_set(1)
+
+# The browser's copy. glTF cannot key visibility, so a figure variant the take never uses
+# (the seated one, usually) is removed from this export; the .blend keeps both.
+never_seated = {pid for pid, pm in manifest['performers'].items() if all(r['pose'] != 'seated' for r in pm['frames'])}
+for pid in never_seated:
+    sit = s.objects.get(f'PROXY_{pid.upper()}_SIT')
+    if sit:
+        for o in list(sit.children_recursive) + [sit]:
+            bpy.data.objects.remove(o, do_unlink=True)
+for o in [o for o in s.objects if o.type in ('CAMERA', 'LIGHT')]:
+    o.hide_set(True)
+try:
+    bpy.ops.export_scene.gltf(
+        filepath=str(TAKE_DIR / 'take.glb'), export_format='GLB', export_apply=True,
+        export_animations=True, export_animation_mode='SCENE', export_force_sampling=True,
+        export_frame_range=True, export_cameras=False, export_lights=False, export_yup=True,
+        use_visible=True)
+    manifest['glb'] = 'take.glb'
+except Exception as e:  # the .blend is what staging uses; the browser copy is a convenience
+    warnings.append(f'the browser copy (take.glb) was not exported: {e}')
 (TAKE_DIR / 'take_manifest.json').write_text(json.dumps(manifest, indent=1), encoding='utf-8')
 print('TAKE_SAVED', json.dumps({'performers': len(manifest['performers']), 'frames': frames,
                                 'cues': len(take.get('cues') or []), 'warnings': warnings}), flush=True)
