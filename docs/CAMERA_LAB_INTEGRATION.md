@@ -331,3 +331,29 @@ The re-render is night in the panorama's room, Tomas as his reference, and **hol
 move to the final close-up**. Still open: the window and the table appear although
 this camera faces away from them; the panorama views bring the room's features in too
 readily.
+
+## Camera Setup: cameras in the browser
+
+The steps now run in the order a film is made: **Screenplay → Characters →
+Locations → Shot List → Camera Setup (blocking, cameras, shoot) → Finish.**
+Control to Video and the splat camera are in the Workshop; the clips come from
+Camera Setup.
+
+**Shots › Camera Setup** (`admin-src/StagePanel.tsx`) works on a take:
+- **Blocking.** "New take from the shot list": tick consecutive Director shots, and
+  the model blocks them on the set (`draft_take`, build) - or pick an existing take.
+- **Cameras.** Add a camera and drag it on the plan (its field of view and its path
+  through the take are drawn). Per camera: lens, height, a move - locked off, pan to
+  follow, push in, pull out, dolly across, orbit, with its amount and timing - and a
+  handheld amount (seeded shake and drift, the same every time), and the Director
+  shot it is for. The setup is saved with the take (`set_takes.cameras`).
+- **Viewfinder** (`admin-src/TakeViewfinder.tsx`): three.js through the selected
+  camera at any frame, playing the take (`take.glb`, exported by `build_take.py`
+  with the performer's animation), with the cues on the timeline.
+- **Shoot** stages every camera on the take and renders its clip.
+
+What you frame is what renders: `admin-src/stageCamera.ts` turns a camera into one
+Blender camera matrix per frame (it matches Blender's own tracking rotation to
+2×10⁻⁷), the viewfinder shows that path, and Shoot sends the same path to staging
+(`shot.cameraPath`), which replays it frame for frame - the route an operated
+VirtuCamera pass already takes.
