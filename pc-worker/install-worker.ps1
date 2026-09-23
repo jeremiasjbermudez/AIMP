@@ -87,6 +87,17 @@ if ($PSCmdlet.ShouldProcess($configPath, 'write')) {
     [System.IO.File]::WriteAllText($configPath, ($config | ConvertTo-Json -Depth 5))
     # ComfyUI refuses a --user-directory that does not exist yet.
     New-Item -ItemType Directory -Force -Path (Join-Path $BaseDir 'user-world') | Out-Null
+    # HY-World's WorldStereo loads its text encoder with ComfyUI's own code, and
+    # looks for it as <base directory>\comfy. With the code kept apart from the
+    # data (--base-directory), it is not there and the loader stops with "Could
+    # not locate ComfyUI root". A junction to the code's comfy package fixes
+    # that without touching the pack; the main ComfyUI still imports comfy from
+    # its own code folder, which comes first on its path.
+    $comfyPkg = Join-Path (Split-Path -Parent $ComfyMain) 'comfy'
+    $link = Join-Path $BaseDir 'comfy'
+    if (-not (Test-Path $link) -and (Test-Path $comfyPkg)) {
+        New-Item -ItemType Junction -Path $link -Target $comfyPkg | Out-Null
+    }
 }
 
 # Registered like ComfyUI-Server: at boot, as this user, without a window.

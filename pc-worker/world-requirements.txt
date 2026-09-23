@@ -1,0 +1,9 @@
+# The world ComfyUI's environment (venv-world), on top of ComfyUI's own
+# requirements and ComfyUI_HYWorld2/requirements.txt.
+#
+# HY-World 2's WorldStereo imports these without listing them; the first world
+# build failed on each in turn ("No module named 'loguru'", then 'decord').
+loguru
+# decord has no Windows wheel for Python 3.12; eva-decord is the maintained
+# build and installs the same `decord` module.
+eva-decord

@@ -70,6 +70,9 @@ const VARIABLES = [
   // The render host's worker (pc-worker/), for work that has to happen on that
   // machine - starting the on-demand world ComfyUI. Blank when there is none.
   { variableName: 'workerUrl', variableValue: process.env.WORKER_URL || '' },
+  // ComfyUI's own Python, for the flows that run a script with it on this
+  // machine (flowise/workers/: Face QA). Blank means `python` on PATH.
+  { variableName: 'comfyPython', variableValue: process.env.COMFY_PYTHON || '' },
   { variableName: 'workerToken', variableValue: process.env.WORKER_TOKEN || '' }
 ]
 // The language-model settings go on EVERY flow, always, even when blank.
