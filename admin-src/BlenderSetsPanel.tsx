@@ -82,7 +82,8 @@ type Visibility = {
   background_risk?: string | null
 }
 type ShotSpec = {
-  character?: { display: string; mark: string; facing: string; pose: string; eye_height_m: number } | null
+  character?: { display: string; mark?: string; facing?: string; pose: string; eye_height_m: number } | null
+  take?: { id: string; performer?: string }
   camera?: { lens_mm: number; azimuth_deg_from_character?: number; start_distance_m?: number; height_m?: number }
   clock?: { frames: number }
 }
@@ -536,10 +537,11 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
   const locTakes = takes.filter((t) => t.set_location_id === locationId)
   const takeSelected = takes.find((t) => t.id === takeId) ?? null
   const planCams = [
-    ...locShots.filter((s) => s.shot.character).map((s) => ({
+    // Shots on a mark; a take's cameras follow a moving actor and have no fixed place to draw.
+    ...locShots.filter((s) => s.shot.character?.mark).map((s) => ({
       key: s.shot_key,
-      mark: s.shot.character!.mark,
-      facing: s.shot.character!.facing,
+      mark: s.shot.character!.mark ?? '',
+      facing: s.shot.character!.facing ?? '',
       az: s.shot.camera?.azimuth_deg_from_character ?? 0,
       dist: s.shot.camera?.start_distance_m ?? 2
     })),
@@ -912,7 +914,7 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
                     />
                   )}
                   <p className="empty">
-                    {c?.lens_mm} mm · {ch ? `${ch.display} on ${ch.mark.replace(/^ANCHOR_/, '')}, ` : ''}
+                    {c?.lens_mm} mm · {ch ? `${ch.display} ${ch.mark ? 'on ' + ch.mark.replace(/^ANCHOR_/, '') : 'in ' + (s.shot.take?.id ?? 'a take')}, ` : ''}
                     {c?.azimuth_deg_from_character ?? 0}° at {c?.start_distance_m} m · {s.shot.clock?.frames} frames
                   </p>
                   {s.visibility && <VisibilityBadges v={s.visibility} />}
