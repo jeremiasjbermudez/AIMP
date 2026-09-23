@@ -9,8 +9,10 @@ Three numbers, so settings can be compared by measurement rather than by eye:
   mid-frequency peaks over the median; about 20 is clean, above about 40 it shows.
 - faces: faces found on each sampled frame. The shot has one person, so more than one
   is a copy of the character.
-- people: every person on each sampled frame (YOLO11 segmentation, back views too). A
-  person who does not overlap the staged actor is an extra one: a copy of the character.
+- people: every person on each sampled frame (YOLO11 segmentation, back views too). The
+  shot stages one performer, so a frame with more than one person has a copy of the
+  character (people_over_one_frames). extra_people counts only the copies well away from
+  the staged actor; a copy standing behind them overlaps the outline and is missed there.
 - follows the camera: the actor's outline in the clip against the staged actor mask
   (blender/mask, the proxy's exact silhouette on that frame): intersection over union,
   1 = the same shape in the same place. And where the eyes should be (camera_manifest
@@ -122,6 +124,7 @@ out = {
     'eye_error_max': round(float(max(errs)), 3) if errs else None,
     'eyes_expected': sum(1 for r in rows if r['eyes_in_frame']),
     'extra_people_frames': sum(1 for r in rows if r.get('extra_people', 0) > 0),
+    'people_over_one_frames': sum(1 for r in rows if r.get('people', 0) > 1),
     'max_people': max((r.get('people', 0) for r in rows), default=0),
     'actor_iou_median': round(float(np.median([r['actor_iou'] for r in rows if 'actor_iou' in r])), 3) if any('actor_iou' in r for r in rows) else None,
     'actor_iou_min': round(float(min([r['actor_iou'] for r in rows if 'actor_iou' in r])), 3) if any('actor_iou' in r for r in rows) else None,
