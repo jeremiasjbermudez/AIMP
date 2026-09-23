@@ -14,7 +14,7 @@ What it does now:
   told to unload its models, the world one is started and waited for, and it
   is stopped again once it has sat idle.
 
-    POST /world/start   -> {"url": "http://<host>:8189"}, once it answers
+    POST /world/start   -> {"url": "http://<host>:8195"}, once it answers
     POST /world/stop
     GET  /world/status
     GET  /health
@@ -28,8 +28,8 @@ Config: aimp-worker.json beside this file (or AIMP_WORKER_CONFIG):
     "main_comfy": "http://127.0.0.1:8188",
     "world": {
       "python": "C:/ComfyUI-server/venv-world/Scripts/python.exe",
-      "args": ["C:/ComfyUI-server/ComfyUI-0.37.0/main.py", "--port", "8189", ...],
-      "port": 8189,
+      "args": ["C:/ComfyUI-server/ComfyUI-0.37.0/main.py", "--port", "8195", ...],
+      "port": 8195,
       "public_host": "thelastofpc",
       "idle_minutes": 10,
       "log": "C:/ComfyUI-server/logs/world-comfy.log"
@@ -92,8 +92,15 @@ class World:
     def start(self):
         with LOCK:
             self.idle_since = None
+            ours = self.proc is not None and self.proc.poll() is None
             if self.answering():
-                return self.public
+                if ours:
+                    return self.public
+                # Something else holds the port - another ComfyUI this machine
+                # runs, say. Using it would send world graphs to a server that
+                # cannot run them; reporting it names the fix.
+                raise RuntimeError(f"port {WORLD['port']} is already in use by another program; "
+                                   'set a free port for the world ComfyUI in aimp-worker.json')
             # The GPU is shared. The main ComfyUI keeps models resident, and a
             # world build on top of them runs out of memory, so they go first.
             try:

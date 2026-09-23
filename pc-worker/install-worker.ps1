@@ -32,7 +32,8 @@ param(
     [string]$ComfyMain    = 'C:\ComfyUI-server\ComfyUI-0.37.0\main.py',
     [string]$BaseDir      = 'C:\Users\alexk\ComfyUI',
     [string]$ModelPaths   = 'C:\ComfyUI-server\model_paths.yaml',
-    [int]$WorldPort       = 8189,
+    # Not 8188-8189: those are commonly other ComfyUI instances.
+    [int]$WorldPort       = 8195,
     # The name other machines reach this one by (the Tailscale name, say).
     [string]$PublicHost   = $env:COMPUTERNAME.ToLower(),
     [int]$IdleMinutes     = 10,
