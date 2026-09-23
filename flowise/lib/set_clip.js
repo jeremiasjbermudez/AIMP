@@ -100,7 +100,9 @@ function setClipPrompt(p) {
       const v0 = setClipViewPhrase(a0, who);
       const v1 = setClipViewPhrase(a1, who);
       lines.push(Math.abs(a1 - a0) < 15 || v0 === v1 ? `The camera is ${v0}.` : `At the start the camera is ${v0}; by the end of the move it is ${v1}.`);
-      if (Math.abs(a0) > 35 || Math.abs(a1) > 35) lines.push(`${who} keeps facing the same direction in the room throughout and does not turn toward the camera.`);
+      // On a mark the actor stays put, so a rear camera must not bring them round to face it.
+      // On a take they walk and turn, and the timeline says when.
+      if (!(p.timeline && p.timeline.length) && (Math.abs(a0) > 35 || Math.abs(a1) > 35)) lines.push(`${who} keeps facing the same direction in the room throughout and does not turn toward the camera.`);
     }
   }
   if (p.timeline && p.timeline.length) lines.push(p.timeline.join(' '));
