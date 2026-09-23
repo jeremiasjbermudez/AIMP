@@ -1,3 +1,5 @@
+// @include comfy_paths
+
 const resolved = JSON.parse($resolveOutput);
 if (resolved.error) return { action: 'error', reason: resolved.error };
 
@@ -93,6 +95,7 @@ const sameWorkspace = !existing || !existing.workspace_name || existing.workspac
 if (existing && (force || resume) && sameWorkspace) {
   backupPath = finalPlyPath.replace(/\.ply$/, '_backup_' + Date.now() + '.ply');
   const backupGraph = { '1': { class_type: 'RenameFile', inputs: { source_path: existing.ply_path, dest_path: backupPath } } };
+  ensureSaveDirs(backupGraph);
   const br = await axios.post(comfyUrl + '/prompt', { prompt: backupGraph });
   const bpid = br.data && br.data.prompt_id;
   if (!bpid) return { action: 'error', reason: 'Forced retrain aborted: could not enqueue backup of the existing splat. Nothing was touched.' };
@@ -117,6 +120,7 @@ const copyGraph = {
   '1': { class_type: 'JWImageLoadRGB', inputs: { path: srcPanoAbs } },
   '2': { class_type: 'JWImageSaveToPath', inputs: { image: ['1', 0], path: String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/input/' + flatPanoName, overwrite: 'true' } }
 };
+ensureSaveDirs(copyGraph);
 const cr = await axios.post(comfyUrl + '/prompt', { prompt: copyGraph });
 const cpid = cr.data && cr.data.prompt_id;
 if (!cpid) return { action: 'error', reason: 'Stage failed: could not enqueue copy of the panorama into the flat input root.' };
@@ -143,6 +147,7 @@ const wf = {
 };
 
 await axios.post(comfyUrl + '/free', { unload_models: true, free_memory: true });
+ensureSaveDirs(wf);
 const r = await axios.post(comfyUrl + '/prompt', { prompt: wf });
 const pid = r.data && r.data.prompt_id;
 if (!pid) return { action: 'error', reason: 'World build enqueue failed', details: (r.data && r.data.node_errors) || r.data };

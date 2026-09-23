@@ -1,3 +1,5 @@
+// @include comfy_paths
+
 const resolved = JSON.parse($resolveOutput);
 if (resolved.error) return { error: resolved.error };
 
@@ -189,6 +191,7 @@ async function generateOne(kindRaw) {
   wf['24'] = { class_type: 'SamplerCustomAdvanced', inputs: { noise: ['23', 0], guider: ['22', 0], sampler: ['20', 0], sigmas: ['21', 0], latent_image: ['10', 0] } };
 
   await axios.post(comfyUrl + '/free', { unload_models: true, free_memory: true });
+  ensureSaveDirs(wf);
   const submitRes = await axios.post(comfyUrl + '/prompt', { prompt: wf });
   const promptId = submitRes.data && submitRes.data.prompt_id;
   if (!promptId) return { KIND, error: 'Enqueue failed: ' + JSON.stringify(submitRes.data).slice(0, 400) };
@@ -234,6 +237,7 @@ async function generateOne(kindRaw) {
       '1': { class_type: 'JWImageLoadRGB', inputs: { path: String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/output/' + srcOutRel } },
       '2': { class_type: 'JWImageSaveToPath', inputs: { image: ['1', 0], path: String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/input/' + dstInRel, overwrite: 'true' } }
     };
+    ensureSaveDirs(cg);
     const rc = await axios.post(comfyUrl + '/prompt', { prompt: cg });
     const cpid = rc.data && rc.data.prompt_id;
     if (cpid) {

@@ -1,3 +1,5 @@
+// @include comfy_paths
+
 // HY-World 2.0: a navigable 3D world from text, an image, or a video.
 //
 // Written against the HY-World 2.0 pipeline as documented, not assembled from
@@ -75,6 +77,7 @@ async function fail(reason) {
 async function run(graph, tries, label) {
   let r;
   try {
+    ensureSaveDirs(graph);
     r = await axios.post(comfyUrl + '/prompt', { prompt: graph });
   } catch (e) {
     const body = (e && e.response && e.response.data) || (e && e.message) || String(e);

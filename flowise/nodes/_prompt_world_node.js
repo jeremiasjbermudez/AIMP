@@ -1,3 +1,5 @@
+// @include comfy_paths
+
 // A 3D world from a prompt alone, with no scene behind it.
 //
 // Both halves of this already existed but only ever ran scene-first: the
@@ -134,6 +136,7 @@ const panoGraph = {
 
 let pr;
 try {
+  ensureSaveDirs(panoGraph);
   pr = await axios.post(comfyUrl + '/prompt', { prompt: panoGraph });
 } catch (e) {
   const body = (e && e.response && e.response.data) || (e && e.message) || String(e);
@@ -189,6 +192,7 @@ const wf = {
 
 let wr;
 try {
+  ensureSaveDirs(wf);
   wr = await axios.post(comfyUrl + '/prompt', { prompt: wf });
 } catch (e) {
   const body = (e && e.response && e.response.data) || (e && e.message) || String(e);

@@ -1,3 +1,5 @@
+// @include comfy_paths
+
 const resolved = JSON.parse($resolveOutput);
 if (resolved.error) return { error: resolved.error };
 
@@ -183,6 +185,7 @@ const g = {
 };
 
 await axios.post(comfyUrl + '/free', { unload_models: true, free_memory: true });
+ensureSaveDirs(g);
 const submitRes = await axios.post(comfyUrl + '/prompt', { prompt: g });
 const promptId = submitRes.data && submitRes.data.prompt_id;
 // ComfyUI puts a missing node type or model in .error, not in .node_errors,
