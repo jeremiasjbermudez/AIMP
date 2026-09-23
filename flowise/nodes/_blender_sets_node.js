@@ -171,8 +171,10 @@ if (action === 'scout') {
 
 /** A picture under the sets root, as base64 for the model. */
 async function setsImage(rel) {
-  const q = new URLSearchParams({ type: 'input', subfolder: ('sets/' + rel).split('/').slice(0, -1).join('/'), filename: rel.split('/').pop() });
-  const r = await axios.get(String($comfyUrl).replace(/\/$/, '') + '/view?' + q.toString(), { responseType: 'arraybuffer', timeout: 60000 });
+  // Built by hand: the flow sandbox has no URLSearchParams.
+  const parts = ('sets/' + rel).split('/');
+  const q = 'type=input&subfolder=' + encodeURIComponent(parts.slice(0, -1).join('/')) + '&filename=' + encodeURIComponent(parts[parts.length - 1]);
+  const r = await axios.get(String($comfyUrl).replace(/\/$/, '') + '/view?' + q, { responseType: 'arraybuffer', timeout: 60000 });
   return Buffer.from(r.data).toString('base64');
 }
 
