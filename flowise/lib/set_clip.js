@@ -33,7 +33,7 @@ function setClipVisibility(vis) {
   if (su.sometimes && su.sometimes.length) out.push('Entering or leaving frame during the move: ' + su.sometimes.join(', ') + '.');
   if (su.never && su.never.length) {
     out.push('Not in this shot at any moment: ' + su.never.join(', ') + '.');
-    const openings = su.never.filter((g) => /window|door/i.test(g));
+    const openings = su.never.filter((g) => /window|door/i.test(g)).map((g) => g.replace(/^the /i, ''));
     if (openings.length) out.push(`No ${openings.join(' and no ')} appears anywhere in this shot; do not add any window, doorway or opening to the walls in view.`);
   }
   return out.join(' ');
@@ -81,7 +81,7 @@ function setClipPrompt(p) {
   const total = Number(tr.total_s || p.frames / p.fps);
   const hold = Number(tr.hold_until_s || 0);
   const end = Number(tr.move_end_s || hold);
-  lines.push(`One continuous camera move over ${total.toFixed(3)}s at ${p.fps} fps.`);
+  lines.push(`One continuous ${tr.type === 'hold' ? 'shot' : 'camera move'} over ${total.toFixed(3)}s at ${p.fps} fps.`);
   if (tr.type === 'push') {
     lines.push(`From 0.000s to ${hold.toFixed(3)}s: hold the camera still.`);
     lines.push(`From ${hold.toFixed(3)}s to ${end.toFixed(3)}s: move the CAMERA straight toward ${who} along the lens axis, keeping the lens aimed at their eyes, from radius 1.00 to ${Number(tr.radius_end_ratio || 1).toFixed(2)} times the start; ${who} stays where they are.`);

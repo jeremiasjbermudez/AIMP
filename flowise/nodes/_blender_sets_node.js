@@ -422,7 +422,10 @@ async function makeClip() {
   clipStep = 'writing the prompt';
   // 3. The prompt.
   const sh = shotRow.shot || {};
-  const action = dshot ? [dshot.motion_prompt, dshot.frame_prompt].filter(Boolean).join(' ') : beat ? beat.summary : '';
+  // The Director's motion prompt is the action. Its frame prompt describes a
+  // first-frame still (lens, framing, a different moment) and would contradict
+  // the staged camera, so it stays out.
+  const action = (dshot && dshot.motion_prompt) || (beat ? beat.summary : '');
   const prompt = setClipPrompt({
     locationName: loc.name || loc.location_key, roomPrompt: facts.room_prompt, lensMm: m.lens_mm || (sh.camera || {}).lens_mm,
     frames: m.frames, fps: m.fps, person: character ? { name: character.name, look: character.visual_anchor } : null,
