@@ -78,10 +78,13 @@ picture. Cameras, control passes and visibility then belong to the camera module
 6. **From a staged shot to a clip. Done.** See [From the set to a clip](#from-the-set-to-a-clip).
    Still to port: Director's Stage (`director_web`) into the Camera tab, writing
    `stageCamera` into the same `stage` action.
-7. **Next.** Proposed coverage: from a scene's shot list (the Director tab), place
+7. **Takes: the performance. Step 1 done.** See [Takes](#takes). Next: the model
+   drafts a take from the beat and the Director's shots; recording camera passes with
+   VirtuCamera on the Mac; a rigged mannequin with walk and turn clips; captured motion.
+8. **Next.** Proposed coverage: from a scene's shot list (the Director tab), place
    cameras on the set's marks (wide, singles, overs), reject angles the visibility
    pass says see only bare wall, and lay them out on a scout sheet for approval.
-8. **Later.** Align the splat world to the block-out (floor, scale, heading), so a
+9. **Later.** Align the splat world to the block-out (floor, scale, heading), so a
    staged camera can also render a photographic plate from the splat.
 
 ## How a set is made
@@ -201,3 +204,38 @@ beat ─▶ Director shot ─▶ staged Blender shot ─▶ make_clip ─▶ min
   calendar") can appear although it is behind the camera. camera_lab's end-frame
   anchor (the actor inserted into the Blender end frame and used as a guide) is the
   next thing to port for both.
+
+## Takes
+
+A staged shot used to place a proxy standing still on a mark. A camera operator needs
+the action to play: follow the actor across the room, find the angle as he turns. So
+a set gets **takes**: the scene's performance, as data.
+
+```
+take.json (take/v0)                      build_take.py            take.blend
+  performers: moves on marks, by time  ───────────────────────▶  the set, performers walking
+  cues: what happens when                                         (legs and arms swing, turn on
+  length: an H3 length                                            arrival, stand or sit), cues as
+                                                                  timeline markers, TAKE_CAM
+```
+
+- **One performance, many cameras.** Every shot staged on a take (`stage` with
+  `takeId`) films the same action, so a scene's angles cut together, as coverage does
+  on a real shoot. The camera from the shot form stays where it is and pans to follow;
+  a recorded camera (`shot.cameraPath`, one matrix per frame) is replayed exactly.
+- **Operate it.** Blender Sets offers the take's `.blend` to download. Open it, press
+  play, and operate against the action (the first use for VirtuCamera). It is plain
+  Blender 4.5: checked on the Mac, the performer walks between frames 29 and 82 and the
+  cue marker sits at frame 97.
+- **The clip.** `make_clip` turns the take into timed sentences ("From 1.2s to 3.4s
+  TOMAS walks from the stove to the middle of the room, and turns to face the
+  calendar") and describes a following camera as a pan, measured from the camera's
+  own frames, not as the locked-off shot the stage would call it.
+- **The figure** is the stage's proxy, moved to `blender/_proxy.py` unchanged:
+  re-staging a shot after the move gives pixel-identical depth and masks.
+
+Tested on Testies (take TK_A1S1_01, shot LK_TK01_FOLLOW, Director shot 2): Tomas at
+the stove with his back to a 28 mm camera, walking toward it and turning to the
+calendar. H3 followed the performance: the back of his head, the turn, the approach,
+and the profile at the end, frame for frame with the depth. The block-out's window
+(a glowing panel) came back looking like a doorway into another room.
