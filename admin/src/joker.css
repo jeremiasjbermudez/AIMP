@@ -355,7 +355,7 @@ main button:not(:where(
   .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
   .edit-ref-actions button, .engine-tab, .ref-remove,
   .grade-inline button, .grade-toggle,
-  .clip-thumb-card
+  .clip-thumb-card, .stage-cam-chip
 )) {
   position: relative;
   isolation: isolate;
@@ -375,7 +375,7 @@ main button:not(:where(
   .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
   .edit-ref-actions button, .engine-tab, .ref-remove,
   .grade-inline button, .grade-toggle,
-  .clip-thumb-card
+  .clip-thumb-card, .stage-cam-chip
 ))::before {
   content: '';
   position: absolute;
@@ -391,7 +391,7 @@ main button:not(:where(
   .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
   .edit-ref-actions button, .engine-tab, .ref-remove,
   .grade-inline button, .grade-toggle,
-  .clip-thumb-card
+  .clip-thumb-card, .stage-cam-chip
 )):hover:not(:disabled) {
   color: #fff;
 }
@@ -401,7 +401,7 @@ main button:not(:where(
   .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
   .edit-ref-actions button, .engine-tab, .ref-remove,
   .grade-inline button, .grade-toggle,
-  .clip-thumb-card
+  .clip-thumb-card, .stage-cam-chip
 )):hover:not(:disabled)::before {
   background: linear-gradient(150deg, var(--joker-green), var(--action-hover) 75%, var(--action));
   filter: url(#paint-edge) drop-shadow(0 0 18px rgb(110 227 110 / 0.6));

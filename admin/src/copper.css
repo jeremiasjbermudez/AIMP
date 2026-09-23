@@ -340,7 +340,7 @@ main button:not(:where(
   .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
   .edit-ref-actions button, .engine-tab, .ref-remove,
   .grade-inline button, .grade-toggle,
-  .clip-thumb-card,
+  .clip-thumb-card, .stage-cam-chip,
   .row-actions button,
   .bulk-bar button,
   .grab-frame
@@ -367,7 +367,7 @@ main button:not(:where(
   .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
   .edit-ref-actions button, .engine-tab, .ref-remove,
   .grade-inline button, .grade-toggle,
-  .clip-thumb-card,
+  .clip-thumb-card, .stage-cam-chip,
   .grab-frame
 ))::before,
 main button:not(:where(
@@ -375,7 +375,7 @@ main button:not(:where(
   .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
   .edit-ref-actions button, .engine-tab, .ref-remove,
   .grade-inline button, .grade-toggle,
-  .clip-thumb-card,
+  .clip-thumb-card, .stage-cam-chip,
   .grab-frame
 ))::after {
   content: none;
@@ -386,7 +386,7 @@ main button:not(:where(
   .screenplay-beat-toggle, .side-nav button, .screenplay-tools button,
   .edit-ref-actions button, .engine-tab, .ref-remove,
   .grade-inline button, .grade-toggle,
-  .clip-thumb-card,
+  .clip-thumb-card, .stage-cam-chip,
   .grab-frame
 )):hover:not(:disabled) {
   background: var(--btn-fill-hover);
