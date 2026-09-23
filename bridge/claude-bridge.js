@@ -182,7 +182,12 @@ async function runClaude({ model, system, blocks }) {
         '--disable-slash-commands',
         '--system-prompt', system || 'You are a helpful assistant.'
       ]
-      const child = spawn(CLAUDE, args, { cwd: os.tmpdir(), stdio: ['pipe', 'pipe', 'pipe'] })
+      // With ANTHROPIC_API_KEY set, the CLI bills that API key rather than the
+      // subscription it is signed in with - silently, per call. This bridge is
+      // for the subscription, so the key is never passed on.
+      const env = { ...process.env }
+      delete env.ANTHROPIC_API_KEY
+      const child = spawn(CLAUDE, args, { cwd: os.tmpdir(), env, stdio: ['pipe', 'pipe', 'pipe'] })
       let out = ''
       let err = ''
       const timer = setTimeout(() => {
@@ -348,4 +353,9 @@ const server = http.createServer(async (req, res) => {
   }
 })
 
-server.listen(PORT, HOST, () => log(`claude bridge on http://${HOST}:${PORT} (default model ${DEFAULT_MODEL})`))
+server.listen(PORT, HOST, () => {
+  log(`claude bridge on http://${HOST}:${PORT} (default model ${DEFAULT_MODEL})`)
+  if (process.env.ANTHROPIC_API_KEY) {
+    log('ANTHROPIC_API_KEY is set here; it is not passed to claude, which uses its own sign-in')
+  }
+})

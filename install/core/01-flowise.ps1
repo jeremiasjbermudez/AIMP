@@ -33,7 +33,12 @@ param(
     [int]$RequiredPnpmMajor = 10,
     [switch]$SkipBuild,
     # Do everything except leave it running.
-    [switch]$NoStart
+    [switch]$NoStart,
+    # The address Flowise listens on. Loopback by default: the admin app and the
+    # installers run on this machine, and a flow can run programs here, so
+    # nothing else should be able to reach it. Pass 0.0.0.0 only if another
+    # machine really needs to.
+    [string]$ListenHost = '127.0.0.1'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -145,6 +150,7 @@ $envFile = Join-Path $Path 'packages/server/.env'
 $dataDir = Join-Path $Path ('data' + $Port)
 $wanted = [ordered]@{
     'PORT' = $Port
+    'HOST' = $ListenHost
     # Keep the sqlite database beside the checkout rather than in the home
     # directory, so two installs on one machine do not share one database.
     'DATABASE_PATH' = $dataDir
