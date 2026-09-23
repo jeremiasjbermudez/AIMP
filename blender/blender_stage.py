@@ -15,7 +15,7 @@ Produces in <shot_dir>/blender/:
 import bpy, json, sys, math, hashlib
 import sys as _sys, os as _os; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); import _sets
 from pathlib import Path
-from mathutils import Vector
+from mathutils import Matrix, Vector
 from bpy_extras.object_utils import world_to_camera_view
 
 argv = sys.argv[sys.argv.index('--') + 1:]; SHOT = Path(argv[0]); shot = json.loads((SHOT / 'shot.json').read_text()); ONLY = set(argv[1].split(',')) if len(argv) > 1 else None
@@ -30,7 +30,14 @@ _sets.use_best_gpu(bpy)   # was Metal-only; the render host has an NVIDIA card
 
 # ---- marks -------------------------------------------------------------------------------------
 ch = shot.get('character')   # None = room-only shot (e.g. the location canon pan): no proxy, no eyes target
-if ch:
+# AIMP: a shot on a take (build_take.py) is staged in take.blend, whose performers already move;
+# the proxy is not placed, and the camera aims at the performer's animated eyes.
+TAKE = shot.get('take')
+if TAKE:
+    s.frame_set(1); _root = s.objects[TAKE['root']]; _eyes = s.objects[TAKE['eyes']]
+    fwd = _root.matrix_world.to_3x3() @ Vector((0, -1, 0)); fwd.z = 0; fwd.normalize()
+    yaw = math.atan2(fwd.y, fwd.x) + math.pi / 2; eyes_world = _eyes.matrix_world.translation.copy()
+elif ch:
     mark = s.objects[ch['mark']].matrix_world.translation.copy(); face_to = s.objects[ch['facing']].matrix_world.translation.copy()
     fwd = (face_to - mark); fwd.z = 0; fwd.normalize()                       # character faces the visitor mark
     yaw = math.atan2(fwd.y, fwd.x) + math.pi / 2                                # proxy local -Y is its front
@@ -39,63 +46,27 @@ else:
     fwd = Vector((0, -1, 0)); yaw = 0.0; eyes_world = Vector(shot['camera'].get('position', (0, 0, 1.5))) + Vector((0, 0, 0))
 
 # ---- proxy figure (smooth v2), replacing any previous block proxies ----------------------------
-for o in [o for o in s.objects if o.name.startswith('PROXY_')]: bpy.data.objects.remove(o, do_unlink=True)
+for o in [o for o in s.objects if o.name.startswith('PROXY_') and not TAKE]: bpy.data.objects.remove(o, do_unlink=True)
 coll = bpy.data.collections.get('PROXY_ACTOR') or bpy.data.collections.new('PROXY_ACTOR')
 if coll.name not in [c.name for c in s.collection.children]: s.collection.children.link(coll)
 root = bpy.data.objects.new('PROXY_ACTOR_ROOT', None); coll.objects.link(root)
 standing = bool(ch) and ch.get('pose', 'seated') == 'standing'
-if ch and standing:
+if TAKE:
+    pass
+elif ch and standing:
     root.location = (mark.x, mark.y, ch['eye_height_m'] - 1.62); root.rotation_euler = (0, 0, yaw)   # v2 proxy eyes sit ~1.62 above root when legs are straight
 elif ch:
     seat_offset = ch.get('seat_top_m', 0.60) - 0.60                                       # v2 proxy was authored for a 0.60 m seat
     root.location = (mark.x, mark.y, seat_offset); root.rotation_euler = (0, 0, yaw)
-def mat(name, rgb):
-    m = bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']; b.inputs['Base Color'].default_value = (*rgb, 1); b.inputs['Roughness'].default_value = 0.85; return m
-SKIN, JACKET, SHIRT, TROUSER, HAIR = mat('px_skin', (0.62, 0.45, 0.36)), mat('px_jacket', (0.80, 0.76, 0.66)), mat('px_shirt', (0.08, 0.08, 0.08)), mat('px_trouser', (0.12, 0.11, 0.10)), mat('px_hair', (0.85, 0.85, 0.85))
-def part(name, kind, loc, scale, material, rot=(0, 0, 0)):
-    if kind == 'sphere': bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1)
-    elif kind == 'cyl': bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=1, depth=1)
-    else: bpy.ops.mesh.primitive_cube_add(size=1)
-    o = bpy.context.active_object; o.name = name
-    for c in list(o.users_collection): c.objects.unlink(o)
-    coll.objects.link(o); o.parent = root; o.location = loc; o.scale = scale; o.rotation_euler = rot; o.data.materials.append(material)
-    if kind == 'cube': bev = o.modifiers.new('bevel', 'BEVEL'); bev.width = 0.06; bev.segments = 4
-    sub = o.modifiers.new('subsurf', 'SUBSURF'); sub.levels = 2; sub.render_levels = 3; bpy.ops.object.shade_smooth(); return o
-if ch and standing:
-    part('proxy_pelvis', 'cube', (0, 0.0, 0.92), (0.38, 0.26, 0.22), TROUSER)
-    part('proxy_torso', 'cube', (0, 0.0, 1.27), (0.46, 0.30, 0.52), JACKET)
-    part('proxy_shirt', 'cube', (0, -0.15, 1.30), (0.14, 0.04, 0.34), SHIRT)
-    part('proxy_neck', 'cyl', (0, 0.0, 1.545), (0.055, 0.055, 0.08), SKIN)
-    part('proxy_head', 'sphere', (0, 0.0, 1.66), (0.09, 0.11, 0.12), SKIN)
-    part('proxy_hair', 'sphere', (0, 0.03, 1.70), (0.10, 0.12, 0.10), HAIR)
-    part('proxy_nose', 'sphere', (0, -0.11, 1.63), (0.018, 0.022, 0.022), SKIN)
-    for side in (-1, 1):
-        part(f'proxy_eye_{side}', 'sphere', (side * 0.033, -0.10, 1.65), (0.011, 0.008, 0.011), SHIRT)
-        part(f'proxy_upperarm_{side}', 'cyl', (side * 0.27, 0.0, 1.22), (0.055, 0.055, 0.34), JACKET)
-        part(f'proxy_forearm_{side}', 'cyl', (side * 0.28, -0.02, 0.90), (0.045, 0.045, 0.30), JACKET)
-        part(f'proxy_hand_{side}', 'sphere', (side * 0.28, -0.03, 0.72), (0.04, 0.05, 0.08), SKIN)
-        part(f'proxy_thigh_{side}', 'cyl', (side * 0.10, 0.0, 0.58), (0.075, 0.075, 0.48), TROUSER)
-        part(f'proxy_shin_{side}', 'cyl', (side * 0.10, 0.0, 0.20), (0.06, 0.06, 0.40), TROUSER)
-        part(f'proxy_shoe_{side}', 'cube', (side * 0.10, -0.05, 0.03), (0.10, 0.27, 0.06), TROUSER)
-elif ch:
-    part('proxy_pelvis', 'cube', (0, 0.08, 0.70), (0.40, 0.30, 0.20), TROUSER)
-    part('proxy_torso', 'cube', (0, 0.10, 1.00), (0.42, 0.24, 0.50), JACKET, rot=(math.radians(-6), 0, 0))
-    part('proxy_shirt', 'cube', (0, -0.045, 1.02), (0.16, 0.06, 0.40), SHIRT, rot=(math.radians(-6), 0, 0))
-    part('proxy_neck', 'cyl', (0, 0.02, 1.235), (0.055, 0.055, 0.09), SKIN)
-    part('proxy_head', 'sphere', (0, 0.0, 1.33), (0.09, 0.11, 0.12), SKIN)
-    part('proxy_hair', 'sphere', (0, 0.03, 1.36), (0.105, 0.125, 0.115), HAIR)
-    part('proxy_nose', 'sphere', (0, -0.11, 1.30), (0.018, 0.022, 0.022), SKIN)
-    for side in (-1, 1):
-        part(f'proxy_eye_{side}', 'sphere', (side * 0.033, -0.10, 1.32), (0.011, 0.008, 0.011), SHIRT)
-        part(f'proxy_upperarm_{side}', 'cyl', (side * 0.24, 0.10, 0.98), (0.05, 0.05, 0.34), JACKET, rot=(math.radians(-6), 0, 0))
-        part(f'proxy_forearm_{side}', 'cyl', (side * 0.19, -0.08, 0.82), (0.042, 0.042, 0.30), JACKET, rot=(math.radians(-85), 0, math.radians(side * -10)))
-        part(f'proxy_hand_{side}', 'sphere', (side * 0.10, -0.24, 0.79), (0.045, 0.06, 0.028), SKIN)
-        part(f'proxy_thigh_{side}', 'cyl', (side * 0.11, -0.20, 0.66), (0.07, 0.07, 0.48), TROUSER, rot=(math.radians(-88), 0, 0))
-        part(f'proxy_shin_{side}', 'cyl', (side * 0.12, -0.46, 0.30), (0.055, 0.055, 0.58), TROUSER, rot=(math.radians(-6), 0, 0))
+import _proxy  # the proxy figure, shared with build_take.py
+if ch and not TAKE: _proxy.build(bpy, coll, root, 'standing' if standing else 'seated')
 bpy.ops.object.select_all(action='DESELECT')
-eyes = s.objects.get('EYES_ACTOR') or bpy.data.objects.new('EYES_ACTOR', None)
-if eyes.name not in s.objects: s.collection.objects.link(eyes)
-eyes.location = eyes_world
+if TAKE:
+    eyes = s.objects[TAKE['eyes']]   # animated with the performer
+else:
+    eyes = s.objects.get('EYES_ACTOR') or bpy.data.objects.new('EYES_ACTOR', None)
+    if eyes.name not in s.objects: s.collection.objects.link(eyes)
+    eyes.location = eyes_world
 
 # ---- shot camera --------------------------------------------------------------------------------
 cam_spec = shot['camera']; cname = 'SHOT_' + cam_spec['id']
@@ -118,6 +89,17 @@ if pan_spec:
         t = 0.0 if f <= mv['start_frame'] else 1.0 if f >= mv['end_frame'] else (f - mv['start_frame']) / (mv['end_frame'] - mv['start_frame'])
         cam.rotation_euler = (math.radians(90 - pitch), 0, math.radians(y0 + (y1 - y0) * t - 90)); cam.keyframe_insert('rotation_euler', frame=f)
     d0 = d1 = 0.0
+elif cam_spec.get('path'):
+    # AIMP: a recorded camera (an operated pass over a take, e.g. VirtuCamera): its matrix on every frame,
+    # held at the ends if the recording is shorter than the shot.
+    rec = {int(r['frame']): r['matrix'] for r in cam_spec['path']}; keys = sorted(rec)
+    if cam_spec.get('lens_mm'): cd.lens = cam_spec['lens_mm']
+    for f in range(1, frames + 1):
+        k = f if f in rec else (keys[0] if f < keys[0] else keys[-1] if f > keys[-1] else max(x for x in keys if x <= f))
+        cam.matrix_world = Matrix(rec[k]); cam.keyframe_insert('location', frame=f); cam.keyframe_insert('rotation_euler', frame=f)
+    mv = {'enabled': True, 'start_frame': 1, 'end_frame': frames, 'easing': 'linear'}
+    s.frame_set(1); d0 = (cam.matrix_world.translation - eyes.matrix_world.translation).length
+    s.frame_set(frames); d1 = (cam.matrix_world.translation - eyes.matrix_world.translation).length
 elif stage_cam:
     cd.lens = stage_cam['lens_mm']; cd.sensor_width = stage_cam['sensor_width_mm']; cd.shift_x, cd.shift_y = stage_cam['shift']; cd.dof.aperture_fstop = stage_cam['f_stop']
     mv = stage_cam['move']; p0, p1 = Vector(stage_cam['start']), Vector(stage_cam['end'] if mv['enabled'] else stage_cam['start'])

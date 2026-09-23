@@ -198,7 +198,7 @@ WORLD_COMFY = World()
 class BlenderJobs:
     """Blender renders for sets, queued and run one at a time."""
 
-    KINDS = ('stage', 'visibility', 'scout', 'assets', 'pano_views', 'build', 'export', 'control')
+    KINDS = ('stage', 'visibility', 'scout', 'assets', 'pano_views', 'build', 'export', 'control', 'take')
 
     def __init__(self, cfg):
         self.cfg = cfg or {}
@@ -273,6 +273,24 @@ class BlenderJobs:
                 raise FileNotFoundError(f'no location.blend for {key} {rev}')
             args = {'cmd': blender + [blend, '--python', script('export_blockout.py'), '--',
                                       os.path.join(out, 'blockout_export.json')], 'out': out}
+        elif kind == 'take':
+            # A performance in a set: performers moving to their marks on a timeline (build_take.py).
+            tk = body.get('take') or {}
+            project, take_id = str(body.get('project', '')), str(tk.get('take_id', ''))
+            if not plain(project) or not plain(take_id):
+                raise ValueError('a take job needs a plain project and take_id')
+            loc = tk.get('location') or {}
+            blend = self.inside(os.path.join('locations', str(loc.get('id')), str(loc.get('revision')), 'location.blend'))
+            if not os.path.exists(blend):
+                raise FileNotFoundError(f"no location.blend for {loc.get('id')} {loc.get('revision')}")
+            out = self.inside(os.path.join('takes', project, take_id))
+            os.makedirs(out, exist_ok=True)
+            with open(os.path.join(out, 'take.json'), 'w', encoding='utf-8') as f:
+                json.dump(tk, f, indent=1)
+            for stale in ('take.blend', 'take_manifest.json'):
+                if os.path.exists(os.path.join(out, stale)):
+                    os.remove(os.path.join(out, stale))
+            args = {'cmd': blender + [blend, '--python', script('build_take.py'), '--', out], 'out': out}
         elif kind == 'control':
             # A staged shot's depth as the control video a clip is driven by.
             shot_dir = self.inside(body.get('shotDir', ''))
@@ -291,9 +309,16 @@ class BlenderJobs:
             with open(os.path.join(shot_dir, 'shot.json'), 'w', encoding='utf-8') as f:
                 json.dump(shot, f, indent=2)
             loc = shot.get('location') or {}
-            blend = self.inside(os.path.join('locations', str(loc.get('id')), str(loc.get('revision')), 'location.blend'))
-            if not os.path.exists(blend):
-                raise FileNotFoundError(f"no location.blend for {loc.get('id')} {loc.get('revision')}")
+            tk = shot.get('take')
+            if tk:
+                # Staged on a take: its performers are already in the scene, moving.
+                blend = self.inside(os.path.join('takes', str(tk.get('project', project)), str(tk.get('id')), 'take.blend'))
+                if not os.path.exists(blend):
+                    raise FileNotFoundError(f"take {tk.get('id')} has not been built")
+            else:
+                blend = self.inside(os.path.join('locations', str(loc.get('id')), str(loc.get('revision')), 'location.blend'))
+                if not os.path.exists(blend):
+                    raise FileNotFoundError(f"no location.blend for {loc.get('id')} {loc.get('revision')}")
             args = [blend, 'blender_stage.py', shot_dir] + ([','.join(body['only'])] if body.get('only') else [])
         elif kind in ('visibility', 'assets'):
             shot_dir = self.inside(body.get('shotDir', ''))
@@ -388,6 +413,11 @@ class BlenderJobs:
             report['previews'] = [f'{rel(args["out"])}/{p}' for p in report.get('previews', [])]
             return {'dir': rel(args['out']), 'blend': rel(os.path.join(args['out'], 'location.blend')),
                     'report': report, 'location': self._read(os.path.join(args['out'], 'location.json'))}
+        if kind == 'take':
+            if not os.path.exists(os.path.join(args['out'], 'take.blend')):
+                raise RuntimeError('the take was not built: ' + out[-800:])
+            return {'dir': rel(args['out']), 'blend': rel(os.path.join(args['out'], 'take.blend')),
+                    'manifest': self._read(os.path.join(args['out'], 'take_manifest.json'))}
         if kind == 'control':
             manifest = self._read(os.path.join(args['out'], 'control', 'control_manifest.json')) or {}
             return dict(manifest, video=rel(os.path.join(args['out'], 'control', 'control_depth.mp4')))

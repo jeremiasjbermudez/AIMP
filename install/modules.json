@@ -302,7 +302,8 @@
       "hyworlds",
       "prompt_worlds",
       "set_locations",
-      "set_shots"
+      "set_shots",
+      "set_takes"
     ],
     "flows": [
       {

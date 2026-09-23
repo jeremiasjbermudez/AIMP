@@ -114,7 +114,27 @@ plates = sorted(score, key=lambda c: -score[c])[:PLATE_COUNT]
 # ---------------------------------------------------------------- where the camera is, seen from the actor
 view = None
 ch = shot.get('character')
-if ch and ch.get('mark') in loc.get('anchors', {}) and ch.get('facing') in loc.get('anchors', {}):
+tk = shot.get('take')
+if tk and tk.get('manifest'):
+    # On a take the actor moves: their position and heading on each frame come from the take.
+    tm = json.loads((_sets.sets_root(SHOT) / tk['manifest']).read_text(encoding='utf-8'))
+    pf = (tm['performers'].get(tk.get('performer')) or next(iter(tm['performers'].values())))['frames']
+
+    def rel_az(i):
+        a = pf[min(i, len(pf) - 1)]
+        h = math.radians(a['heading_deg'])
+        fwd = np.array([math.cos(h), math.sin(h)])
+        v = np.array(fr[i]['matrix'])[:2, 3] - np.array([a['x'], a['y']])
+        v = v / (np.linalg.norm(v) + 1e-9)
+        return math.degrees(math.atan2(fwd[0] * v[1] - fwd[1] * v[0], fwd[0] * v[0] + fwd[1] * v[1]))
+
+    def dist(i):
+        a = pf[min(i, len(pf) - 1)]
+        return float(np.linalg.norm(np.array(fr[i]['matrix'])[:2, 3] - np.array([a['x'], a['y']])))
+
+    view = {'start_deg': round(rel_az(0), 1), 'end_deg': round(rel_az(len(fr) - 1), 1),
+            'start_m': round(dist(0), 3), 'end_m': round(dist(len(fr) - 1), 3)}
+elif ch and ch.get('mark') in loc.get('anchors', {}) and ch.get('facing') in loc.get('anchors', {}):
     eye = np.array(cm['eyes_world'])
     mk, fc = np.array(loc['anchors'][ch['mark']]), np.array(loc['anchors'][ch['facing']])
     fwd = fc[:2] - mk[:2]

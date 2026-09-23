@@ -25,6 +25,15 @@
 //       beside the panorama and fixed `rounds` times; every pass is a revision
 //   {"action":"revise_location","movieId":"...","setLocationId":"...","notes":"...","rounds":1}
 //       the next revision of any set, a script-built one included
+//   {"action":"save_take","movieId":"...","setLocationId":"...","take":{
+//       "takeKey":"TK_A1S1_01", "frames":124, "sceneId":"...",
+//       "performers":[{"name":"TOMAS", "eyeHeightM":1.68, "keys":[
+//           {"t":0, "mark":"ANCHOR_stand_stove", "facing":"ANCHOR_stove"},
+//           {"t":3.5, "mark":"ANCHOR_stand_center", "facing":"ANCHOR_calendar"}]}],
+//       "cues":[{"t":4.0, "text":"He looks at the calendar"}]}}
+//       a performance in the set, built as take.blend to operate a camera against;
+//       then "stage" with "takeId" films a pass over it (a camera from the form, or
+//       "shot":{"cameraPath":[{"frame":1,"matrix":[[4x4]]}...]} recorded)
 //   {"action":"make_clip","movieId":"...","setShotId":"...","directorShotId":"...",
 //       "characterId":"...", "controlStrength":1.0, "controlEnd":1.0, "render":true}
 //       a staged shot as a MiniMax H3 control clip for a Director shot (and so a
@@ -102,6 +111,54 @@ if (action === 'add_location') {
 }
 
 // ---------------------------------------------------------------- stage one shot
+// ---------------------------------------------------------------- a take: the performance
+const slug = (v) => String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'actor';
+
+if (action === 'save_take') {
+  const loc = (await rows('set_locations', { id: `eq.${parsed.setLocationId}`, movie_id: `eq.${movieId}`, select: '*' }))[0];
+  if (!loc) return { error: 'That set is not part of this project.' };
+  const t = parsed.take || {};
+  const takeKey = String(t.takeKey || '').trim();
+  if (!/^[A-Za-z0-9_.-]{1,80}$/.test(takeKey)) return { error: 'A take needs a name of letters, digits, _ . or - (e.g. TK_A1S1_01).' };
+  const frames = Number(t.frames) || 124;
+  if ((frames - 5) % 17 !== 0) return { error: `${frames} frames is not a MiniMax length (17k+5: 107, 124, 141, 158...).` };
+  const anchors = (loc.facts && loc.facts.anchors) || {};
+  const performers = [];
+  for (const p of t.performers || []) {
+    const keys = (p.keys || []).map((k) => ({ t: Number(k.t) || 0, mark: k.mark || undefined, at: k.at || undefined,
+      facing: k.facing || undefined, facing_deg: k.facingDeg ?? undefined, pose: k.pose === 'seated' ? 'seated' : 'standing' }));
+    if (!keys.length) return { error: `${p.name || 'A performer'} has no moves.` };
+    for (const k of keys) {
+      if (k.mark && !anchors[k.mark]) return { error: `${k.mark} is not a mark in ${loc.name}.` };
+      if (k.facing && !anchors[k.facing]) return { error: `${k.facing} is not a mark in ${loc.name}.` };
+      if (k.t > frames / 24) return { error: `A move at ${k.t}s is past the end of a ${(frames / 24).toFixed(1)}s take.` };
+    }
+    performers.push({ id: slug(p.name), display: p.name || 'Actor', eye_height_m: Number(p.eyeHeightM) || 1.65,
+      seat_top_m: Number(p.seatTopM) || 0.6, character_id: p.characterId || null, keys });
+  }
+  if (!performers.length) return { error: 'A take needs someone in it.' };
+  const take = {
+    schema: 'take/v0', take_id: takeKey,
+    location: { id: loc.location_key, revision: loc.revision, lighting_state: t.lighting || 'L1' },
+    clock: { fps: 24, frames, size: Array.isArray(t.size) ? t.size : [1344, 576] },
+    performers, cues: (t.cues || []).map((c) => ({ t: Number(c.t) || 0, text: String(c.text || '') })),
+    camera: t.camera || undefined
+  };
+  const existing = (await rows('set_takes', { movie_id: `eq.${movieId}`, take_key: `eq.${takeKey}`, select: 'id' }))[0];
+  const row = existing
+    ? (await update('set_takes', existing.id, { set_location_id: loc.id, take, status: 'building', error_message: null, scene_id: t.sceneId || null }), { id: existing.id })
+    : await insert('set_takes', { movie_id: movieId, set_location_id: loc.id, take_key: takeKey, take, status: 'building', scene_id: t.sceneId || null });
+  const built = await workerJob({ kind: 'take', project: movie.slug, take }, { timeoutMs: 20 * 60 * 1000 });
+  if (built.status !== 'done') {
+    await update('set_takes', row.id, { status: 'failed', error_message: String(built.error).slice(0, 1000) });
+    return { action: 'error', reason: 'The take did not build: ' + built.error, takeId: row.id };
+  }
+  const m = built.result.manifest || {};
+  await update('set_takes', row.id, { status: 'built', blend_path: built.result.blend, manifest: m, error_message: null });
+  return { action: 'take_built', takeId: row.id, takeKey, blend: built.result.blend, warnings: m.warnings || [],
+    performers: Object.keys(m.performers || {}) };
+}
+
 if (action === 'stage') {
   const loc = (await rows('set_locations', { id: `eq.${parsed.setLocationId}`, movie_id: `eq.${movieId}`, select: '*' }))[0];
   if (!loc) return { error: 'That set is not part of this project.' };
@@ -109,11 +166,16 @@ if (action === 'stage') {
   const shotKey = String(s.shotKey || '').trim();
   if (!/^[A-Za-z0-9_.-]{1,80}$/.test(shotKey)) return { error: 'A shot needs a name of letters, digits, _ . or - (e.g. WH_A_01).' };
   const anchors = (loc.facts && loc.facts.anchors) || {};
-  if (s.mark && !anchors[s.mark]) return { error: `${s.mark} is not a mark in ${loc.name}.` };
-  if (s.facing && !anchors[s.facing]) return { error: `${s.facing} is not a mark in ${loc.name}.` };
+  // A shot on a take films its performance; the form's mark and facing are not used.
+  const takeRow = parsed.takeId ? (await rows('set_takes', { id: `eq.${parsed.takeId}`, movie_id: `eq.${movieId}`, select: '*' }))[0] : null;
+  if (parsed.takeId && !takeRow) return { error: 'That take is not in this project.' };
+  if (takeRow && takeRow.status !== 'built') return { error: `Take ${takeRow.take_key} has not been built.` };
+  if (takeRow && takeRow.set_location_id !== loc.id) return { error: `Take ${takeRow.take_key} is in another set.` };
+  if (!takeRow && s.mark && !anchors[s.mark]) return { error: `${s.mark} is not a mark in ${loc.name}.` };
+  if (!takeRow && s.facing && !anchors[s.facing]) return { error: `${s.facing} is not a mark in ${loc.name}.` };
 
   // H3 lengths are 17k+5 frames; staging renders exactly what the clip will be.
-  const frames = Number(s.frames) || 124;
+  const frames = takeRow ? takeRow.take.clock.frames : Number(s.frames) || 124;
   if ((frames - 5) % 17 !== 0) return { error: `${frames} frames is not a MiniMax length (17k+5: 107, 124, 141, 158...).` };
   const move = { enabled: !!s.move, start_frame: Number(s.moveStart) || 25, end_frame: Number(s.moveEnd) || frames - 38, easing: 'smoothstep' };
   const camera = s.stageCamera
@@ -130,20 +192,30 @@ if (action === 'stage') {
     shot_id: shotKey,
     scene: s.sceneLabel || loc.name,
     location: { id: loc.location_key, revision: loc.revision, lighting_state: s.lighting || 'L1' },
-    character: s.mark ? {
+    character: takeRow ? (() => {
+      const perf = takeRow.take.performers.find((p) => p.id === s.performer) || takeRow.take.performers[0];
+      return { id: perf.id, display: perf.display, pose: 'standing', eye_height_m: perf.eye_height_m, performer: perf.id };
+    })() : s.mark ? {
       id: String(s.character || 'actor').toLowerCase().replace(/[^a-z0-9]+/g, '_'),
       display: s.character || 'Actor', pose: s.pose === 'seated' ? 'seated' : 'standing',
       mark: s.mark, facing: s.facing || s.mark, eye_height_m: Number(s.eyeHeightM) || 1.65
     } : null,
-    camera,
+    // A recorded camera replaces the computed one frame for frame.
+    camera: Array.isArray(s.cameraPath) && s.cameraPath.length ? Object.assign({}, camera, { path: s.cameraPath }) : camera,
+    take: takeRow ? (() => {
+      const perf = (takeRow.manifest.performers || {})[s.performer] ? s.performer : Object.keys(takeRow.manifest.performers || {})[0];
+      const pm = takeRow.manifest.performers[perf];
+      return { id: takeRow.take_key, project: movie.slug, performer: perf, root: pm.root, eyes: pm.eyes,
+        manifest: `takes/${movie.slug}/${takeRow.take_key}/take_manifest.json` };
+    })() : undefined,
     clock: { fps: 24, frames, size: Array.isArray(s.size) ? s.size : [1344, 576] },
     recipe: { name: 'depth_only_v1', control: 'depth', controls: ['depth'] }
   };
 
   const existing = (await rows('set_shots', { movie_id: `eq.${movieId}`, shot_key: `eq.${shotKey}`, select: 'id' }))[0];
   const row = existing
-    ? (await update('set_shots', existing.id, { set_location_id: loc.id, shot, status: 'staging', error_message: null, scene_id: s.sceneId || null }), { id: existing.id })
-    : await insert('set_shots', { movie_id: movieId, set_location_id: loc.id, shot_key: shotKey, shot, status: 'staging', scene_id: s.sceneId || null });
+    ? (await update('set_shots', existing.id, { set_location_id: loc.id, shot, status: 'staging', error_message: null, scene_id: s.sceneId || (takeRow && takeRow.scene_id) || null, take_id: takeRow ? takeRow.id : null }), { id: existing.id })
+    : await insert('set_shots', { movie_id: movieId, set_location_id: loc.id, shot_key: shotKey, shot, status: 'staging', scene_id: s.sceneId || (takeRow && takeRow.scene_id) || null, take_id: takeRow ? takeRow.id : null });
 
   const staged = await workerJob({ kind: 'stage', project: movie.slug, shot }, { timeoutMs: 40 * 60 * 1000 });
   if (staged.status !== 'done') {
