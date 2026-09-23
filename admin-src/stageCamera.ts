@@ -161,17 +161,28 @@ export function planPose(cam: StageCam, eyes: Vec3[]): { x: number; y: number; h
 }
 
 let counter = 0
-/** A new camera across from where the actor starts, looking at them. */
-export function newCamera(name: string, eyes: Vec3[], facingDeg: number | null, lensMm = 35): StageCam {
+/**
+ * A new camera in front of where the actor starts, looking at them: 2 m out, or as far
+ * as the room allows (inside(x, y) says whether a point is safely inside the set).
+ */
+export function newCamera(name: string, eyes: Vec3[], facingDeg: number | null, inside: (x: number, y: number) => boolean, lensMm = 35): StageCam {
   const e = eyes[0]
   const h = facingDeg == null ? -Math.PI / 2 : (facingDeg * Math.PI) / 180
-  // In front of them, slightly to one side, 2 m out, at eye height.
-  const a = h + 0.35 * (counter++ % 2 === 0 ? 1 : -1)
+  // Slightly to one side of their front, alternating, so two new cameras do not stack.
+  const side = counter++ % 2 === 0 ? 1 : -1
+  let at: [number, number] = [e[0], e[1] - 1]
+  search: for (const turn of [0.35, 0.8, 1.3, 2.0, 2.8]) {
+    for (let d = 2.0; d >= 0.9; d -= 0.1) {
+      const a = h + turn * side
+      const x = e[0] + Math.cos(a) * d, y = e[1] + Math.sin(a) * d
+      if (inside(x, y)) { at = [x, y]; break search }
+    }
+  }
   return {
     id: `cam_${Date.now().toString(36)}_${counter}`,
     name,
     lensMm,
-    position: [e[0] + Math.cos(a) * 2, e[1] + Math.sin(a) * 2, Math.max(1.2, e[2] - 0.05)],
+    position: [Math.round(at[0] * 100) / 100, Math.round(at[1] * 100) / 100, Math.max(1.2, Math.round((e[2] - 0.05) * 100) / 100)],
     motion: { type: 'follow', amount: 0.8, startS: 1, endS: 4 },
     handheld: 0
   }

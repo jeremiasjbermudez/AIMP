@@ -1345,8 +1345,9 @@
   .stage-cues span { position: absolute; top: -4px; width: 2px; height: 8px; background: var(--accent); transform: translateX(-1px); }
   .stage-cue-now { color: var(--accent); }
   .stage-cams { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; }
-  .stage-cam-chip { border: 1px solid var(--line); border-radius: 999px; padding: 0.25rem 0.7rem; background: var(--surface); }
-  .stage-cam-chip.selected { border-color: var(--accent); }
+  .stage-cam-chip { border: 1px solid var(--line); border-radius: 999px; padding: 0.25rem 0.7rem; background: var(--surface); color: var(--text); }
+  .stage-cam-chip .empty { color: var(--text-dim); }
+  .stage-cam-chip.selected { border-color: var(--accent); background: var(--accent-soft); }
   .stage-inspector { border-top: 1px solid var(--line); padding-top: 0.6rem; }
 
   /* A scene's set, step by step: panorama, splat, block-out, cameras. */

@@ -249,7 +249,12 @@ export function StagePanel({ movie }: { movie: Movie }) {
     if (!eyes.length) return
     const letter = String.fromCharCode(65 + (cams.length % 26))
     const facing = track[0]?.heading_deg ?? null
-    const c = newCamera(`CAM ${letter}`, eyes, facing)
+    // Inside the walls, with room to stand: 0.35 m from a wall.
+    const w = loc?.facts.dimensions_m?.width ?? 4
+    const dd = loc?.facts.dimensions_m?.depth ?? w
+    const round = loc?.facts.blockout?.room?.shape === 'round'
+    const inside = (x: number, y: number) => (round ? Math.hypot(x, y) < w / 2 - 0.35 : Math.abs(x) < w / 2 - 0.35 && Math.abs(y) < dd / 2 - 0.35)
+    const c = newCamera(`CAM ${letter}`, eyes, facing, inside)
     setCams((cs) => [...cs, c])
     setSelected(c.id)
   }
