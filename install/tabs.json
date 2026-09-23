@@ -60,30 +60,6 @@
     "group": "cast"
   },
   {
-    "id": "director",
-    "label": "Director",
-    "hint": "Plan a shot list from the beats, then produce it in stages",
-    "icon": "Film",
-    "module": "director",
-    "component": "DirectorPanel",
-    "from": "./DirectorPanel",
-    "props": {},
-    "takesMovie": true,
-    "group": "shots"
-  },
-  {
-    "id": "camera",
-    "label": "Camera",
-    "hint": "Place each shot’s camera inside the scene’s 3D world and render its plate",
-    "icon": "CameraIcon",
-    "module": "camera",
-    "component": "CameraPanel",
-    "from": "./CameraPanel",
-    "props": {},
-    "takesMovie": true,
-    "group": "sets"
-  },
-  {
     "id": "world",
     "label": "Panoramas & Worlds",
     "hint": "Location panoramas and 3D worlds",
@@ -106,6 +82,92 @@
     "group": "sets",
     "props": {},
     "takesMovie": true
+  },
+  {
+    "id": "director",
+    "label": "Director",
+    "hint": "Plan a shot list from the beats, then produce it in stages",
+    "icon": "Film",
+    "module": "director",
+    "component": "DirectorPanel",
+    "from": "./DirectorPanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "shots"
+  },
+  {
+    "id": "camera",
+    "label": "Camera",
+    "hint": "Place each shot’s camera inside the scene’s 3D world and render its plate",
+    "icon": "CameraIcon",
+    "module": "camera",
+    "component": "CameraPanel",
+    "from": "./CameraPanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "shots"
+  },
+  {
+    "id": "control",
+    "label": "Control to Video",
+    "hint": "A clip driven by a depth, pose or edge video: a staged Blender shot, or one you bring",
+    "icon": "Film",
+    "module": "video",
+    "component": "MinimaxVideoPanel",
+    "from": "./MinimaxVideoPanel",
+    "props": {
+      "kind": "control"
+    },
+    "takesMovie": true,
+    "group": "shots"
+  },
+  {
+    "id": "faceqa",
+    "label": "Face QA",
+    "hint": "Score a clip against a character to find face drift",
+    "icon": "ScanFace",
+    "module": "faceqa",
+    "component": "FaceQaPanel",
+    "from": "./FaceQaPanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "shots"
+  },
+  {
+    "id": "postvoice",
+    "label": "Post Voice",
+    "hint": "Replace a voice after rendering, keeping music and sync",
+    "icon": "Mic",
+    "module": "audio",
+    "component": "PostVoicePanel",
+    "from": "./PostVoicePanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "finish"
+  },
+  {
+    "id": "score",
+    "label": "Score",
+    "hint": "Generate music once for a scene, to lay under the edit",
+    "icon": "Music",
+    "module": "audio",
+    "component": "ScorePanel",
+    "from": "./ScorePanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "finish"
+  },
+  {
+    "id": "resolve",
+    "label": "DaVinci Resolve",
+    "hint": "Send this movie to Resolve as a project, in screenplay order",
+    "icon": "Clapperboard",
+    "module": "delivery",
+    "component": "ResolvePanel",
+    "from": "./ResolvePanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "finish"
   },
   {
     "id": "hyworld",
@@ -222,68 +284,6 @@
     },
     "takesMovie": true,
     "group": "workshop"
-  },
-  {
-    "id": "control",
-    "label": "Control to Video",
-    "hint": "Drive a shot with a depth or pose video, e.g. rendered in Blender",
-    "icon": "Film",
-    "module": "video",
-    "component": "MinimaxVideoPanel",
-    "from": "./MinimaxVideoPanel",
-    "props": {
-      "kind": "control"
-    },
-    "takesMovie": true,
-    "group": "workshop"
-  },
-  {
-    "id": "postvoice",
-    "label": "Post Voice",
-    "hint": "Replace a voice after rendering, keeping music and sync",
-    "icon": "Mic",
-    "module": "audio",
-    "component": "PostVoicePanel",
-    "from": "./PostVoicePanel",
-    "props": {},
-    "takesMovie": true,
-    "group": "finish"
-  },
-  {
-    "id": "score",
-    "label": "Score",
-    "hint": "Generate music once for a scene, to lay under the edit",
-    "icon": "Music",
-    "module": "audio",
-    "component": "ScorePanel",
-    "from": "./ScorePanel",
-    "props": {},
-    "takesMovie": true,
-    "group": "finish"
-  },
-  {
-    "id": "faceqa",
-    "label": "Face QA",
-    "hint": "Score a clip against a character to find face drift",
-    "icon": "ScanFace",
-    "module": "faceqa",
-    "component": "FaceQaPanel",
-    "from": "./FaceQaPanel",
-    "props": {},
-    "takesMovie": true,
-    "group": "shots"
-  },
-  {
-    "id": "resolve",
-    "label": "DaVinci Resolve",
-    "hint": "Send this movie to Resolve as a project, in screenplay order",
-    "icon": "Clapperboard",
-    "module": "delivery",
-    "component": "ResolvePanel",
-    "from": "./ResolvePanel",
-    "props": {},
-    "takesMovie": true,
-    "group": "finish"
   },
   {
     "id": "contextloop",
