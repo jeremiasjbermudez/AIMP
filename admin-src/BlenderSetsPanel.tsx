@@ -29,11 +29,27 @@ const POSES = [
 ]
 
 type Vec = [number, number, number]
+type BlockoutObject = {
+  name: string
+  shape: string
+  at?: Vec
+  size?: Vec
+  rot_deg?: Vec
+  radius?: number
+  radius1?: number
+  major?: number
+  minor?: number
+  repeat?: { count: number; step: Vec }
+  cover?: boolean
+  exterior?: boolean
+}
 type LocationFacts = {
   name?: string
   dimensions_m?: { width: number; depth: number; eave_height?: number; ridge_height?: number }
   anchors?: Record<string, Vec>
   set_pieces?: Record<string, string[]>
+  inferences?: string[]
+  blockout?: { room?: { shape?: string }; objects?: BlockoutObject[] }
 }
 type Available = { id: string; revision: string; name: string; anchors: string[]; setPieces: string[] }
 type SetLocation = {
@@ -43,7 +59,16 @@ type SetLocation = {
   name: string
   facts: LocationFacts
   created_at: string
+  // Set when a model built this revision (generate_location / revise_location).
+  previews?: string[] | null
+  build_report?: { objects: number; warnings: string[]; errors: string[] } | null
+  source?: { panoPath?: string; scenePanoId?: string; views?: string[] } | null
+  change_note?: string | null
+  made_by?: string | null
+  parent_id?: string | null
 }
+type ScenePano = { id: string; act_number: number; scene_number: number; image_path: string }
+const PASSES = [0, 1, 2, 3].map((n) => ({ value: String(n), label: n === 0 ? 'No checking pass' : `${n} checking pass${n === 1 ? '' : 'es'}` }))
 type Visibility = {
   summary?: { always: string[]; sometimes: string[]; never: string[] }
   placement?: Record<string, string>
@@ -115,9 +140,26 @@ function Plan({ facts, cams }: {
   // Blender is Z-up with +Y away; the plan draws +Y toward the top of the page.
   const vb = `${-w / 2 - pad} ${-d / 2 - pad} ${w + pad * 2} ${d + pad * 2}`
   const y = (v: number) => -v
+  const round = facts.blockout?.room?.shape === 'round'
+  // Footprints of what a model built, so a revision can be checked at a glance.
+  const footprints = (facts.blockout?.objects ?? []).filter((o) => !o.cover && !o.exterior && o.at && o.shape !== 'poly').flatMap((o) => {
+    const n = Math.max(1, Math.min(o.repeat?.count ?? 1, 60))
+    const step = o.repeat?.step ?? [0, 0, 0]
+    return Array.from({ length: n }, (_, i) => ({ o, x: o.at![0] + step[0] * i, y: o.at![1] + step[1] * i, key: `${o.name}-${i}` }))
+  })
   return (
     <svg className="sets-plan" viewBox={vb} role="img" aria-label={`Plan of ${facts.name ?? 'the set'}`}>
-      <rect x={-w / 2} y={-d / 2} width={w} height={d} className="sets-plan-room" />
+      {round
+        ? <circle cx={0} cy={0} r={w / 2} className="sets-plan-room" />
+        : <rect x={-w / 2} y={-d / 2} width={w} height={d} className="sets-plan-room" />}
+      {footprints.map(({ o, x, y: oy, key }) =>
+        o.shape === 'box' && o.size ? (
+          <rect key={key} x={x - o.size[0] / 2} y={y(oy) - o.size[1] / 2} width={o.size[0]} height={o.size[1]}
+            transform={`rotate(${-(o.rot_deg?.[2] ?? 0)} ${x} ${y(oy)})`} className="sets-plan-thing"><title>{o.name}</title></rect>
+        ) : (
+          <circle key={key} cx={x} cy={y(oy)} r={o.radius ?? o.radius1 ?? ((o.major ?? 0) + (o.minor ?? 0) || 0.1)} className="sets-plan-thing"><title>{o.name}</title></circle>
+        )
+      )}
       {Object.entries(anchors).map(([name, v]) => (
         <g key={name}>
           <circle cx={v[0]} cy={y(v[1])} r={0.06} className="sets-plan-mark" />
@@ -181,12 +223,21 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
   const [scoutIds, setScoutIds] = useState<string[]>([])
   const [sheet, setSheet] = useState<string | null>(null)
   const [openPlates, setOpenPlates] = useState<string | null>(null)
+  const [panos, setPanos] = useState<ScenePano[]>([])
+  const [genPano, setGenPano] = useState('')
+  const [genName, setGenName] = useState('')
+  const [genNotes, setGenNotes] = useState('')
+  const [genPasses, setGenPasses] = useState('1')
+  const [reviseNotes, setReviseNotes] = useState('')
 
   async function loadRows() {
-    const [l, s] = await Promise.all([
+    const [l, s, p] = await Promise.all([
       insforge.database.from('set_locations').select('*').eq('movie_id', movie.id).order('created_at', { ascending: true }),
-      insforge.database.from('set_shots').select('*').eq('movie_id', movie.id).order('shot_key', { ascending: true })
+      insforge.database.from('set_shots').select('*').eq('movie_id', movie.id).order('shot_key', { ascending: true }),
+      insforge.database.from('scene_panos').select('id,act_number,scene_number,image_path').eq('movie_id', movie.id)
+        .order('act_number', { ascending: true }).order('scene_number', { ascending: true })
     ])
+    setPanos((p.data ?? []) as ScenePano[])
     const locs = (l.data ?? []) as SetLocation[]
     setLocations(locs)
     setShots((s.data ?? []) as SetShot[])
@@ -261,6 +312,48 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
     setBusy(null)
     if (!r.ok) return setError(r.message)
     setPick('')
+    await loadRows()
+    setLocationId(r.data.setLocation.id)
+  }
+
+  /** A block-out written by the language model from a panorama, then checked against it and fixed. */
+  async function handleGenerate() {
+    const pano = panos.find((p) => p.id === genPano)
+    if (!pano || !genName.trim()) return
+    const passes = Number(genPasses)
+    setBusy('generate')
+    setError(null)
+    setNote(`The model is writing ${genName.trim()} from the panorama, then Blender builds it` +
+      (passes ? `, and the model checks it against the panorama and fixes it (${passes} pass${passes === 1 ? '' : 'es'})` : '') +
+      '. A few minutes per pass.')
+    const r = parseFlowJson<{ action: string; reason?: string; setLocation?: SetLocation }>(
+      await triggerFlow(flowId, { action: 'generate_location', movieId: movie.id, scenePanoId: pano.id, name: genName.trim(), notes: genNotes.trim() || undefined, rounds: passes })
+    )
+    setBusy(null)
+    setNote(null)
+    if (!r.ok) return setError(r.message)
+    if (r.data.action === 'error' || !r.data.setLocation) return setError(r.data.reason ?? 'The block-out failed.')
+    setGenName('')
+    setGenNotes('')
+    await loadRows()
+    setLocationId(r.data.setLocation.id)
+  }
+
+  /** The next revision of the selected set: the model looks at it and fixes what is wrong. */
+  async function handleRevise() {
+    if (!location) return
+    setBusy('revise')
+    setError(null)
+    setNote(`The model is looking at ${location.name} ${location.revision}` +
+      (reviseNotes.trim() ? ' with your notes' : '') + ' and writing the next revision. A few minutes.')
+    const r = parseFlowJson<{ action: string; reason?: string; setLocation?: SetLocation }>(
+      await triggerFlow(flowId, { action: 'revise_location', movieId: movie.id, setLocationId: location.id, notes: reviseNotes.trim() || undefined })
+    )
+    setBusy(null)
+    setNote(null)
+    if (!r.ok) return setError(r.message)
+    if (r.data.action === 'error' || !r.data.setLocation) return setError(r.data.reason ?? 'The revision failed.')
+    setReviseNotes('')
     await loadRows()
     setLocationId(r.data.setLocation.id)
   }
@@ -367,8 +460,98 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
         </button>
       </div>
       {availableError && <p className="error">{availableError}</p>}
+
+      <details className="sets-make" open={locations.length === 0}>
+        <summary>Make a set from a panorama</summary>
+        <p className="empty">
+          The language model looks at the panorama from four directions and writes the room as a block-out: walls,
+          openings, furniture, lights and marks. Blender builds it, then the model compares what was built with the
+          panorama and fixes it. Every pass is kept as a revision.
+        </p>
+        <div className="camera-row">
+          <label>
+            Panorama
+            <Select
+              value={genPano}
+              onValueChange={setGenPano}
+              placeholder={panos.length ? 'Pick a scene’s panorama…' : 'No panoramas yet'}
+              items={panos.map((p) => ({ value: p.id, label: `A${p.act_number}S${p.scene_number}` }))}
+            />
+          </label>
+          <label>
+            Name
+            <input type="text" placeholder="Lighthouse kitchen" value={genName} onChange={(e) => setGenName(e.target.value)} />
+          </label>
+          <label>
+            Checking
+            <Select value={genPasses} onValueChange={setGenPasses} items={PASSES} />
+          </label>
+          <button type="button" disabled={!!busy || !genPano || !genName.trim()} onClick={handleGenerate}>
+            {busy === 'generate' ? 'Building…' : 'Build the set'}
+          </button>
+        </div>
+        {genPano && (
+          <img className="sets-pano" src={comfyViewUrl(panos.find((p) => p.id === genPano)!.image_path)} alt="The panorama" />
+        )}
+        <textarea
+          className="prompt-editor"
+          rows={2}
+          placeholder="Notes for the model (optional): the room is round, the door is behind the stove…"
+          value={genNotes}
+          onChange={(e) => setGenNotes(e.target.value)}
+        />
+      </details>
       {locations.length === 0 && !availableError && (
         <p className="empty">No sets in {movie.title} yet. Add one the render host has, above.</p>
+      )}
+
+      {location && (location.previews?.length || location.made_by) && (
+        <div className="sets-revision">
+          <p className="empty">
+            <strong>{location.name} {location.revision}</strong>
+            {location.made_by && <> · built by {location.made_by.replace(/^[^:]*:/, '')}</>}
+            {location.change_note && <> · {location.change_note}</>}
+          </p>
+          {location.build_report && location.build_report.errors.length + location.build_report.warnings.length > 0 && (
+            <details>
+              <summary className="empty">
+                {location.build_report.errors.length} error{location.build_report.errors.length === 1 ? '' : 's'},{' '}
+                {location.build_report.warnings.length} warning{location.build_report.warnings.length === 1 ? '' : 's'} from the build (the next revision is told)
+              </summary>
+              <ul className="empty">
+                {[...location.build_report.errors, ...location.build_report.warnings].map((w) => <li key={w}>{w}</li>)}
+              </ul>
+            </details>
+          )}
+          {location.previews && location.previews.length > 0 && (
+            <div className="sets-compare">
+              {(['N', 'E', 'S', 'W'] as const).map((t) => {
+                const ref = location.source?.views?.find((v) => v.endsWith(`view_${t}.png`))
+                const built = location.previews!.find((v) => v.endsWith(`view_${t}.png`))
+                return (
+                  <figure key={t}>
+                    {ref && <img src={setsView(ref)} alt={`Panorama, looking ${t}`} />}
+                    {built && <img src={setsView(built, location.id)} alt={`Block-out, looking ${t}`} />}
+                    <figcaption>{{ N: 'North', E: 'East', S: 'South', W: 'West' }[t]}</figcaption>
+                  </figure>
+                )
+              })}
+            </div>
+          )}
+          {location.source?.views && <p className="empty">Top row: the panorama. Bottom row: the block-out, from the same place.</p>}
+          <div className="camera-row">
+            <textarea
+              className="prompt-editor"
+              rows={2}
+              placeholder="What is wrong with it (optional): the stove is too small, the window should be taller…"
+              value={reviseNotes}
+              onChange={(e) => setReviseNotes(e.target.value)}
+            />
+            <button type="button" disabled={!!busy} onClick={handleRevise}>
+              {busy === 'revise' ? 'Revising…' : 'Revise'}
+            </button>
+          </div>
+        </div>
       )}
 
       {location && (

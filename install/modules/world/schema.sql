@@ -377,3 +377,13 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.set_locations, public.set_shots T
 DROP TRIGGER IF EXISTS set_shots_updated_at ON public.set_shots;
 CREATE TRIGGER set_shots_updated_at BEFORE UPDATE ON public.set_shots
     FOR EACH ROW EXECUTE FUNCTION system.update_updated_at();
+
+-- Block-outs written by a model (48-Blender-Sets generate_location / revise_location).
+-- Each pass is a revision: where it came from, what it looks like, what the build
+-- said about it, the revision it fixes, and which model wrote it.
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS source jsonb;
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS previews jsonb;
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS build_report jsonb;
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS parent_id uuid;
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS change_note text;
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS made_by text;

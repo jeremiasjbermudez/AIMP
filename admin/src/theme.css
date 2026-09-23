@@ -1281,6 +1281,41 @@
     align-items: start;
   }
 
+  /* A scene's set, step by step: panorama, splat, block-out, cameras. */
+  .set-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    list-style: none;
+    margin: 0.25rem 0 0.6rem;
+    padding: 0;
+    counter-reset: step;
+    font-size: 0.85rem;
+  }
+  .set-steps li {
+    counter-increment: step;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem 0.2rem 0.3rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--text-dim);
+  }
+  .set-steps li::before {
+    content: counter(step);
+    display: inline-grid;
+    place-items: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    border-radius: 50%;
+    background: var(--surface-3);
+    font-size: 0.75rem;
+  }
+  .set-steps li.done { color: var(--text); border-color: var(--ok); }
+  .set-steps li.done::before { content: '✓'; background: var(--ok); color: #fff; }
+  .set-steps button { padding: 0.1rem 0.5rem; font-size: 0.8rem; }
+
   /* Blender sets: the plan of the room beside the shot form. */
   .sets-layout {
     display: grid;
@@ -1307,6 +1342,22 @@
   .sets-plan-cam.draft line { stroke: var(--accent); }
   .sets-plan-cam.draft circle { fill: var(--accent); }
   .sets-plan-cam.draft .sets-plan-label { fill: var(--accent); }
+  .sets-plan-thing { fill: var(--surface-3); stroke: var(--text-faint); stroke-width: 0.015; }
+  .sets-make { margin: 0.5rem 0 1rem; }
+  .sets-make summary { cursor: pointer; font-weight: 600; margin-bottom: 0.5rem; }
+  .sets-pano { width: 100%; max-width: 720px; border-radius: 6px; display: block; margin: 0.5rem 0; }
+  .sets-revision { margin: 0.5rem 0 1rem; }
+  .sets-compare {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  @media (max-width: 760px) {
+    .sets-compare { grid-template-columns: repeat(2, 1fr); }
+  }
+  .sets-compare figure { margin: 0; display: grid; gap: 0.25rem; }
+  .sets-compare img { width: 100%; border-radius: 4px; display: block; }
+  .sets-compare figcaption { font-size: 0.8rem; color: var(--text-dim); text-align: center; }
   .sets-plates {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

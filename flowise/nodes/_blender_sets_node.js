@@ -18,7 +18,16 @@
 //       "heightM":1.6, "frames":124, "size":[1344,576], "lighting":"L1"}}
 //       or "shot":{"shotKey":"...", "stageCamera":{...a Director's Stage camera...}, ...}
 //   {"action":"scout","movieId":"...","shotIds":["...", ...]}
+//   {"action":"generate_location","movieId":"...","name":"Lighthouse kitchen",
+//       "panoPath":"input/testies/_pano/scene1.png" | "scenePanoId":"...",
+//       "notes":"...", "rounds":1}
+//       a block-out written by the language model from a panorama, then looked at
+//       beside the panorama and fixed `rounds` times; every pass is a revision
+//   {"action":"revise_location","movieId":"...","setLocationId":"...","notes":"...","rounds":1}
+//       the next revision of any set, a script-built one included
 // @include worker_jobs
+// @include llm
+// @include blockout_ai
 
 const axios = require('axios');
 const insforgeUrl = $insforgeUrl;
@@ -153,6 +162,145 @@ if (action === 'scout') {
   if (job.status !== 'done') return { action: 'error', reason: 'Tech scout failed: ' + job.error };
   for (const r of ready) await update('set_shots', r.id, { scout_sheet: job.result.sheet });
   return { action: 'scouted', sheet: job.result.sheet, coverage: job.result.coverage, shots: ready.map((r) => r.shot_key) };
+}
+
+// ---------------------------------------------------------------- block-outs by a model
+// The process camera_lab's locations were made by: a model writes the room,
+// Blender builds it, the model looks at what was built beside the reference and
+// fixes it, and every pass is kept as a revision.
+
+/** A picture under the sets root, as base64 for the model. */
+async function setsImage(rel) {
+  const q = new URLSearchParams({ type: 'input', subfolder: ('sets/' + rel).split('/').slice(0, -1).join('/'), filename: rel.split('/').pop() });
+  const r = await axios.get(String($comfyUrl).replace(/\/$/, '') + '/view?' + q.toString(), { responseType: 'arraybuffer', timeout: 60000 });
+  return Buffer.from(r.data).toString('base64');
+}
+
+async function askModel(prompt, images) {
+  const res = await llmChat({
+    stream: false, think: false, format: 'json',
+    options: { temperature: 0.2, num_ctx: 32768 },
+    messages: [{ role: 'user', content: prompt, images }]
+  }, { timeout: 20 * 60 * 1000 });
+  return blockoutJson(res.data.message.content);
+}
+
+async function revisionsOf(key) {
+  const listing = await workerCall('get', '/blender/locations');
+  return (listing.locations || []).filter((l) => l.id === key).map((l) => l.revision);
+}
+
+/** Build one revision on the render host and record it. */
+async function buildRevision(key, location, meta) {
+  const rev = blockoutNextRevision(await revisionsOf(key));
+  const job = await workerJob({ kind: 'build', locationKey: key, revision: rev, location }, { timeoutMs: 20 * 60 * 1000 });
+  if (job.status !== 'done') throw new Error(`Building ${key} ${rev} failed: ${job.error}`);
+  const settings = await llmSettings();
+  return insert('set_locations', {
+    movie_id: movieId, location_key: key, revision: rev, name: location.name || key,
+    blend_path: job.result.blend, facts: job.result.location, previews: job.result.report.previews,
+    build_report: { objects: job.result.report.objects, warnings: job.result.report.warnings, errors: job.result.report.errors },
+    source: meta.source || null, parent_id: meta.parentId || null, change_note: location.change || meta.changeNote || null,
+    made_by: (settings.provider || '') + ':' + (settings.model || '')
+  });
+}
+
+/** What the next revision has to fix: the director's notes, the build, and the staged shots. */
+async function feedbackFor(row, notes) {
+  const out = [];
+  if (notes) out.push('Director: ' + notes);
+  const rep = row.build_report || {};
+  for (const e of rep.errors || []) out.push('Build error: ' + e);
+  for (const w of rep.warnings || []) out.push('Build warning: ' + w);
+  const shots = await rows('set_shots', { set_location_id: `eq.${row.id}`, status: 'eq.staged', select: 'shot_key,visibility' });
+  for (const s of shots) {
+    const v = s.visibility || {};
+    if (v.background_risk) out.push(`Shot ${s.shot_key}: ${v.background_risk}`);
+    for (const t of v.bare_thirds || []) out.push(`Shot ${s.shot_key}: the ${typeof t === 'string' ? t : JSON.stringify(t)} of frame is bare wall`);
+  }
+  return out;
+}
+
+/** One look-and-fix pass on a recorded revision; returns the new row. */
+async function reviseOnce(row, notes) {
+  let loc = row.facts || {};
+  if (!loc.blockout) {
+    // Built by a script before this process: describe it as data first.
+    const ex = await workerJob({ kind: 'export', locationKey: row.location_key, revision: row.revision }, { timeoutMs: 10 * 60 * 1000 });
+    if (ex.status !== 'done') throw new Error('Could not read the existing set as data: ' + ex.error);
+    loc = Object.assign({}, loc, { blockout: ex.result.blockout });
+  }
+  loc = Object.assign({}, loc, { revision: row.revision, name: row.name });
+  // Previews: this revision's own, or rendered now for one built before previews existed.
+  let previews = row.previews;
+  if (!previews || !previews.length) {
+    const key = row.location_key + '_' + row.revision;
+    const pv = await workerJob({ kind: 'build', preview: true, locationKey: key, revision: 'r' + Date.now(), location: loc }, { timeoutMs: 20 * 60 * 1000 });
+    if (pv.status !== 'done') throw new Error('Could not render the set to look at: ' + pv.error);
+    previews = pv.result.report.previews;
+  }
+  const reference = ((row.source || {}).views || []);
+  const images = [];
+  for (const rel of reference) images.push(await setsImage(rel));
+  for (const t of ['N', 'E', 'S', 'W']) images.push(await setsImage(previews.find((p) => p.endsWith(`view_${t}.png`))));
+  images.push(await setsImage(previews.find((p) => p.endsWith('plan.png'))));
+  const change = await askModel(blockoutRevisePrompt(loc, await feedbackFor(row, notes), reference.length === 4), images);
+  const next = blockoutNormalise(blockoutApply(loc, change));
+  return buildRevision(row.location_key, next, { source: row.source, parentId: row.id, changeNote: change.change_note });
+}
+
+if (action === 'generate_location') {
+  const name = String(parsed.name || '').trim();
+  if (!name) return { error: 'Name the location.' };
+  const key = (String(parsed.locationKey || name).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'location').slice(0, 60);
+  if ((await revisionsOf(key)).length) return { error: `There is already a location called ${key}; revise it instead, or pick another name.` };
+  let panoPath = parsed.panoPath;
+  let scenePanoId = null;
+  if (parsed.scenePanoId) {
+    const p = (await rows('scene_panos', { id: `eq.${parsed.scenePanoId}`, movie_id: `eq.${movieId}`, select: 'id,image_path' }))[0];
+    if (!p) return { error: 'That panorama is not in this project.' };
+    panoPath = p.image_path;
+    scenePanoId = p.id;
+  }
+  if (!panoPath) return { error: 'Give a panorama to build from.' };
+  const views = await workerJob({ kind: 'pano_views', pano: panoPath, name: key }, { timeoutMs: 10 * 60 * 1000 });
+  if (views.status !== 'done') return { action: 'error', reason: 'Could not cut the panorama into views: ' + views.error };
+  const source = { panoPath, scenePanoId, views: views.result.views };
+  try {
+    const images = [];
+    for (const rel of source.views) images.push(await setsImage(rel));
+    const first = await askModel(blockoutFirstPrompt(name, parsed.notes), images);
+    const loc = blockoutNormalise(Object.assign({}, first.location || first, {
+      name, reference_source: panoPath, reference_plates: source.views, status: 'block-out by a model; not surveyed'
+    }));
+    let row = await buildRevision(key, loc, { source, changeNote: 'First block-out, from the panorama.' });
+    const made = [row];
+    const rounds = Math.max(0, Math.min(3, parsed.rounds === undefined ? 1 : Number(parsed.rounds) || 0));
+    for (let i = 0; i < rounds; i++) {
+      row = await reviseOnce(row, parsed.notes);
+      made.push(row);
+    }
+    return { action: 'generated', setLocation: row, revisions: made.map((r) => ({ id: r.id, revision: r.revision, change: r.change_note })), survey: first.survey || null };
+  } catch (e) {
+    return { action: 'error', reason: e.message };
+  }
+}
+
+if (action === 'revise_location') {
+  const row = (await rows('set_locations', { id: `eq.${parsed.setLocationId}`, movie_id: `eq.${movieId}`, select: '*' }))[0];
+  if (!row) return { error: 'That set is not part of this project.' };
+  try {
+    let cur = row;
+    const made = [];
+    const rounds = Math.max(1, Math.min(3, Number(parsed.rounds) || 1));
+    for (let i = 0; i < rounds; i++) {
+      cur = await reviseOnce(cur, parsed.notes);
+      made.push(cur);
+    }
+    return { action: 'revised', setLocation: cur, revisions: made.map((r) => ({ id: r.id, revision: r.revision, change: r.change_note })) };
+  } catch (e) {
+    return { action: 'error', reason: e.message };
+  }
 }
 
 return { error: `Unknown action '${action}'.` };

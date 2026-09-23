@@ -198,7 +198,7 @@ WORLD_COMFY = World()
 class BlenderJobs:
     """Blender renders for sets, queued and run one at a time."""
 
-    KINDS = ('stage', 'visibility', 'scout', 'assets')
+    KINDS = ('stage', 'visibility', 'scout', 'assets', 'pano_views', 'build', 'export')
 
     def __init__(self, cfg):
         self.cfg = cfg or {}
@@ -209,6 +209,19 @@ class BlenderJobs:
     @property
     def root(self):
         return os.path.realpath(self.cfg['sets_root'])
+
+    @property
+    def comfy_root(self):
+        # The sets root is <ComfyUI>/input/sets unless configured otherwise.
+        return os.path.realpath(self.cfg.get('comfy_root') or os.path.dirname(os.path.dirname(self.root)))
+
+    def comfy_file(self, rel):
+        """A file in ComfyUI's input or output folder, for reading only."""
+        full = os.path.realpath(os.path.join(self.comfy_root, str(rel)))
+        allowed = [os.path.join(self.comfy_root, d) for d in ('input', 'output')]
+        if not any(full.startswith(a + os.sep) for a in allowed) or not os.path.isfile(full):
+            raise ValueError(f'{rel} is not a file in ComfyUI\'s input or output folder')
+        return full
 
     def inside(self, rel):
         """A path under the sets root, or an error: nothing outside it is touched."""
@@ -223,10 +236,46 @@ class BlenderJobs:
         kind = body.get('kind')
         if kind not in self.KINDS:
             raise ValueError(f'kind must be one of {", ".join(self.KINDS)}')
-        if kind == 'stage':
+        plain = lambda v: bool(re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', str(v))) and not set(str(v)) <= {'.'}
+        blender = [self.cfg['exe'], '-b']
+        script = lambda name: os.path.join(self.cfg['scripts'], name)
+        if kind == 'pano_views':
+            # A panorama cut into the four views a block-out is written from and checked against.
+            name = str(body.get('name', ''))
+            if not plain(name):
+                raise ValueError('pano_views needs a plain name')
+            out = self.inside(os.path.join('panos', name))
+            args = {'cmd': blender + ['--factory-startup', '--python', script('pano_views.py'), '--',
+                                      self.comfy_file(body.get('pano', '')), out, str(int(body.get('size', 768)))],
+                    'out': out}
+        elif kind == 'build':
+            # A location revision from its description. Revisions are never rebuilt in place.
+            key, rev = str(body.get('locationKey', '')), str(body.get('revision', ''))
+            loc = body.get('location')
+            if not plain(key) or not plain(rev) or not isinstance(loc, dict):
+                raise ValueError('build needs a plain locationKey and revision, and the location')
+            # A preview build (of a set made before previews existed) is not a revision.
+            out = self.inside(os.path.join('scratch' if body.get('preview') else 'locations', key, rev))
+            if os.path.exists(os.path.join(out, 'location.blend')):
+                raise ValueError(f'{key} {rev} already exists; a change is a new revision')
+            os.makedirs(out, exist_ok=True)
+            with open(os.path.join(out, 'location.json'), 'w', encoding='utf-8') as f:
+                json.dump(dict(loc, id=key, revision=rev), f, indent=1)
+            args = {'cmd': blender + ['--factory-startup', '--python', script('build_blockout.py'), '--', out], 'out': out}
+        elif kind == 'export':
+            # An older, script-built location described as data, so it can be revised as data.
+            key, rev = str(body.get('locationKey', '')), str(body.get('revision', ''))
+            if not plain(key) or not plain(rev):
+                raise ValueError('export needs a plain locationKey and revision')
+            out = self.inside(os.path.join('locations', key, rev))
+            blend = os.path.join(out, 'location.blend')
+            if not os.path.exists(blend):
+                raise FileNotFoundError(f'no location.blend for {key} {rev}')
+            args = {'cmd': blender + [blend, '--python', script('export_blockout.py'), '--',
+                                      os.path.join(out, 'blockout_export.json')], 'out': out}
+        elif kind == 'stage':
             shot = body.get('shot') or {}
             shot_id, project = str(shot.get('shot_id', '')), str(body.get('project', ''))
-            plain = lambda v: re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', v) and not set(v) <= {'.'}
             if not plain(shot_id) or not plain(project):
                 raise ValueError('a stage job needs a shot with a plain shot_id, and a plain project name')
             shot_dir = self.inside(os.path.join('shots', project, shot_id))
@@ -263,6 +312,8 @@ class BlenderJobs:
         base = os.path.join(self.root, 'locations')
         found = []
         for loc_id in sorted(os.listdir(base)) if os.path.isdir(base) else []:
+            if loc_id.startswith('_'):   # tests and scratch, not sets
+                continue
             for rev in sorted(os.listdir(os.path.join(base, loc_id))):
                 d = os.path.join(base, loc_id, rev)
                 meta = self._read(os.path.join(d, 'location.json'))
@@ -302,7 +353,9 @@ class BlenderJobs:
         except Exception:
             pass
         flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
-        if args[0] == '__scout__':
+        if isinstance(args, dict):
+            cmd = args['cmd']
+        elif args[0] == '__scout__':
             name, dirs = args[1], args[2:]
             env['AIMP_SCOUT_OUT'] = os.path.join(self.root, 'reviews')
             cmd = [self.cfg.get('scout_python') or sys.executable, os.path.join(self.cfg['scripts'], 'tech_scout.py'), name] + dirs
@@ -316,6 +369,17 @@ class BlenderJobs:
         if proc.returncode != 0 or 'Traceback' in out:
             raise RuntimeError(f'{os.path.basename(cmd[0])} exited {proc.returncode}: ' + out[-800:])
         rel = lambda p: os.path.relpath(p, self.root).replace(os.sep, '/')
+        if kind == 'pano_views':
+            return {'dir': rel(args['out']), 'views': [f'{rel(args["out"])}/view_{t}.png' for t in 'NESW']}
+        if kind == 'build':
+            if not os.path.exists(os.path.join(args['out'], 'location.blend')):
+                raise RuntimeError('the block-out was not built: ' + out[-800:])
+            report = self._read(os.path.join(args['out'], 'build_report.json')) or {}
+            report['previews'] = [f'{rel(args["out"])}/{p}' for p in report.get('previews', [])]
+            return {'dir': rel(args['out']), 'blend': rel(os.path.join(args['out'], 'location.blend')),
+                    'report': report, 'location': self._read(os.path.join(args['out'], 'location.json'))}
+        if kind == 'export':
+            return {'blockout': self._read(os.path.join(args['out'], 'blockout_export.json'))}
         if kind == 'scout':
             return {'sheet': f'reviews/tech_scout_{args[1]}.jpg', 'coverage': self._read(os.path.join(self.root, 'reviews', f'tech_scout_{args[1]}.json'))}
         shot_dir = args[2]
