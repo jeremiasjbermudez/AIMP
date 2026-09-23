@@ -19,7 +19,14 @@ import { Select } from './ui/Select'
 // Where the worker's sets root sits among ComfyUI's folders: install-worker.ps1
 // puts it at <ComfyUI>\input\sets, so /view serves it as type=input, subfolder sets/...
 const SETS_VIEW = 'input/sets'
-const setsView = (rel: string, cacheKey?: string) => comfyViewUrl(`${SETS_VIEW}/${rel.split('\\').join('/')}`, cacheKey)
+const setsView = (rel: string, cacheKey?: string) => comfyViewUrl(`${SETS_VIEW}/${slashed(rel)}`, cacheKey)
+// ComfyUI on Windows reports subfolders with backslashes (output/testies\_minimax_control/...),
+// which comfyViewUrl would read as part of the file name.
+const slashed = (p: string) => p.split(String.fromCharCode(92)).join('/')
+// The Director's motion prompts all open the same way; the rest is what tells shots apart.
+const shotLabel = (d: { position: number; scene_number: number | null; shot_type: string | null; motion_prompt: string | null }) =>
+  `#${d.position}${d.scene_number ? ` · scene ${d.scene_number}` : ''} · ${d.shot_type ?? 'shot'} · ` +
+  (d.motion_prompt ?? '').replace(/^Cinematic,\s*live-action\.\s*/i, '').slice(0, 36)
 
 // MiniMax H3 clip lengths are 17k+5 frames; staging renders exactly the clip.
 const FRAMES = [90, 107, 124, 141, 158, 175].map((n) => ({ value: String(n), label: `${n} frames · ${(n / 24).toFixed(1)} s` }))
@@ -722,7 +729,7 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
                   {s.error_message && <p className="error">{s.error_message}</p>}
                   {s.clip_id && clips[s.clip_id] && (
                     clips[s.clip_id].video_path
-                      ? <video className="shot-preview" src={comfyViewUrl(clips[s.clip_id].video_path!)} controls muted loop playsInline />
+                      ? <video className="shot-preview" src={comfyViewUrl(slashed(clips[s.clip_id].video_path!))} controls muted loop playsInline />
                       : <p className={clips[s.clip_id].status === 'failed' ? 'error' : 'empty'}>
                           Clip {clips[s.clip_id].status}{clips[s.clip_id].error_message ? ': ' + clips[s.clip_id].error_message : ''}
                         </p>
@@ -736,7 +743,7 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
                             value={forShot[s.id] ?? s.director_shot_id ?? ''}
                             onValueChange={(v) => setForShot((m) => ({ ...m, [s.id]: v }))}
                             placeholder="Pick the Director's shot…"
-                            items={dshots.map((d) => ({ value: d.id, label: `#${d.position}${d.scene_number ? ` · scene ${d.scene_number}` : ''} · ${d.shot_type ?? 'shot'} · ${(d.motion_prompt ?? '').slice(0, 40)}` }))}
+                            items={dshots.map((d) => ({ value: d.id, label: shotLabel(d) }))}
                           />
                         </label>
                       )}

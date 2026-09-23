@@ -1358,6 +1358,8 @@
   .sets-compare figure { margin: 0; display: grid; gap: 0.25rem; }
   .sets-compare img { width: 100%; border-radius: 4px; display: block; }
   .sets-compare figcaption { font-size: 0.8rem; color: var(--text-dim); text-align: center; }
+  .clip-grid .beat-card .ui-select { max-width: 100%; min-width: 0; }
+  .clip-grid .beat-card .camera-row label { min-width: 0; max-width: 100%; }
   .sets-plates {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
