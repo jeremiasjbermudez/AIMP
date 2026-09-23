@@ -57,6 +57,13 @@ $nodeMajor = [int](((node --version) -replace '^v', '') -split '\.')[0]
 if ($nodeMajor -lt $RequiredNodeMajor) {
     throw "Flowise $Version needs Node $RequiredNodeMajor or newer; this is Node $nodeMajor. Install it and re-run."
 }
+# Newer is not fine either. The tag declares ^$RequiredNodeMajor, and on Node 25
+# it builds cleanly and then cannot start: a dependency of its auth still reads
+# buffer.SlowBuffer, which Node 25 removed, and the CLI reports only
+# "command start not found".
+if ($nodeMajor -gt $RequiredNodeMajor) {
+    throw "Flowise $Version runs on Node $RequiredNodeMajor; this is Node $nodeMajor, which it cannot start on. Put Node $RequiredNodeMajor first on PATH (a portable copy is enough) and re-run."
+}
 
 # A pinned pnpm, not whatever is newest. pnpm 12 fails differently here AND
 # rewrites pnpm-workspace.yaml on the way, which leaves the checkout worse than
