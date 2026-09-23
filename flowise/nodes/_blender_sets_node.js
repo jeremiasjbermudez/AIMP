@@ -356,7 +356,9 @@ async function lookPlate(initRel, prompt, prefix) {
 }
 
 // Any failure comes back as a reason, not a flow crash (which reaches the app as a bare HTTP 500).
+let clipStep = 'starting';
 async function makeClip() {
+  clipStep = 'reading the shot';
   const shotRow = (await rows('set_shots', { id: `eq.${parsed.setShotId}`, movie_id: `eq.${movieId}`, select: '*' }))[0];
   if (!shotRow) return { error: 'That shot is not in this project.' };
   if (shotRow.status !== 'staged' || !shotRow.stage) return { error: `${shotRow.shot_key} has not been staged yet.` };
@@ -364,6 +366,7 @@ async function makeClip() {
   if (!loc) return { error: 'The set this shot was staged in is gone.' };
   const facts = loc.facts || {};
 
+  clipStep = 'reading the Director shot and beat';
   // The Director's shot and its beat, when the shot is for one.
   let dshot = null;
   let beat = null;
@@ -374,6 +377,7 @@ async function makeClip() {
     if (dshot.beat_id) beat = (await rows('beats', { id: `eq.${dshot.beat_id}`, select: 'id,summary,raw_text' }).catch(() => []))[0] || null;
   }
 
+  clipStep = 'finding the character and their reference';
   // Who is in it: the character asked for, else the Director shot's first, else the staged proxy's name.
   const chars = await rows('characters', { movie_id: `eq.${movieId}`, select: 'id,name,visual_anchor' }).catch(() => []);
   const wanted = parsed.characterId
@@ -388,11 +392,13 @@ async function makeClip() {
     identity = pick ? (pick.image_path || pick.storage_key) : null;
   }
 
+  clipStep = 'making the control video';
   // 1. The control video, and the facts about the camera the prompt needs.
   const ctl = await workerJob({ kind: 'control', shotDir: shotRow.stage.shotDir, plateCount: 2 }, { timeoutMs: 20 * 60 * 1000 });
   if (ctl.status !== 'done') return { action: 'error', reason: 'Could not make the control video: ' + ctl.error };
   const m = ctl.result;
 
+  clipStep = 'making the look plates';
   // 2. Look plates for the coverage plates this camera faces: made once per set revision.
   const look = Object.assign({}, loc.look || {});
   const lookPrompt = setClipLookPrompt(facts.room_prompt || loc.name);
@@ -410,6 +416,7 @@ async function makeClip() {
     return { action: 'error', reason: e.message };
   }
 
+  clipStep = 'writing the prompt';
   // 3. The prompt.
   const sh = shotRow.shot || {};
   const action = dshot ? [dshot.motion_prompt, dshot.frame_prompt].filter(Boolean).join(' ') : beat ? beat.summary : '';
@@ -420,6 +427,7 @@ async function makeClip() {
     action: action || (beat ? beat.summary : ''), visibility: shotRow.visibility
   });
 
+  clipStep = 'recording the clip';
   // 4. The clip, recorded against the Director's shot and beat so it lands where they look for it.
   const size = m.size || [1344, 576];
   const clip = await insert('minimax_clips', {
@@ -441,6 +449,7 @@ async function makeClip() {
     beat: beat ? beat.summary : null, prompt };
   if (!parsed.render) return Object.assign({ action: 'clip_ready' }, summary);
 
+  clipStep = 'rendering';
   // 5. Render through Control to Video, the same flow the Video tab uses.
   let out;
   try {
@@ -462,8 +471,7 @@ if (action === 'make_clip') {
   try {
     return await makeClip();
   } catch (e) {
-    const at = String((e && e.stack) || '').split('\n').slice(1, 3).map((l) => l.trim()).join(' / ');
-    return { action: 'error', reason: (e && e.message ? e.message : String(e)) + (at ? ` (${at})` : '') };
+    return { action: 'error', reason: `While ${clipStep}: ` + (e && e.message ? e.message : String(e)) };
   }
 }
 
