@@ -2526,6 +2526,9 @@ export function DirectorPanel({ movie }: { movie: Movie }) {
             )}
             </p>
           )}
+          {/* The shot list is wider than the page once it has many columns filled; it
+              scrolls in its own box rather than pushing the whole page sideways. */}
+          <div className="table-scroll">
           <table className="data-table director-shots">
             <thead>
               <tr>
@@ -2957,6 +2960,7 @@ export function DirectorPanel({ movie }: { movie: Movie }) {
               ))}
             </tbody>
           </table>
+          </div>
         </>
       )}
 

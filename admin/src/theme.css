@@ -1356,6 +1356,9 @@
   .set-steps li.done::before { content: '✓'; background: var(--ok); color: #fff; }
   .set-steps button { padding: 0.1rem 0.5rem; font-size: 0.8rem; }
 
+  /* A table wider than the page scrolls inside this box, never the page itself. */
+  .table-scroll { overflow-x: auto; max-width: 100%; }
+
   /* Blender sets: the plan of the room beside the shot form. */
   .sets-layout {
     display: grid;
