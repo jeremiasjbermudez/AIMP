@@ -357,3 +357,25 @@ Blender camera matrix per frame (it matches Blender's own tracking rotation to
 2×10⁻⁷), the viewfinder shows that path, and Shoot sends the same path to staging
 (`shot.cameraPath`), which replays it frame for frame - the route an operated
 VirtuCamera pass already takes.
+
+### Several cameras, one room
+
+The first Shoot of two cameras on a take (TK_S1_02_03) came back as two different
+rooms: bare walls with a diamond pattern in one, whitewashed brick and a hanging lamp
+in the other, where a second Tomas also appeared. Every clip was generated alone; they
+shared only the geometry and the two panorama views each camera faced, which differ
+by camera.
+
+So, as camera_lab did (its canon frames), Shoot renders a **master camera** first (the
+one marked Master, else the first) and gives every other camera three of the master
+clip's frames (start, middle, end; worker job `frames`) as references, with the
+prompt saying they are the same take from another position. Every camera on a take
+also gets the same four panorama views.
+
+Re-shot: both angles show the same room (the whitewashed stone, the dark window, the
+panorama's calendar, the lamp), the same single Tomas, and CAM B keeps its own push-in
+to a close-up. The wall pattern mostly went with the new references. Still open: CAM
+B's opening frame copies the master's composition before its own camera takes over.
+
+(Releasing the depth control at 80% of the steps was tried against the pattern and
+made it much worse; full strength to the end stays the default.)
