@@ -75,10 +75,9 @@ picture. Cameras, control passes and visibility then belong to the camera module
    with its marks and every staged camera, a shot form with a live preview, shot cards
    with the first frame, visibility and plates, and the tech-scout sheet.
 5. **Block-outs written by a model. Done.** See [How a set is made](#how-a-set-is-made).
-6. **Next.** Bring Director's Stage (`director_web`) into the Camera tab, writing
-   `stageCamera` into the same `stage` action. Port `compile_shot.py` and
-   `prepare_take.py`'s depth and Canny binding into `flowise/lib`, and feed a staged
-   shot's depth into 46-MiniMax-Control-To-Video.
+6. **From a staged shot to a clip. Done.** See [From the set to a clip](#from-the-set-to-a-clip).
+   Still to port: Director's Stage (`director_web`) into the Camera tab, writing
+   `stageCamera` into the same `stage` action.
 7. **Next.** Proposed coverage: from a scene's shot list (the Director tab), place
    cameras on the set's marks (wide, singles, overs), reject angles the visibility
    pass says see only bare wall, and lay them out on a scout sheet for approval.
@@ -158,12 +157,47 @@ Testies, scene A1S1, through the app's own flow on the render host (23 September
 What this does not do yet: propose the cameras itself (step 7 above), or check the
 block-out against the splat world rather than the panorama alone.
 
-## Not coming across
+## From the set to a clip
 
-- **Experiment files.** The 33 GB of renders and shots. Only the code,
-  `locations/*/location.json` and the `.blend` files (about 1 GB) move.
-- **The web app's hosting.** `@openai/sites-vite-plugin` and the Wrangler deploy.
-  Director's Stage becomes part of the admin app instead.
-- **The per-experiment submission budget.**
-- **Local configuration.** `experiment/config.local.json`, which holds hosts, and
-  the `.openai/` project IDs.
+`48-Blender-Sets` action `make_clip` (the **Make clip** button on a staged shot, with a
+**For shot** picker of the Director's shots) joins a staged shot to the story and the
+video route:
+
+```
+beat ─▶ Director shot ─▶ staged Blender shot ─▶ make_clip ─▶ minimax_clips row ─▶ 46-MiniMax-Control-To-Video
+                                                  │
+     control video  ◀── depth pass (worker job `control`, blender/control_depth.py)
+     Picture 1      ◀── the character's reference (Characters tab)
+     Pictures 2-3   ◀── look plates: Z-Image over the coverage plates this camera faces,
+                        made once per set revision (set_locations.look)
+     prompt         ◀── flowise/lib/set_clip.js: camera position relative to the actor,
+                        the move, the visibility pass, the Director shot's motion prompt
+```
+
+- **The control video** is camera_lab's: inverse depth, one range for the whole clip
+  (0.5-99.5 percentile of every frame), near white, lossless, exactly the staged
+  frame count. A camera within 0.35 m of the set on more than 2% of a frame is
+  refused.
+- **The link.** The clip carries the beat (`minimax_clips.beat_id`). The Director shot
+  finds its clip through `director_shots.clip_id`, and the staged shot records the
+  Director shot, the beat, the control facts and the clip (`set_shots`).
+  `minimax_clips.source_shot_id` is not used: it points at the screenplay breakdown's
+  `shots` table.
+- **The settings, measured.** On Testies (beat A1S1B1, Director shot 2, "TOMAS
+  frowns. He looks at the wall calendar", a 50 mm medium close-up), three renders of
+  about 4 minutes each:
+
+  | Setting | Result |
+  |---|---|
+  | camera_lab's strength 0.7, depth released at 0.5 | H3 ignored the depth and framed its own wide shot |
+  | strength 1.0 for the whole render | framing followed the depth; the room description in the prompt brought in the window and radio, which this camera cannot see |
+  | 1.0 / 1.0, room description left to the look plates | followed the depth and the set: the bare stone wall this camera faces |
+
+  So `make_clip` defaults to strength 1.0 for the whole render (`control_end`, a new
+  column that 46-MiniMax-Control-To-Video now honours). camera_lab's 0.7 / 0.5 was for
+  a different control node, with frame anchors.
+- **Still open.** The character renders a little smaller than the proxy, and copies
+  the pose of the reference portrait. A prop named in the action ("he looks at the
+  calendar") can appear although it is behind the camera. camera_lab's end-frame
+  anchor (the actor inserted into the Blender end frame and used as a guide) is the
+  next thing to port for both.
