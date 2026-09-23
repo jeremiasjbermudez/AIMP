@@ -78,6 +78,23 @@ function setClipTimeline(take) {
 }
 
 /**
+ * Mark the timeline's mentions of things this camera never sees as out of frame.
+ * "He looks at the wall calendar" with the calendar never in frame made H3 draw the
+ * calendar anyway, and a second him to use it; the prompt must say he looks off frame.
+ */
+function setClipOffFrame(sentences, vis) {
+  const never = (((vis || {}).summary || {}).never || []).map((g) => String(g).replace(/^the /i, ''));
+  return (sentences || []).map((line) => {
+    const hit = never.filter((g) => {
+      const word = g.split(/\s+/).pop();
+      // The first five letters: "the stairs" (a mark's name) is "the stairwell" (a set piece).
+      return word && word.length > 3 && new RegExp('\\b' + word.slice(0, 5).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\w*', 'i').test(line);
+    });
+    return hit.length ? `${line} (${hit.map((g) => 'the ' + g).join(' and ')} ${hit.length === 1 ? 'is' : 'are'} out of frame in this shot: he looks off frame toward ${hit.length === 1 ? 'it' : 'them'}; do not draw ${hit.length === 1 ? 'it' : 'them'}.)` : line;
+  });
+}
+
+/**
  * The whole prompt.
  *   p.locationName, p.roomPrompt, p.lensMm, p.frames, p.fps
  *   p.person {name, look} or null     p.pictures: number of look plates after <Picture 1>
@@ -111,7 +128,7 @@ function setClipPrompt(p) {
   }
   // On a take the timeline is the action, lines included, at the take's times; the Director
   // shot's own text would give the same line a second time, counted from its own start.
-  if (p.timeline && p.timeline.length) lines.push(p.timeline.join(' '));
+  if (p.timeline && p.timeline.length) lines.push(setClipOffFrame(p.timeline, p.visibility).join(' '));
   else if (p.action) lines.push(String(p.action).trim().replace(/\s+/g, ' '));
   lines.push('');
   lines.push(p.person
