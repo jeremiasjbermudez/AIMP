@@ -103,6 +103,14 @@ $values = @{
 # ComfyUI served through the dev server's proxy (see admin/vite.config.ts):
 # the app must keep calling /comfy, not the URL the proxy forwards to.
 if (Select-String -Path $envFile -Pattern '^\s*COMFY_PROXY_TARGET\s*=\s*\S' -Quiet) { $values['VITE_COMFY_URL'] = '/comfy' }
+# ADMIN_PROXY=1: every service through the dev server, so the app is opened
+# from another machine while InsForge and Flowise stay on loopback here.
+if ($env:ADMIN_PROXY -eq '1') {
+    $values['VITE_INSFORGE_URL'] = '/';         $values['INSFORGE_PROXY_TARGET'] = $env:INSFORGE_URL
+    $values['VITE_FLOWISE_URL'] = '/flowise';   $values['FLOWISE_PROXY_TARGET'] = $env:FLOWISE_URL
+    $values['VITE_COMFY_URL'] = '/comfy';       $values['COMFY_PROXY_TARGET'] = $env:COMFY_URL
+    if ($env:ADMIN_HOST) { $values['ADMIN_HOST'] = $env:ADMIN_HOST }
+}
 foreach ($k in $coreFlowIds.Keys) { $values[$k] = $coreFlowIds[$k] }
 Set-EnvValues -Values $values
 Write-Host "  set the service URLs and $($coreFlowIds.Count) core flow id(s) in admin/.env" -ForegroundColor DarkGray
