@@ -8,6 +8,9 @@ const requestedType = typeMatch ? typeMatch[1] : null;
 // so a regenerate sits beside the previous attempt rather than replacing it.
 const versionMatch = /--version\s+(\d+)/i.exec(rawInput);
 const targetVersion = versionMatch ? parseInt(versionMatch[1], 10) : 1;
+// Read before the name is cleaned; stripping it first would lose the request.
+// The later steps regenerate an existing character's images only when forced.
+const force = /--force\b/i.test(rawInput);
 // Flags that take a value go first, then any remaining bare flag.
 // Stripping only "--flag value" pairs left a trailing --force in the name.
 const characterName = rawInput
@@ -72,5 +75,6 @@ return {
   characterName,
   isNewCharacter,
   existingCharacter: existing,
-  requestedType
+  requestedType,
+  force
 };

@@ -19,6 +19,10 @@
  */
 const fs = require('fs')
 const path = require('path')
+// The sources are the only copy anyone edits: flowise/build.js inlines their
+// shared code (`// @include llm`) and knows which source is which step.
+const { buildSource } = require('../../flowise/build.js')
+const SOURCES_MANIFEST = path.join(__dirname, '../../flowise/flows/_sources.json')
 
 function arg(name, fallback) {
   const i = process.argv.indexOf('--' + name)
@@ -95,7 +99,7 @@ async function main() {
   // from a source file loses all of it.
   if (SOURCE.endsWith('.json')) return importExported()
 
-  const body = fs.readFileSync(path.resolve(SOURCE), 'utf8')
+  const body = buildSource(path.resolve(SOURCE))
 
   // The node definitions are fetched rather than hardcoded: their input schema
   // changes between Flowise versions, and a stale copy produces a flow that
@@ -169,6 +173,16 @@ async function main() {
 /** Register a flow from an exported graph, rewriting its per-install variables. */
 async function importExported() {
   const graph = JSON.parse(fs.readFileSync(path.resolve(SOURCE), 'utf8'))
+  // Each code step is rebuilt from its source here, not taken from the export
+  // as committed, so a source edited without re-running flowise/build.js still
+  // installs what the source says.
+  const steps = (JSON.parse(fs.readFileSync(SOURCES_MANIFEST, 'utf8')) || {})[NAME] || {}
+  for (const node of graph.nodes || []) {
+    const inputs = (node.data || {}).inputs
+    if (steps[node.id] && inputs && typeof inputs.customFunctionJavascriptFunction === 'string') {
+      inputs.customFunctionJavascriptFunction = buildSource(steps[node.id])
+    }
+  }
   for (const node of graph.nodes || []) {
     const inputs = (node.data || {}).inputs
     if (!inputs) continue

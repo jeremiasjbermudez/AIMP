@@ -1,0 +1,149 @@
+{
+  "1-Beat-Generator": {
+    "customFunctionAgentflow_0": "_beat_generator__fetch_screenplay_scope.js",
+    "customFunctionAgentflow_1": "_beat_generator__extract_scope_text.js",
+    "customFunctionAgentflow_2": "_beat_generator__write_beats_to_insforge.js"
+  },
+  "10-Qwen-Cleanup": {
+    "customFunctionAgentflow_0": "_qwen_cleanup_node.js"
+  },
+  "11-MiniMax-Prompt-Enhancer": {
+    "customFunctionAgentflow_0": "_prompt_enhancer_node.js"
+  },
+  "12-Character-Bible-Import": {
+    "customFunctionAgentflow_0": "_character_bible_import_node.js"
+  },
+  "13-Scene-Import": {
+    "customFunctionAgentflow_0": "_scene_import_node.js"
+  },
+  "14-Screenplay-Assist": {
+    "customFunctionAgentflow_0": "_screenplay_assist_node.js"
+  },
+  "15-Delete-Movie": {
+    "customFunctionAgentflow_0": "_delete_movie_node.js"
+  },
+  "16-MiniMax-Extend": {
+    "customFunctionAgentflow_0": "_minimax_extend_node.js"
+  },
+  "17-MiniMax-Ref-To-Video": {
+    "customFunctionAgentflow_0": "_minimax_ref_node.js"
+  },
+  "18-Post-Voice": {
+    "customFunctionAgentflow_0": "_post_voice_node.js"
+  },
+  "19-Score-Generator": {
+    "customFunctionAgentflow_0": "_score_node.js"
+  },
+  "2-Trigger-Orchestration": {
+    "customFunctionAgentflow_0": "_trigger_orchestration__resolve_scope_characters.js",
+    "customFunctionAgentflow_1": "_trigger_orchestration__extract_character_list.js",
+    "customFunctionAgentflow_2": "_trigger_orchestration__extract_scene_list_pano.js",
+    "customFunctionAgentflow_3": "_trigger_orchestration__extract_scene_list_world.js"
+  },
+  "20-Resolve-Deliver": {
+    "customFunctionAgentflow_0": "_resolve_node.js"
+  },
+  "21-Resolve-Chat": {
+    "customFunctionAgentflow_0": "_resolve_chat_node.js"
+  },
+  "22-Screenplay-Writer": {
+    "customFunctionAgentflow_0": "_screenplay_writer_node.js"
+  },
+  "23-Character-Bible-Writer": {
+    "customFunctionAgentflow_0": "_character_bible_writer_node.js"
+  },
+  "24-Face-QA": {
+    "customFunctionAgentflow_0": "_face_qa_node.js"
+  },
+  "25-Character-QA-Shots": {
+    "customFunctionAgentflow_0": "_character_qa_shots_node.js"
+  },
+  "26-Image-Edit": {
+    "customFunctionAgentflow_0": "_image_edit_node.js"
+  },
+  "27-Pano-Prompt-From-Image": {
+    "customFunctionAgentflow_0": "_pano_prompt_node.js"
+  },
+  "28-Qwen-Image-Edit": {
+    "customFunctionAgentflow_0": "_qwen_image_edit_node.js"
+  },
+  "29-Delete-Asset": {
+    "customFunctionAgentflow_0": "_delete_asset_node.js"
+  },
+  "3-Character-Generator": {
+    "customFunctionAgentflow_0": "_chargen_resolver_node.js",
+    "customFunctionAgentflow_1": "_character_generator__gather_descriptor_sources.js",
+    "customFunctionAgentflow_2": "_character_generator__write_character_descriptor.js",
+    "customFunctionAgentflow_3": "_character_generator__generate_reference_images.js"
+  },
+  "30-Score-Agent": {
+    "customFunctionAgentflow_0": "_score_agent_node.js"
+  },
+  "31-Palette-Namer": {
+    "customFunctionAgentflow_0": "_palette_namer_node.js"
+  },
+  "32-Apply-LUT": {
+    "customFunctionAgentflow_0": "_apply_lut_node.js"
+  },
+  "34-Face-Fix": {
+    "customFunctionAgentflow_0": "_face_fix_node.js"
+  },
+  "35-MiniMax-Video-to-Video": {
+    "customFunctionAgentflow_0": "_minimax_v2v_node.js"
+  },
+  "36-Z-Image": {
+    "customFunctionAgentflow_0": "_z_image_node.js"
+  },
+  "37-Prompt-World": {
+    "customFunctionAgentflow_0": "_prompt_world_node.js"
+  },
+  "38-HY-World": {
+    "customFunctionAgentflow_0": "_hyworld_node.js"
+  },
+  "39-Director": {
+    "customFunctionAgentflow_0": "_director_node.js"
+  },
+  "4-Panoramic-Generator": {
+    "customFunctionAgentflow_0": "_pano_resolver_node.js",
+    "customFunctionAgentflow_1": "_panoramic_generator_node.js"
+  },
+  "40-Character-Wardrobe": {
+    "customFunctionAgentflow_0": "_character_wardrobe_node.js"
+  },
+  "41-Copy-Movie": {
+    "customFunctionAgentflow_0": "_copy_movie_node.js"
+  },
+  "42-Shot-Breakdown": {
+    "customFunctionAgentflow_0": "_shot_breakdown_node.js"
+  },
+  "43-Import-Breakdown": {
+    "customFunctionAgentflow_0": "_import_breakdown_node.js"
+  },
+  "44-Image-Check": {
+    "customFunctionAgentflow_0": "_image_check_node.js"
+  },
+  "45-Splat-Camera": {
+    "customFunctionAgentflow_0": "_splat_camera_node.js"
+  },
+  "46-MiniMax-Control-To-Video": {
+    "customFunctionAgentflow_0": "_minimax_control_node.js"
+  },
+  "5-3DGS-World-Builder": {
+    "customFunctionAgentflow_0": "_3dgs_world_builder__resolve_movie_scope.js",
+    "customFunctionAgentflow_1": "_world_builder_node.js"
+  },
+  "6-GS-Cleaner": {
+    "customFunctionAgentflow_0": "_gs_cleaner__resolve_shot.js",
+    "customFunctionAgentflow_1": "_gs_cleaner__run_qwen_cleanup.js"
+  },
+  "7-MiniMax-Clip-Generator": {
+    "customFunctionAgentflow_0": "_minimax_clip_generator__resolve_shot_references.js",
+    "customFunctionAgentflow_1": "_minimax_clip_generator__generate_minimax_clip.js"
+  },
+  "8-MiniMax-Image-To-Video": {
+    "customFunctionAgentflow_0": "_minimax_av_node.js"
+  },
+  "9-MiniMax-Text-To-Video": {
+    "customFunctionAgentflow_0": "_minimax_av_node.js"
+  }
+}
