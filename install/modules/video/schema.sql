@@ -105,3 +105,7 @@ END $guard$;
 --
 
 ALTER TABLE public.minimax_clips ENABLE ROW LEVEL SECURITY;
+
+-- Control to Video: the share of the denoising steps the control video steers
+-- (0-1). camera_lab released depth at 0.5-0.6, leaving the model the finish.
+ALTER TABLE public.minimax_clips ADD COLUMN IF NOT EXISTS control_end double precision DEFAULT 1.0 NOT NULL;

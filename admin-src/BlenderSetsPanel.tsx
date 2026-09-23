@@ -90,7 +90,12 @@ type SetShot = {
   scout_sheet: string | null
   error_message: string | null
   updated_at: string
+  director_shot_id?: string | null
+  clip_id?: string | null
 }
+// The Director's shots (director module) and the clips made from staged shots (video module).
+type DirectorShot = { id: string; position: number; scene_number: number | null; shot_type: string | null; motion_prompt: string | null; beat_id: string | null }
+type Clip = { id: string; status: string; video_path: string | null; error_message: string | null }
 
 type Draft = {
   shotKey: string
@@ -210,6 +215,8 @@ function VisibilityBadges({ v }: { v: Visibility }) {
 
 export function BlenderSetsPanel({ movie }: { movie: Movie }) {
   const flowId = import.meta.env.VITE_BLENDER_SETS_ID
+  // Making a clip needs the video module's Control to Video.
+  const flowIdHasVideo = !!import.meta.env.VITE_MINIMAX_CONTROL_ID
   const [available, setAvailable] = useState<Available[]>([])
   const [availableError, setAvailableError] = useState<string | null>(null)
   const [locations, setLocations] = useState<SetLocation[]>([])
@@ -229,6 +236,9 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
   const [genNotes, setGenNotes] = useState('')
   const [genPasses, setGenPasses] = useState('1')
   const [reviseNotes, setReviseNotes] = useState('')
+  const [dshots, setDshots] = useState<DirectorShot[]>([])
+  const [forShot, setForShot] = useState<Record<string, string>>({})
+  const [clips, setClips] = useState<Record<string, Clip>>({})
 
   async function loadRows() {
     const [l, s, p] = await Promise.all([
@@ -238,6 +248,15 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
         .order('act_number', { ascending: true }).order('scene_number', { ascending: true })
     ])
     setPanos((p.data ?? []) as ScenePano[])
+    // Both belong to other modules; an install without them just shows no picker and no clips.
+    const d = await insforge.database.from('director_shots').select('id,position,scene_number,shot_type,motion_prompt,beat_id')
+      .eq('movie_id', movie.id).order('position', { ascending: true })
+    setDshots(d.error ? [] : ((d.data ?? []) as DirectorShot[]))
+    const clipIds = ((s.data ?? []) as SetShot[]).map((x) => x.clip_id).filter((x): x is string => !!x)
+    if (clipIds.length) {
+      const c = await insforge.database.from('minimax_clips').select('id,status,video_path,error_message').in('id', clipIds)
+      setClips(Object.fromEntries(((c.data ?? []) as Clip[]).map((x) => [x.id, x])))
+    }
     const locs = (l.data ?? []) as SetLocation[]
     setLocations(locs)
     setShots((s.data ?? []) as SetShot[])
@@ -402,6 +421,23 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
     if (!r.ok) return setError(r.message)
     if (r.data.action === 'error' || !r.data.sheet) return setError(r.data.reason ?? 'The scout failed.')
     setSheet(r.data.sheet)
+    await loadRows()
+  }
+
+  /** The staged shot as a MiniMax control clip: depth drives it, the set's look plates and the character dress it. */
+  async function handleMakeClip(s: SetShot) {
+    setBusy('clip-' + s.id)
+    setError(null)
+    setNote(`${s.shot_key}: making the control video and look plates, then rendering the clip. Allow 15–30 minutes.`)
+    const run = triggerFlow(flowId, { action: 'make_clip', movieId: movie.id, setShotId: s.id, directorShotId: forShot[s.id] || s.director_shot_id || undefined, render: true })
+    // The clip row exists once the inputs are ready; show it rendering.
+    setTimeout(loadRows, 60000)
+    const r = parseFlowJson<{ action: string; reason?: string }>(await run)
+    setBusy(null)
+    setNote(null)
+    if (!r.ok) setError(r.message)
+    else if (r.data.action === 'error') setError(`${s.shot_key}: ${r.data.reason}`)
+    else if (r.data.action === 'rendering') setNote(`${s.shot_key} is still rendering; it will appear here when it lands.`)
     await loadRows()
   }
 
@@ -684,6 +720,31 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
                   </p>
                   {s.visibility && <VisibilityBadges v={s.visibility} />}
                   {s.error_message && <p className="error">{s.error_message}</p>}
+                  {s.clip_id && clips[s.clip_id] && (
+                    clips[s.clip_id].video_path
+                      ? <video className="shot-preview" src={comfyViewUrl(clips[s.clip_id].video_path!)} controls muted loop playsInline />
+                      : <p className={clips[s.clip_id].status === 'failed' ? 'error' : 'empty'}>
+                          Clip {clips[s.clip_id].status}{clips[s.clip_id].error_message ? ': ' + clips[s.clip_id].error_message : ''}
+                        </p>
+                  )}
+                  {s.status === 'staged' && flowIdHasVideo && (
+                    <div className="camera-row">
+                      {dshots.length > 0 && (
+                        <label>
+                          For shot
+                          <Select
+                            value={forShot[s.id] ?? s.director_shot_id ?? ''}
+                            onValueChange={(v) => setForShot((m) => ({ ...m, [s.id]: v }))}
+                            placeholder="Pick the Director's shot…"
+                            items={dshots.map((d) => ({ value: d.id, label: `#${d.position}${d.scene_number ? ` · scene ${d.scene_number}` : ''} · ${d.shot_type ?? 'shot'} · ${(d.motion_prompt ?? '').slice(0, 40)}` }))}
+                          />
+                        </label>
+                      )}
+                      <button type="button" disabled={!!busy} onClick={() => handleMakeClip(s)}>
+                        {busy === 'clip-' + s.id ? 'Making the clip…' : s.clip_id ? 'Make it again' : 'Make clip'}
+                      </button>
+                    </div>
+                  )}
                   <div className="edit-ref-actions">
                     {s.stage?.plates && (
                       <button type="button" onClick={() => setOpenPlates(openPlates === s.id ? null : s.id)}>

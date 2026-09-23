@@ -25,7 +25,15 @@
 //       beside the panorama and fixed `rounds` times; every pass is a revision
 //   {"action":"revise_location","movieId":"...","setLocationId":"...","notes":"...","rounds":1}
 //       the next revision of any set, a script-built one included
+//   {"action":"make_clip","movieId":"...","setShotId":"...","directorShotId":"...",
+//       "characterId":"...", "controlStrength":0.7, "controlEnd":0.6, "render":true}
+//       a staged shot as a MiniMax H3 control clip for a Director shot (and so a
+//       beat): the depth as the control video, photographic look plates of the
+//       set, the character's reference, and a prompt from all of it; with
+//       render, 46-MiniMax-Control-To-Video renders it
 // @include worker_jobs
+// @include comfy_jobs
+// @include set_clip
 // @include llm
 // @include blockout_ai
 
@@ -316,6 +324,137 @@ if (action === 'revise_location') {
   } catch (e) {
     return { action: 'error', reason: e.message };
   }
+}
+
+// ---------------------------------------------------------------- a staged shot as a clip
+const LOOK_SEED = 1703;      // camera_lab's plate seed and denoise
+const LOOK_DENOISE = 0.55;
+
+/** One photographic look plate: Z-Image over a Blender coverage plate, as camera_lab made them. */
+async function lookPlate(initRel, prompt, prefix) {
+  const g = {
+    '1': { class_type: 'UNETLoader', inputs: { unet_name: 'z_image_turbo_bf16.safetensors', weight_dtype: 'default' } },
+    '3': { class_type: 'ModelSamplingAuraFlow', inputs: { model: ['1', 0], shift: 3 } },
+    '4': { class_type: 'CLIPLoader', inputs: { clip_name: 'qwen_3_4b.safetensors', type: 'lumina2', device: 'default' } },
+    '5': { class_type: 'CLIPTextEncode', inputs: { clip: ['4', 0], text: prompt } },
+    '6': { class_type: 'ConditioningZeroOut', inputs: { conditioning: ['5', 0] } },
+    '7': { class_type: 'VAELoader', inputs: { vae_name: 'ae.safetensors' } },
+    '8': { class_type: 'LoadImage', inputs: { image: initRel } },
+    '9': { class_type: 'VAEEncode', inputs: { pixels: ['8', 0], vae: ['7', 0] } },
+    '10': { class_type: 'KSampler', inputs: { model: ['3', 0], positive: ['5', 0], negative: ['6', 0], latent_image: ['9', 0],
+      seed: LOOK_SEED, steps: 8, cfg: 1, sampler_name: 'res_multistep', scheduler: 'simple', denoise: LOOK_DENOISE } },
+    '11': { class_type: 'VAEDecode', inputs: { samples: ['10', 0], vae: ['7', 0] } },
+    '12': { class_type: 'SaveImage', inputs: { images: ['11', 0], filename_prefix: prefix } }
+  };
+  const sub = await comfySubmit($comfyUrl, g);
+  if (sub.error) throw new Error('Look plate: ' + sub.error);
+  const done = await comfyWait($comfyUrl, sub.promptId, { timeoutMs: 15 * 60 * 1000 });
+  if (done.status !== 'success') throw new Error('Look plate: ' + (done.error || done.status));
+  const img = ((done.record.outputs || {})['12'] || {}).images || [];
+  if (!img.length) throw new Error('Look plate: nothing saved');
+  return 'output/' + (img[0].subfolder ? img[0].subfolder + '/' : '') + img[0].filename;
+}
+
+if (action === 'make_clip') {
+  const shotRow = (await rows('set_shots', { id: `eq.${parsed.setShotId}`, movie_id: `eq.${movieId}`, select: '*' }))[0];
+  if (!shotRow) return { error: 'That shot is not in this project.' };
+  if (shotRow.status !== 'staged' || !shotRow.stage) return { error: `${shotRow.shot_key} has not been staged yet.` };
+  const loc = (await rows('set_locations', { id: `eq.${shotRow.set_location_id}`, select: '*' }))[0];
+  if (!loc) return { error: 'The set this shot was staged in is gone.' };
+  const facts = loc.facts || {};
+
+  // The Director's shot and its beat, when the shot is for one.
+  let dshot = null;
+  let beat = null;
+  const dId = parsed.directorShotId || shotRow.director_shot_id;
+  if (dId) {
+    dshot = (await rows('director_shots', { id: `eq.${dId}`, movie_id: `eq.${movieId}`, select: '*' }).catch(() => []))[0] || null;
+    if (!dshot) return { error: 'That Director shot is not in this project (is the director module installed?).' };
+    if (dshot.beat_id) beat = (await rows('beats', { id: `eq.${dshot.beat_id}`, select: 'id,summary,raw_text' }).catch(() => []))[0] || null;
+  }
+
+  // Who is in it: the character asked for, else the Director shot's first, else the staged proxy's name.
+  const chars = await rows('characters', { movie_id: `eq.${movieId}`, select: 'id,name,visual_anchor' }).catch(() => []);
+  const wanted = parsed.characterId
+    || ((dshot && (dshot.characters || [])[0]) ? String((dshot.characters[0].name || dshot.characters[0])) : '')
+    || ((shotRow.shot || {}).character || {}).display || '';
+  const character = chars.find((c) => c.id === wanted) || chars.find((c) => String(c.name).toLowerCase() === String(wanted).toLowerCase()) || null;
+  let identity = null;
+  if (character) {
+    const imgs = await rows('character_images', { character_id: `eq.${character.id}`, select: 'kind,image_path,storage_key,created_at', order: 'created_at.desc' }).catch(() => []);
+    const pref = ['front', 'portrait', 'qa_front', 'sheet'];
+    const pick = pref.map((k) => imgs.find((i) => i.kind === k && (i.image_path || i.storage_key))).find(Boolean) || imgs.find((i) => i.image_path || i.storage_key);
+    identity = pick ? (pick.image_path || pick.storage_key) : null;
+  }
+
+  // 1. The control video, and the facts about the camera the prompt needs.
+  const ctl = await workerJob({ kind: 'control', shotDir: shotRow.stage.shotDir, plateCount: 2 }, { timeoutMs: 20 * 60 * 1000 });
+  if (ctl.status !== 'done') return { action: 'error', reason: 'Could not make the control video: ' + ctl.error };
+  const m = ctl.result;
+
+  // 2. Look plates for the coverage plates this camera faces: made once per set revision.
+  const look = Object.assign({}, loc.look || {});
+  const lookPrompt = setClipLookPrompt(facts.room_prompt || loc.name);
+  const plates = [];
+  try {
+    for (const cam of m.plates || []) {
+      if (!look[cam]) {
+        look[cam] = await lookPlate(`sets/${shotRow.stage.blenderDir}/plates/${cam}.png`, lookPrompt,
+          `${movie.slug}/_sets/look/${loc.location_key}_${loc.revision}_${cam}`);
+        await update('set_locations', loc.id, { look });
+      }
+      plates.push(look[cam]);
+    }
+  } catch (e) {
+    return { action: 'error', reason: e.message };
+  }
+
+  // 3. The prompt.
+  const sh = shotRow.shot || {};
+  const action = dshot ? [dshot.motion_prompt, dshot.frame_prompt].filter(Boolean).join(' ') : beat ? beat.summary : '';
+  const prompt = setClipPrompt({
+    locationName: loc.name || loc.location_key, roomPrompt: facts.room_prompt, lensMm: m.lens_mm || (sh.camera || {}).lens_mm,
+    frames: m.frames, fps: m.fps, person: character ? { name: character.name, look: character.visual_anchor } : null,
+    pictures: plates.length, view: m.view, trajectory: m.trajectory,
+    action: action || (beat ? beat.summary : ''), visibility: shotRow.visibility
+  });
+
+  // 4. The clip, recorded against the Director's shot and beat so it lands where they look for it.
+  const size = m.size || [1344, 576];
+  const clip = await insert('minimax_clips', {
+    movie_id: movieId, beat_id: (dshot && dshot.beat_id) || shotRow.beat_id || null, source_shot_id: dshot ? dshot.id : null,
+    mode: 'control', prompt, width: size[0], height: size[1], length: m.frames, status: 'queued',
+    reference_image_paths: [identity, ...plates].filter(Boolean),
+    control_video_path: 'input/sets/' + m.video, control_type: 'depth',
+    control_strength: Number(parsed.controlStrength) || 0.7,
+    control_end: Number(parsed.controlEnd) || (m.trajectory && m.trajectory.type === 'hold' ? 0.5 : 0.6),
+    camera: { source: 'blender_set', set_shot_id: shotRow.id, location: loc.location_key, revision: loc.revision }
+  });
+  await update('set_shots', shotRow.id, {
+    director_shot_id: dshot ? dshot.id : shotRow.director_shot_id, beat_id: (dshot && dshot.beat_id) || shotRow.beat_id,
+    control: m, clip_id: clip.id
+  });
+
+  const summary = { clipId: clip.id, controlVideo: 'input/sets/' + m.video, references: clip.reference_image_paths,
+    identity: !!identity, character: character ? character.name : null, directorShot: dshot ? dshot.id : null,
+    beat: beat ? beat.summary : null, prompt };
+  if (!parsed.render) return Object.assign({ action: 'clip_ready' }, summary);
+
+  // 5. Render through Control to Video, the same flow the Video tab uses.
+  let out;
+  try {
+    const r = await axios.post(`${String($flowiseUrl).replace(/\/$/, '')}/api/v1/prediction/{{flow:46-MiniMax-Control-To-Video}}`,
+      { question: JSON.stringify({ clipId: clip.id }) },
+      { timeout: 3 * 60 * 60 * 1000, validateStatus: () => true, headers: { Authorization: `Bearer ${$flowiseApiKey}` } });
+    out = JSON.parse((r.data && r.data.text) || '{}');
+  } catch (e) {
+    return Object.assign({ action: 'error', reason: 'Control to Video could not be reached: ' + e.message }, summary);
+  }
+  if (out.action === 'complete' && dshot) await axios.patch(`${insforgeUrl}/api/database/records/director_shots`, { clip_id: clip.id }, { params: { id: `eq.${dshot.id}` }, headers });
+  // Control to Video stops watching after about 17 minutes and says 'pending';
+  // the render carries on and the clip row is completed when it lands.
+  const state = out.action === 'complete' ? 'rendered' : out.action === 'pending' ? 'rendering' : 'error';
+  return Object.assign({ action: state, reason: out.reason || out.error, videoPath: out.videoPath, promptId: out.promptId }, summary);
 }
 
 return { error: `Unknown action '${action}'.` };

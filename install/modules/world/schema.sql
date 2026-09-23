@@ -387,3 +387,14 @@ ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS build_report jsonb;
 ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS parent_id uuid;
 ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS change_note text;
 ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS made_by text;
+
+-- A staged shot as the input to a clip (48-Blender-Sets make_clip): the Director
+-- shot and beat it is for, the control video and prompt made from it, and the
+-- clip. No foreign keys: the director and video modules may be installed later.
+ALTER TABLE public.set_shots ADD COLUMN IF NOT EXISTS director_shot_id uuid;
+ALTER TABLE public.set_shots ADD COLUMN IF NOT EXISTS beat_id uuid;
+ALTER TABLE public.set_shots ADD COLUMN IF NOT EXISTS control jsonb;
+ALTER TABLE public.set_shots ADD COLUMN IF NOT EXISTS clip_id uuid;
+-- Photographic look plates of a location revision, made once and shared by
+-- every shot in it: {"R03": "output/<project>/_sets/look/...png", ...}.
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS look jsonb;

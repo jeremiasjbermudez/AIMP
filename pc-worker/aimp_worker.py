@@ -198,7 +198,7 @@ WORLD_COMFY = World()
 class BlenderJobs:
     """Blender renders for sets, queued and run one at a time."""
 
-    KINDS = ('stage', 'visibility', 'scout', 'assets', 'pano_views', 'build', 'export')
+    KINDS = ('stage', 'visibility', 'scout', 'assets', 'pano_views', 'build', 'export', 'control')
 
     def __init__(self, cfg):
         self.cfg = cfg or {}
@@ -273,6 +273,14 @@ class BlenderJobs:
                 raise FileNotFoundError(f'no location.blend for {key} {rev}')
             args = {'cmd': blender + [blend, '--python', script('export_blockout.py'), '--',
                                       os.path.join(out, 'blockout_export.json')], 'out': out}
+        elif kind == 'control':
+            # A staged shot's depth as the control video a clip is driven by.
+            shot_dir = self.inside(body.get('shotDir', ''))
+            if not os.path.exists(os.path.join(shot_dir, 'blender', 'depth', 'depth_manifest.json')):
+                raise FileNotFoundError('that shot has not been staged (no depth pass)')
+            count = max(1, min(int(body.get('plateCount', 2)), 8))
+            args = {'cmd': [self.cfg.get('scout_python') or sys.executable, script('control_depth.py'), shot_dir, str(count)],
+                    'out': shot_dir}
         elif kind == 'stage':
             shot = body.get('shot') or {}
             shot_id, project = str(shot.get('shot_id', '')), str(body.get('project', ''))
@@ -347,6 +355,8 @@ class BlenderJobs:
     def _run(self, job, kind, args):
         env = dict(os.environ, AIMP_SETS_ROOT=self.root, AIMP_BLENDER=self.cfg['exe'],
                    PYTHONUTF8='1', PYTHONIOENCODING='utf-8')
+        if self.cfg.get('ffmpeg'):
+            env['AIMP_FFMPEG'] = self.cfg['ffmpeg']
         # The GPU is shared, as for the world ComfyUI: the main one unloads first.
         try:
             http_json('POST', CONFIG['main_comfy'].rstrip('/') + '/free', {'unload_models': True, 'free_memory': True}, timeout=10)
@@ -378,6 +388,9 @@ class BlenderJobs:
             report['previews'] = [f'{rel(args["out"])}/{p}' for p in report.get('previews', [])]
             return {'dir': rel(args['out']), 'blend': rel(os.path.join(args['out'], 'location.blend')),
                     'report': report, 'location': self._read(os.path.join(args['out'], 'location.json'))}
+        if kind == 'control':
+            manifest = self._read(os.path.join(args['out'], 'control', 'control_manifest.json')) or {}
+            return dict(manifest, video=rel(os.path.join(args['out'], 'control', 'control_depth.mp4')))
         if kind == 'export':
             return {'blockout': self._read(os.path.join(args['out'], 'blockout_export.json'))}
         if kind == 'scout':

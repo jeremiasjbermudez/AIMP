@@ -41,8 +41,11 @@ param(
     # Blender sets (blender/ in the repository). Leave -BlenderExe empty to skip.
     [string]$BlenderExe   = 'C:\ComfyUI-server\blender-4.5.9\blender.exe',
     [string]$SetsRoot     = 'C:\Users\alexk\ComfyUI\input\sets',
-    # A Python with numpy and Pillow, for the tech-scout sheet: ComfyUI's own.
-    [string]$ScoutPython  = 'C:\ComfyUI-server\daisy-v2\venv\Scripts\python.exe'
+    # A Python with numpy, Pillow and OpenCV, for the tech-scout sheet and the
+    # control video: ComfyUI's own.
+    [string]$ScoutPython  = 'C:\ComfyUI-server\daisy-v2\venv\Scripts\python.exe',
+    # ffmpeg, for the control video. Empty: whichever ffmpeg is on PATH.
+    [string]$Ffmpeg       = ''
 )
 $ErrorActionPreference = 'Stop'
 
@@ -97,6 +100,8 @@ if ($BlenderExe -and (Test-Path $BlenderExe)) {
         sets_root    = $SetsRoot
         scout_python = $ScoutPython
     }
+    if (-not $Ffmpeg) { $Ffmpeg = (Get-Command ffmpeg -ErrorAction SilentlyContinue).Source }
+    if ($Ffmpeg) { $config.blender.ffmpeg = $Ffmpeg } else { Write-Warning 'No ffmpeg found: staged shots cannot become control videos until one is on PATH or given with -Ffmpeg.' }
 }
 if ($PSCmdlet.ShouldProcess($configPath, 'write')) {
     [System.IO.File]::WriteAllText($configPath, ($config | ConvertTo-Json -Depth 5))

@@ -77,7 +77,7 @@ function needsGpu(flowId: string, input: string | object): boolean {
   const fields = typeof input === 'object' && input !== null ? (input as { mode?: string; action?: string }) : {}
   // Blender sets render on the same GPU (the worker frees ComfyUI's models
   // first); listing and adding sets does not.
-  if (flowId === import.meta.env.VITE_BLENDER_SETS_ID) return fields.action === 'stage' || fields.action === 'scout'
+  if (flowId === import.meta.env.VITE_BLENDER_SETS_ID) return ['stage', 'scout', 'make_clip'].includes(fields.action ?? '')
   if (flowId !== import.meta.env.VITE_DIRECTOR_ID) return false
   return fields.mode === 'render' || fields.mode === 'assemble'
 }
