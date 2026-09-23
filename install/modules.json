@@ -212,7 +212,8 @@
     ],
     "needs": [
       "core",
-      "screenplay"
+      "screenplay",
+      "imaging"
     ],
     "modelFiles": [
       "flux-2-klein-9b.safetensors",

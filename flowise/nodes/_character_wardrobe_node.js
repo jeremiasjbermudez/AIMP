@@ -128,13 +128,14 @@ const wf = {
 // already stages reference images into ComfyUI's input folder, handles Klein's
 // reference wiring, and follows the job to completion. Rebuilding that here
 // would be a second copy of it to keep in step.
-const editId = parsed.imageEditFlowId || '0afebffb-7fab-4ef1-a4fe-28da3f11a88d';
+// By name, resolved to this install's id when the flow is registered.
+const editId = parsed.imageEditFlowId || '{{flow:26-Image-Edit}}';
 let out;
 try {
   const r = await axios.post(
-    `http://localhost:3010/api/v1/prediction/${editId}`,
+    `${String($flowiseUrl).replace(/\/$/, '')}/api/v1/prediction/${editId}`,
     { question: JSON.stringify({ movieId: parsed.movieId, ...wf }) },
-    { timeout: 1800000, validateStatus: () => true }
+    { timeout: 1800000, validateStatus: () => true, headers: { Authorization: `Bearer ${$flowiseApiKey}` } }
   );
   out = JSON.parse(r.data.text || '{}');
 } catch (e) {

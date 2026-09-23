@@ -2985,7 +2985,7 @@
         ],
         "inputAnchors": [],
         "inputs": {
-          "executeFlowSelectedFlow": "0e72b75a-ad63-4505-81c4-9d1f82f8d4a4",
+          "executeFlowSelectedFlow": "{{flow:3-Character-Generator}}",
           "executeFlowInput": "{{ $iteration }}",
           "executeFlowReturnResponseAs": "userMessage"
         },
@@ -3141,7 +3141,7 @@
         ],
         "inputAnchors": [],
         "inputs": {
-          "executeFlowSelectedFlow": "3a462ae3-e268-4ebd-a357-d2235739b6cb",
+          "executeFlowSelectedFlow": "{{flow:4-Panoramic-Generator}}",
           "executeFlowInput": "{{ $iteration }}",
           "executeFlowReturnResponseAs": "userMessage"
         },
@@ -3297,7 +3297,7 @@
         ],
         "inputAnchors": [],
         "inputs": {
-          "executeFlowSelectedFlow": "1b313782-0a77-40ac-9e8d-1d4df3eaf708",
+          "executeFlowSelectedFlow": "{{flow:5-3DGS-World-Builder}}",
           "executeFlowInput": "{{ $iteration }}",
           "executeFlowReturnResponseAs": "userMessage"
         },

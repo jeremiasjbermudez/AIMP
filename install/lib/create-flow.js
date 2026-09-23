@@ -58,7 +58,11 @@ const VARIABLES = [
   { variableName: 'insforgeUrl', variableValue: process.env.INSFORGE_URL },
   { variableName: 'insforgeApiKey', variableValue: process.env.INSFORGE_API_KEY },
   { variableName: 'comfyUrl', variableValue: process.env.COMFY_URL },
-  { variableName: 'comfyRoot', variableValue: process.env.COMFY_ROOT }
+  { variableName: 'comfyRoot', variableValue: process.env.COMFY_ROOT },
+  // For a flow that runs another flow itself (Wardrobe runs Image-Edit): where
+  // Flowise is, and the key to call it with, rather than localhost:3010.
+  { variableName: 'flowiseUrl', variableValue: BASE },
+  { variableName: 'flowiseApiKey', variableValue: process.env.FLOWISE_API_KEY }
 ]
 // The language-model settings go on EVERY flow, always, even when blank.
 // Injecting them only when an Ollama URL happened to be set is what produced
@@ -125,7 +129,7 @@ async function main() {
     width: 300, height: 100, selected: false, positionAbsolute: { x: 300, y: 0 }, dragging: false
   }
 
-  const flowData = JSON.stringify({
+  const flowDataRaw = JSON.stringify({
     nodes: [startNode, fnNode],
     edges: [{
       source: 'startAgentflow_0', sourceHandle: 'startAgentflow_0-output-startAgentflow',
@@ -136,12 +140,14 @@ async function main() {
   })
 
   if (UPDATE) {
+    const flowData = await resolveFlowRefs(flowDataRaw)
     await send('PUT', '/api/v1/chatflows/' + UPDATE, { flowData })
     console.log('updated ' + NAME)
     console.log(UPDATE)
     return
   }
 
+  const flowData = await resolveFlowRefs(flowDataRaw)
   // A second flow with the same name would be indistinguishable in the list and
   // would leave the installer unsure which id to record, so an existing one is
   // updated in place instead.
@@ -218,7 +224,7 @@ async function importExported() {
     process.exit(1)
   }
 
-  const flowData = JSON.stringify(graph)
+  const flowData = await resolveFlowRefs(JSON.stringify(graph))
   const existing = (await get('/api/v1/chatflows')).find((f) => f.name === NAME)
   if (existing) {
     await send('PUT', '/api/v1/chatflows/' + existing.id, { flowData })
@@ -229,6 +235,27 @@ async function importExported() {
   const made = await send('POST', '/api/v1/chatflows', { name: NAME, type: 'AGENTFLOW', flowData, deployed: true })
   console.log('created ' + NAME + ' (from export)')
   console.log(made.id)
+}
+
+/**
+ * Replace every {{flow:NAME}} with the id that flow has on THIS install.
+ *
+ * A flow that runs another one used to carry the other's id from the machine it
+ * was exported on, so on any other install it ran nothing (the orchestrator) or
+ * fell back to a stranger's id (Wardrobe). Flows are referred to by name
+ * instead, and a name that is not installed stops the install here, saying
+ * which, rather than failing the first time the flow runs.
+ */
+async function resolveFlowRefs(text) {
+  const names = [...new Set([...text.matchAll(/\{\{flow:([\w.-]+)\}\}/g)].map((m) => m[1]))]
+  if (!names.length) return text
+  const byName = new Map((await get('/api/v1/chatflows')).map((f) => [f.name, f.id]))
+  const missing = names.filter((n) => !byName.has(n))
+  if (missing.length) {
+    throw new Error(`${NAME} runs ${missing.join(', ')}, which is not installed. ` +
+      'Install the module that owns it first.')
+  }
+  return text.replace(/\{\{flow:([\w.-]+)\}\}/g, (_, n) => byName.get(n))
 }
 
 async function get(route) {
