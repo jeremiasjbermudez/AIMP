@@ -360,6 +360,14 @@
         "files": [
           "BlenderSetsPanel.tsx"
         ]
+      },
+      {
+        "tab": "stage",
+        "files": [
+          "StagePanel.tsx",
+          "stageCamera.ts",
+          "TakeViewfinder.tsx"
+        ]
       }
     ],
     "packs": [

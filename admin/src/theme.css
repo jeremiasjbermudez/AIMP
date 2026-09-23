@@ -1321,6 +1321,34 @@
     align-items: start;
   }
 
+  /* Camera setup: the plan beside the viewfinder. */
+  .stage-layout { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: 1.25rem; align-items: start; }
+  @media (max-width: 900px) { .stage-layout { grid-template-columns: 1fr; } }
+  .stage-plan { width: 100%; height: auto; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; touch-action: none; user-select: none; }
+  .stage-room { fill: var(--surface); stroke: var(--text-dim); stroke-width: 0.03; }
+  .stage-mark circle { fill: var(--text-faint); }
+  .stage-mark text, .stage-cam text { font-size: 0.14px; fill: var(--text-dim); }
+  .stage-actor-path { fill: none; stroke: var(--ok); stroke-width: 0.03; stroke-dasharray: 0.06 0.05; }
+  .stage-actor circle { fill: var(--ok); }
+  .stage-actor line { stroke: var(--ok); stroke-width: 0.04; }
+  .stage-cam circle { fill: var(--text-dim); cursor: grab; stroke: var(--surface); stroke-width: 0.02; }
+  .stage-cam .stage-cam-view { fill: var(--text-faint); opacity: 0.18; }
+  .stage-cam .stage-cam-trail { fill: none; stroke: var(--text-faint); stroke-width: 0.015; }
+  .stage-cam.selected circle { fill: var(--accent); }
+  .stage-cam.selected .stage-cam-view { fill: var(--accent); opacity: 0.25; }
+  .stage-cam.selected .stage-cam-trail { stroke: var(--accent); }
+  .take-viewfinder { position: relative; }
+  .take-viewfinder-canvas canvas { display: block; width: 100%; border-radius: 6px; }
+  .stage-timeline { display: flex; align-items: center; gap: 0.6rem; margin: 0.5rem 0; }
+  .stage-scrub { position: relative; flex: 1; }
+  .stage-scrub input { width: 100%; }
+  .stage-cues span { position: absolute; top: -4px; width: 2px; height: 8px; background: var(--accent); transform: translateX(-1px); }
+  .stage-cue-now { color: var(--accent); }
+  .stage-cams { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; }
+  .stage-cam-chip { border: 1px solid var(--line); border-radius: 999px; padding: 0.25rem 0.7rem; background: var(--surface); }
+  .stage-cam-chip.selected { border-color: var(--accent); }
+  .stage-inspector { border-top: 1px solid var(--line); padding-top: 0.6rem; }
+
   /* A scene's set, step by step: panorama, splat, block-out, cameras. */
   .set-steps {
     display: flex;

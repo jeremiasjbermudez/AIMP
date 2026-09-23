@@ -445,3 +445,7 @@ CREATE TRIGGER set_takes_updated_at BEFORE UPDATE ON public.set_takes
 
 -- A shot staged on a take films that take's performance.
 ALTER TABLE public.set_shots ADD COLUMN IF NOT EXISTS take_id uuid;
+
+-- The cameras set up on a take in Camera Setup (StagePanel): position, lens, move,
+-- handheld and the Director shot each is for. Shoot stages each one on the take.
+ALTER TABLE public.set_takes ADD COLUMN IF NOT EXISTS cameras jsonb;

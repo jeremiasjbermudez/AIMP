@@ -96,6 +96,18 @@
     "group": "shots"
   },
   {
+    "id": "stage",
+    "label": "Camera Setup",
+    "hint": "Put cameras on a take, look through them, and shoot them all",
+    "icon": "Aperture",
+    "module": "world",
+    "component": "StagePanel",
+    "from": "./StagePanel",
+    "group": "shots",
+    "props": {},
+    "takesMovie": true
+  },
+  {
     "id": "camera",
     "label": "Camera",
     "hint": "Place each shot’s camera inside the scene’s 3D world and render its plate",
