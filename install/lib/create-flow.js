@@ -66,7 +66,11 @@ const VARIABLES = [
   // For a flow that runs another flow itself (Wardrobe runs Image-Edit): where
   // Flowise is, and the key to call it with, rather than localhost:3010.
   { variableName: 'flowiseUrl', variableValue: BASE },
-  { variableName: 'flowiseApiKey', variableValue: process.env.FLOWISE_API_KEY }
+  { variableName: 'flowiseApiKey', variableValue: process.env.FLOWISE_API_KEY },
+  // The render host's worker (pc-worker/), for work that has to happen on that
+  // machine - starting the on-demand world ComfyUI. Blank when there is none.
+  { variableName: 'workerUrl', variableValue: process.env.WORKER_URL || '' },
+  { variableName: 'workerToken', variableValue: process.env.WORKER_TOKEN || '' }
 ]
 // The language-model settings go on EVERY flow, always, even when blank.
 // Injecting them only when an Ollama URL happened to be set is what produced

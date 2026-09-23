@@ -27,7 +27,10 @@ const path = require('path');
 
 const insforgeUrl = $insforgeUrl;
 const insforgeApiKey = $insforgeApiKey;
-const comfyUrl = $comfyUrl;
+// @include comfy_world
+
+// HY-World graphs run on the world ComfyUI, started on demand (see lib/comfy_world.js).
+const comfyUrl = await worldComfyUrl();
 const comfyRoot = $comfyRoot;
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 
