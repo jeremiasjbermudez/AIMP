@@ -69,13 +69,17 @@ const GPU_FLOWS: Set<string> = new Set(
 /**
  * The Director plans with an LLM and renders with the GPU through the same
  * flow id, so the id alone cannot say which this is. Only the modes that reach
- * ComfyUI queue; drafting a shot list does not wait behind a render.
+ * ComfyUI queue; drafting a shot list does not wait behind a render. Blender
+ * sets are the same: staging renders, listing does not.
  */
 function needsGpu(flowId: string, input: string | object): boolean {
   if (GPU_FLOWS.has(flowId)) return true
+  const fields = typeof input === 'object' && input !== null ? (input as { mode?: string; action?: string }) : {}
+  // Blender sets render on the same GPU (the worker frees ComfyUI's models
+  // first); listing and adding sets does not.
+  if (flowId === import.meta.env.VITE_BLENDER_SETS_ID) return fields.action === 'stage' || fields.action === 'scout'
   if (flowId !== import.meta.env.VITE_DIRECTOR_ID) return false
-  const mode = typeof input === 'object' && input !== null ? (input as { mode?: string }).mode : undefined
-  return mode === 'render' || mode === 'assemble'
+  return fields.mode === 'render' || fields.mode === 'assemble'
 }
 
 // The line itself: a promise chain, so each job starts when the one before it

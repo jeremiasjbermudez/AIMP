@@ -88,6 +88,18 @@
     "takesMovie": true
   },
   {
+    "id": "blendersets",
+    "label": "Blender Sets",
+    "hint": "Stage shots inside a location built in Blender: depth, mask, plates and what the camera sees",
+    "icon": "Box",
+    "module": "world",
+    "component": "BlenderSetsPanel",
+    "from": "./BlenderSetsPanel",
+    "group": "sets",
+    "props": {},
+    "takesMovie": true
+  },
+  {
     "id": "hyworld",
     "label": "HY-World",
     "hint": "Text, an image or a video into a navigable 3D world",

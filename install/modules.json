@@ -353,6 +353,12 @@
         "files": [
           "HyWorldPanel.tsx"
         ]
+      },
+      {
+        "tab": "blendersets",
+        "files": [
+          "BlenderSetsPanel.tsx"
+        ]
       }
     ],
     "packs": [

@@ -1281,6 +1281,40 @@
     align-items: start;
   }
 
+  /* Blender sets: the plan of the room beside the shot form. */
+  .sets-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) 1fr;
+    gap: 1.25rem;
+    align-items: start;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 760px) {
+    .sets-layout { grid-template-columns: 1fr; }
+  }
+  .sets-plan {
+    width: 100%;
+    height: auto;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .sets-plan-room { fill: var(--surface); stroke: var(--text-dim); stroke-width: 0.04; }
+  .sets-plan-mark { fill: var(--text-dim); }
+  .sets-plan-label { font-size: 0.17px; fill: var(--text-dim); }
+  .sets-plan-cam line { stroke: var(--text-faint); stroke-width: 0.025; stroke-dasharray: 0.08 0.06; }
+  .sets-plan-cam circle { fill: var(--text); }
+  .sets-plan-cam.draft line { stroke: var(--accent); }
+  .sets-plan-cam.draft circle { fill: var(--accent); }
+  .sets-plan-cam.draft .sets-plan-label { fill: var(--accent); }
+  .sets-plates {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+  }
+  .sets-plates img { width: 100%; border-radius: 4px; display: block; }
+
   .clip-grid .beat-card {
     display: flex;
     flex-direction: column;
