@@ -195,7 +195,8 @@ if (action === 'draft_take') {
     return c;
   });
   const people = [...new Set(shots.flatMap((sh) => (sh.characters || []).map((c) => (typeof c === 'string' ? c : c.name))).filter(Boolean))];
-  const prompt = takePrompt({ setName: loc.name, facts: loc.facts || {}, frames, people, shots: shotCtx, notes: parsed.notes });
+  const lines = shots.flatMap((sh, i) => takeLines(sh.motion_prompt, shotCtx[i].start));
+  const prompt = takePrompt({ setName: loc.name, facts: loc.facts || {}, frames, people, shots: shotCtx, lines, notes: parsed.notes });
   try {
     let draft = await askModel(prompt, []);
     let problems = takeProblems(draft, loc.facts || {}, frames);
@@ -209,7 +210,7 @@ if (action === 'draft_take') {
     }
     const scene = shots[0].scene_number;
     const takeKey = String(parsed.takeKey || `TK_S${scene || 0}_${shots.map((sh) => String(sh.position).padStart(2, '0')).join('_')}`).slice(0, 80);
-    const take = Object.assign({ takeKey, frames }, takeForSave(draft));
+    const take = Object.assign({ takeKey, frames }, takeForSave(draft, lines));
     if (!parsed.build) return { action: 'take_drafted', take, reading: draft.reading || null, shots: shots.map((sh) => sh.position) };
     const built = await saveTake(loc, take);
     return Object.assign({}, built, { take, reading: draft.reading || null });

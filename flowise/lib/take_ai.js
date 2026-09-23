@@ -22,9 +22,9 @@ const TAKE_RULES = [
   '- Facing: face what the script says they look at or use (a mark by it), or the person they speak to.',
   '- ANCHOR_stand_* marks are places to stand; ANCHOR_sit_* are seats (pose "seated"); other marks are things to',
   '  face, which people do not stand on.',
-  '- Cues are the moments that matter, with times: an action ("TOMAS checks his wristwatch") or a line',
-  '  ("TOMAS says: \\"You\'re early.\\""). Keep a line at the time the script gives it, counted from the start of',
-  '  its shot, which is given below.',
+  '- Cues are the actions that matter, with times ("TOMAS checks his wristwatch"), in a few words each. The',
+  '  spoken lines are already placed (listed below); do not repeat them as cues, but block around them: a person',
+  '  who speaks faces who they speak to, and does not walk away mid-line.',
   '- Every time is between 0 and the length of the take.',
   '- Only people who are seen are performers. A voice on a radio or from off screen is not: give its line as a cue.'
 ].join('\n');
@@ -49,7 +49,22 @@ function takeMarks(facts) {
 }
 
 /**
- * The prompt. ctx: {setName, facts, frames, people: [names], shots: [{start, seconds, type, text}], notes}
+ * The spoken lines in a Director shot's motion prompt, with their times in the take:
+ * "At 00:00.800, TOMAS (S1) says: You're early." in a shot starting at 5.2s -> 6.0s.
+ * Placed by the code, not the model: a line's time is a fact of the script.
+ */
+function takeLines(text, start) {
+  const out = [];
+  const re = /At (\d+):(\d+(?:\.\d+)?),\s*([^()\n,]+?)\s*(?:\([^)]*\))?\s*says:\s*(?:<d>)?\s*(?:\[[^\]]*\]\s*)?([\s\S]+?)(?:<\/d>|(?=\s+(?:Overall soundscape|The only sounds|Non-diegetic))|$)/g;
+  let m;
+  while ((m = re.exec(String(text || '')))) {
+    out.push({ t: Math.round((start + Number(m[1]) * 60 + Number(m[2])) * 10) / 10, who: m[3].trim(), line: m[4].trim() });
+  }
+  return out;
+}
+
+/**
+ * The prompt. ctx: {setName, facts, frames, people: [names], shots: [{start, seconds, type, text}], lines, notes}
  */
 function takePrompt(ctx) {
   const d = (ctx.facts && ctx.facts.dimensions_m) || {};
@@ -64,6 +79,8 @@ function takePrompt(ctx) {
     `People: ${ctx.people.join(', ')}.`,
     `The take is ${(ctx.frames / 24).toFixed(2)} seconds long and covers these shots, in order:`,
     ...ctx.shots.map((s, i) => `  Shot ${i + 1}, from ${s.start.toFixed(1)}s to ${(s.start + s.seconds).toFixed(1)}s (${s.type || 'shot'}): ${s.text}`),
+    (ctx.lines && ctx.lines.length) ? 'Spoken lines, already placed at these times:' : '',
+    ...((ctx.lines || []).map((l) => `  ${l.t.toFixed(1)}s: ${l.who} says "${l.line}"`)),
     ctx.notes ? '\nNotes from the director: ' + ctx.notes : '',
     '',
     'Answer with JSON only:',
@@ -86,6 +103,7 @@ function takeProblems(draft, facts, frames) {
     if (!keys.length) { out.push(`${who} has no moves`); continue; }
     if (Number(keys[0].t) > 0.01) out.push(`${who}'s first move must be at t 0`);
     keys.forEach((k, i) => {
+      if (i > 0 && Math.abs(Number(k.t) - Number(keys[i - 1].t)) < 0.05 && k.mark === keys[i - 1].mark && k.facing === keys[i - 1].facing) out.push(`${who} has the same move twice at ${k.t}s`);
       if (!anchors[k.mark]) out.push(`${who} at ${k.t}s: ${k.mark} is not one of the marks`);
       else if (!/^ANCHOR_(stand|sit)_/.test(k.mark)) out.push(`${who} at ${k.t}s: ${k.mark} is a thing to face, not a place to stand`);
       if (k.facing && !anchors[k.facing]) out.push(`${who} at ${k.t}s: facing ${k.facing}, which is not one of the marks`);
@@ -105,8 +123,10 @@ function takeProblems(draft, facts, frames) {
   return out;
 }
 
-/** The draft in the shape save_take takes (and the Takes editor shows). */
-function takeForSave(draft) {
+/** The draft in the shape save_take takes (and the Takes editor shows), with the lines as cues. */
+function takeForSave(draft, lines) {
+  const said = (lines || []).map((l) => ({ t: l.t, text: `${l.who} says: "${l.line}"` }));
+  const quiet = ((draft && draft.cues) || []).filter((c) => !/\bsays?\b|"/.test(String(c.text || '')));
   return {
     performers: ((draft && draft.performers) || []).map((p) => ({
       name: p.name,
@@ -114,6 +134,6 @@ function takeForSave(draft) {
         t: Math.round(Number(k.t) * 10) / 10, mark: k.mark, facing: k.facing || undefined, pose: k.pose === 'seated' ? 'seated' : 'standing'
       }))
     })),
-    cues: ((draft && draft.cues) || []).map((c) => ({ t: Math.round(Number(c.t) * 10) / 10, text: String(c.text || '') }))
+    cues: [...quiet.map((c) => ({ t: Math.round(Number(c.t) * 10) / 10, text: String(c.text || '') })), ...said].sort((a, b) => a.t - b.t)
   };
 }
