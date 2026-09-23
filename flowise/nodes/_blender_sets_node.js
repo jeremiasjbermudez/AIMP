@@ -34,6 +34,11 @@
 //       a performance in the set, built as take.blend to operate a camera against;
 //       then "stage" with "takeId" films a pass over it (a camera from the form, or
 //       "shot":{"cameraPath":[{"frame":1,"matrix":[[4x4]]}...]} recorded)
+//   {"action":"draft_take","movieId":"...","setLocationId":"...",
+//       "directorShotIds":["...","..."], "notes":"...", "takeKey":"...", "build":false}
+//       the language model blocks the performance for consecutive Director shots
+//       (one clip long at most) on this set's marks; returns it for the Takes editor,
+//       or builds it straight away with build:true
 //   {"action":"make_clip","movieId":"...","setShotId":"...","directorShotId":"...",
 //       "characterId":"...", "controlStrength":1.0, "controlEnd":1.0, "render":true}
 //       a staged shot as a MiniMax H3 control clip for a Director shot (and so a
@@ -45,6 +50,7 @@
 // @include set_clip
 // @include llm
 // @include blockout_ai
+// @include take_ai
 
 const axios = require('axios');
 const insforgeUrl = $insforgeUrl;
@@ -114,10 +120,8 @@ if (action === 'add_location') {
 // ---------------------------------------------------------------- a take: the performance
 const slug = (v) => String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'actor';
 
-if (action === 'save_take') {
-  const loc = (await rows('set_locations', { id: `eq.${parsed.setLocationId}`, movie_id: `eq.${movieId}`, select: '*' }))[0];
-  if (!loc) return { error: 'That set is not part of this project.' };
-  const t = parsed.take || {};
+/** Build (or rebuild) a take in a set: the save_take action, and draft_take with build. */
+async function saveTake(loc, t) {
   const takeKey = String(t.takeKey || '').trim();
   if (!/^[A-Za-z0-9_.-]{1,80}$/.test(takeKey)) return { error: 'A take needs a name of letters, digits, _ . or - (e.g. TK_A1S1_01).' };
   const frames = Number(t.frames) || 124;
@@ -157,6 +161,61 @@ if (action === 'save_take') {
   await update('set_takes', row.id, { status: 'built', blend_path: built.result.blend, manifest: m, error_message: null });
   return { action: 'take_built', takeId: row.id, takeKey, blend: built.result.blend, warnings: m.warnings || [],
     performers: Object.keys(m.performers || {}) };
+}
+
+if (action === 'save_take') {
+  const loc = (await rows('set_locations', { id: `eq.${parsed.setLocationId}`, movie_id: `eq.${movieId}`, select: '*' }))[0];
+  if (!loc) return { error: 'That set is not part of this project.' };
+  return await saveTake(loc, parsed.take || {});
+}
+
+// The Director's motion prompt, without its sound notes: what happens, and who says what when.
+const actionOf = (text) => String(text || '')
+  .replace(/^Cinematic,\s*live-action\.\s*/i, '')
+  .split(/\s*(Overall soundscape:|The only sounds are|Non-diegetic music:)/i)[0]
+  .replace(/<\/?d>|\[English\]\s*/g, '').trim();
+
+if (action === 'draft_take') {
+  const loc = (await rows('set_locations', { id: `eq.${parsed.setLocationId}`, movie_id: `eq.${movieId}`, select: '*' }))[0];
+  if (!loc) return { error: 'That set is not part of this project.' };
+  const ids = Array.isArray(parsed.directorShotIds) ? parsed.directorShotIds : [];
+  if (!ids.length) return { error: 'Pick the Director shots the take covers.' };
+  const shots = (await rows('director_shots', { id: `in.(${ids.join(',')})`, movie_id: `eq.${movieId}`, select: 'id,position,scene_number,shot_type,characters,length_frames,motion_prompt' }))
+    .sort((a, b) => a.position - b.position);
+  if (shots.length !== ids.length) return { error: 'Some of those Director shots are not in this project.' };
+  // One take is one continuous performance, one clip long at most.
+  const total = shots.reduce((n, sh) => n + (Number(sh.length_frames) || 124), 0);
+  let frames = 124;
+  while (frames < total) frames += 17;
+  if (frames > 362) return { error: `Those shots run ${(total / 24).toFixed(1)}s, longer than one clip (${(362 / 24).toFixed(1)}s): pick fewer.` };
+  let start = 0;
+  const shotCtx = shots.map((sh) => {
+    const c = { start, seconds: (Number(sh.length_frames) || 124) / 24, type: sh.shot_type, text: actionOf(sh.motion_prompt) };
+    start += c.seconds;
+    return c;
+  });
+  const people = [...new Set(shots.flatMap((sh) => (sh.characters || []).map((c) => (typeof c === 'string' ? c : c.name))).filter(Boolean))];
+  const prompt = takePrompt({ setName: loc.name, facts: loc.facts || {}, frames, people, shots: shotCtx, notes: parsed.notes });
+  try {
+    let draft = await askModel(prompt, []);
+    let problems = takeProblems(draft, loc.facts || {}, frames);
+    if (problems.length) {
+      draft = await askModel(prompt + '\n\nYour last answer had these problems: ' + problems.join('; ') + '. Answer again, complete.', []);
+      problems = takeProblems(draft, loc.facts || {}, frames);
+    }
+    if (problems.length) {
+      const settings = await llmSettings();
+      return { action: 'error', reason: `${settings.model || 'The model'} did not block a usable take: ${problems.join('; ')}.` };
+    }
+    const scene = shots[0].scene_number;
+    const takeKey = String(parsed.takeKey || `TK_S${scene || 0}_${shots.map((sh) => String(sh.position).padStart(2, '0')).join('_')}`).slice(0, 80);
+    const take = Object.assign({ takeKey, frames }, takeForSave(draft));
+    if (!parsed.build) return { action: 'take_drafted', take, reading: draft.reading || null, shots: shots.map((sh) => sh.position) };
+    const built = await saveTake(loc, take);
+    return Object.assign({}, built, { take, reading: draft.reading || null });
+  } catch (e) {
+    return { action: 'error', reason: e.message };
+  }
 }
 
 if (action === 'stage') {

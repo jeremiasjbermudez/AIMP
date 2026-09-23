@@ -282,6 +282,12 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
   const [takeKeys, setTakeKeys] = useState<KeyDraft[]>([{ ...NEW_KEY }])
   const [takeCues, setTakeCues] = useState<CueDraft[]>([])
   const [characterNames, setCharacterNames] = useState<string[]>([])
+  // Drafting a take with the model: the Director shots it covers, notes, and what the model read.
+  const [draftShots, setDraftShots] = useState<string[]>([])
+  const [draftNotes, setDraftNotes] = useState('')
+  const [draftReading, setDraftReading] = useState<string | null>(null)
+  // Performers after the first, from a draft: the editor edits the first, the rest go through as drafted.
+  const [extraPerformers, setExtraPerformers] = useState<{ name: string; keys: TakeKey[] }[]>([])
   const [dshots, setDshots] = useState<DirectorShot[]>([])
   const [forShot, setForShot] = useState<Record<string, string>>({})
   const [clips, setClips] = useState<Record<string, Clip>>({})
@@ -443,7 +449,7 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
         action: 'save_take', movieId: movie.id, setLocationId: location.id,
         take: {
           takeKey: takeName.trim(), frames: Number(takeFrames),
-          performers: [{ name: takeWho.trim() || 'Actor', keys: takeKeys.filter((k) => k.mark).map((k) => ({ t: Number(k.t) || 0, mark: k.mark, facing: k.facing || undefined, pose: k.pose })) }],
+          performers: [{ name: takeWho.trim() || 'Actor', keys: takeKeys.filter((k) => k.mark).map((k) => ({ t: Number(k.t) || 0, mark: k.mark, facing: k.facing || undefined, pose: k.pose })) }, ...extraPerformers],
           cues: takeCues.filter((c) => c.text.trim()).map((c) => ({ t: Number(c.t) || 0, text: c.text.trim() }))
         }
       })
@@ -457,6 +463,33 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
     if (r.data.takeId) setTakeId(r.data.takeId)
   }
 
+  /** The model blocks the performance for the ticked Director shots; the draft fills the editor. */
+  async function handleDraftTake() {
+    if (!location || !draftShots.length) return
+    setBusy('draft')
+    setError(null)
+    setDraftReading(null)
+    setNote('The model is blocking the scene on this set\'s marks…')
+    const ordered = dshots.filter((d) => draftShots.includes(d.id)).map((d) => d.id)
+    const r = parseFlowJson<{ action: string; reason?: string; reading?: string
+      take?: { takeKey: string; frames: number; performers: { name: string; keys: TakeKey[] }[]; cues: { t: number; text: string }[] } }>(
+      await triggerFlow(flowId, { action: 'draft_take', movieId: movie.id, setLocationId: location.id, directorShotIds: ordered, notes: draftNotes.trim() || undefined })
+    )
+    setBusy(null)
+    setNote(null)
+    if (!r.ok) return setError(r.message)
+    if (r.data.action === 'error' || !r.data.take) return setError(r.data.reason ?? 'The model did not draft a take.')
+    const t = r.data.take
+    const [first, ...rest] = t.performers
+    setTakeName(t.takeKey)
+    setTakeFrames(String(t.frames))
+    setTakeWho(first?.name ?? '')
+    setTakeKeys((first?.keys ?? []).map((k) => ({ t: String(k.t), mark: k.mark ?? '', facing: k.facing ?? '', pose: k.pose ?? 'standing' })))
+    setExtraPerformers(rest)
+    setTakeCues(t.cues.map((c) => ({ t: String(c.t), text: c.text })))
+    setDraftReading(r.data.reading ?? null)
+  }
+
   /** Put a take back in the editor, to change and rebuild. */
   function editTake(t: SetTake) {
     const perf = t.take.performers[0]
@@ -465,6 +498,8 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
     setTakeFrames(String(t.take.clock.frames))
     setTakeKeys((perf?.keys ?? []).map((k) => ({ t: String(k.t), mark: k.mark ?? '', facing: k.facing ?? '', pose: k.pose ?? 'standing' })))
     setTakeCues((t.take.cues ?? []).map((c) => ({ t: String(c.t), text: c.text })))
+    setExtraPerformers(t.take.performers.slice(1).map((p) => ({ name: p.display, keys: p.keys })))
+    setDraftReading(null)
   }
 
   async function handleStage() {
@@ -726,6 +761,37 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
             ))}
             <details className="sets-take-editor" open={locTakes.length === 0}>
               <summary>{takeName && locTakes.some((t) => t.take_key === takeName) ? `Edit ${takeName}` : 'New take'}</summary>
+              {dshots.length > 0 && (
+                <div className="sets-draft">
+                  <p className="empty">
+                    Draft it from the Director's shots: tick shots that run on from each other (one clip long at most),
+                    and the model blocks the performance on this set's marks. Then adjust it below and build it.
+                  </p>
+                  <div className="sets-draft-shots">
+                    {dshots.map((d) => (
+                      <label className="checkbox" key={d.id}>
+                        <input
+                          type="checkbox"
+                          checked={draftShots.includes(d.id)}
+                          onChange={(e) => setDraftShots((ids) => (e.target.checked ? [...ids, d.id] : ids.filter((x) => x !== d.id)))}
+                        />
+                        {shotLabel(d)}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="camera-row">
+                    <label className="grow">
+                      Notes (optional)
+                      <input type="text" placeholder="He starts at the stove; keep him away from the window" value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} />
+                    </label>
+                    <button type="button" disabled={!!busy || !draftShots.length} onClick={handleDraftTake}>
+                      {busy === 'draft' ? 'Drafting…' : `Draft from ${draftShots.length || ''} shot${draftShots.length === 1 ? '' : 's'}`}
+                    </button>
+                  </div>
+                  {draftReading && <p className="empty"><strong>The model's reading:</strong> {draftReading}</p>}
+                  {extraPerformers.length > 0 && <p className="empty">Also in this take, as drafted: {extraPerformers.map((p) => p.name).join(', ')}.</p>}
+                </div>
+              )}
               <div className="camera-row">
                 <label>
                   Take

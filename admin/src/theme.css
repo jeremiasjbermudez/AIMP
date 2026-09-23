@@ -1407,6 +1407,8 @@
   .sets-plan-path circle { fill: var(--ok); }
   .sets-take { border-top: 1px solid var(--line); padding: 0.4rem 0; }
   .sets-take-editor { margin: 0.5rem 0 1rem; }
+  .sets-draft { border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 0.8rem; }
+  .sets-draft-shots { max-height: 11rem; overflow-y: auto; display: grid; gap: 0.2rem; margin: 0.4rem 0; font-size: 0.85rem; }
   .sets-take-editor summary { cursor: pointer; font-weight: 600; margin-bottom: 0.4rem; }
   .button-link {
     display: inline-flex; align-items: center; padding: 0.35rem 0.8rem; border: 1px solid var(--line);
