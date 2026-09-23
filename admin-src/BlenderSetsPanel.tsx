@@ -100,6 +100,23 @@ type SetShot = {
   director_shot_id?: string | null
   clip_id?: string | null
 }
+// A take: performers moving through the set on a timeline (48-Blender-Sets save_take).
+type TakeKey = { t: number; mark?: string; facing?: string; pose?: string }
+type TakePerformer = { id: string; display: string; eye_height_m?: number; keys: TakeKey[] }
+type SetTake = {
+  id: string
+  set_location_id: string
+  take_key: string
+  status: string
+  blend_path: string | null
+  error_message: string | null
+  take: { clock: { frames: number }; performers: TakePerformer[]; cues: { t: number; text: string }[] }
+  manifest: { warnings?: string[] } | null
+}
+type KeyDraft = { t: string; mark: string; facing: string; pose: string }
+type CueDraft = { t: string; text: string }
+const NEW_KEY: KeyDraft = { t: '0', mark: '', facing: '', pose: 'standing' }
+
 // The Director's shots (director module) and the clips made from staged shots (video module).
 type DirectorShot = { id: string; position: number; scene_number: number | null; shot_type: string | null; motion_prompt: string | null; beat_id: string | null }
 type Clip = { id: string; status: string; video_path: string | null; error_message: string | null }
@@ -138,9 +155,11 @@ function cameraInPlan(anchors: Record<string, Vec>, mark: string, facing: string
   return { mark: m, cam: [m[0] + Math.cos(a) * distance, m[1] + Math.sin(a) * distance] as [number, number] }
 }
 
-function Plan({ facts, cams }: {
+function Plan({ facts, cams, paths = [] }: {
   facts: LocationFacts
   cams: { key: string; mark: string; facing: string; az: number; dist: number; draft?: boolean }[]
+  // A take's performers, as the marks they move through.
+  paths?: { key: string; marks: string[] }[]
 }) {
   const anchors = facts.anchors ?? {}
   const dims = facts.dimensions_m
@@ -178,6 +197,17 @@ function Plan({ facts, cams }: {
           <text x={v[0] + 0.1} y={y(v[1]) + 0.05} className="sets-plan-label">{name.replace(/^ANCHOR_/, '')}</text>
         </g>
       ))}
+      {paths.map((pth) => {
+        const pts = pth.marks.map((m) => anchors[m]).filter(Boolean)
+        if (pts.length < 1) return null
+        return (
+          <g key={'path-' + pth.key} className="sets-plan-path">
+            <polyline points={pts.map((v) => `${v[0]},${y(v[1])}`).join(' ')} />
+            {pts.map((v, i) => <circle key={i} cx={v[0]} cy={y(v[1])} r={i === pts.length - 1 ? 0.08 : 0.05} />)}
+            <text x={pts[pts.length - 1][0] + 0.1} y={y(pts[pts.length - 1][1]) + 0.2} className="sets-plan-label">{pth.key}</text>
+          </g>
+        )
+      })}
       {cams.map((c) => {
         const p = cameraInPlan(anchors, c.mark, c.facing, c.az, c.dist)
         if (!p) return null
@@ -243,6 +273,14 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
   const [genNotes, setGenNotes] = useState('')
   const [genPasses, setGenPasses] = useState('1')
   const [reviseNotes, setReviseNotes] = useState('')
+  const [takes, setTakes] = useState<SetTake[]>([])
+  const [takeId, setTakeId] = useState('')          // the take the shot form films, '' = none
+  const [takeName, setTakeName] = useState('')
+  const [takeWho, setTakeWho] = useState('')
+  const [takeFrames, setTakeFrames] = useState('124')
+  const [takeKeys, setTakeKeys] = useState<KeyDraft[]>([{ ...NEW_KEY }])
+  const [takeCues, setTakeCues] = useState<CueDraft[]>([])
+  const [characterNames, setCharacterNames] = useState<string[]>([])
   const [dshots, setDshots] = useState<DirectorShot[]>([])
   const [forShot, setForShot] = useState<Record<string, string>>({})
   const [clips, setClips] = useState<Record<string, Clip>>({})
@@ -255,6 +293,10 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
         .order('act_number', { ascending: true }).order('scene_number', { ascending: true })
     ])
     setPanos((p.data ?? []) as ScenePano[])
+    const tk = await insforge.database.from('set_takes').select('*').eq('movie_id', movie.id).order('created_at', { ascending: true })
+    setTakes(tk.error ? [] : ((tk.data ?? []) as SetTake[]))
+    const cn = await insforge.database.from('characters').select('name').eq('movie_id', movie.id)
+    setCharacterNames(cn.error ? [] : ((cn.data ?? []) as { name: string }[]).map((c) => c.name))
     // Both belong to other modules; an install without them just shows no picker and no clips.
     const d = await insforge.database.from('director_shots').select('id,position,scene_number,shot_type,motion_prompt,beat_id')
       .eq('movie_id', movie.id).order('position', { ascending: true })
@@ -324,7 +366,7 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
     ? 'a set'
     : !/^[A-Za-z0-9_.-]{1,80}$/.test(draft.shotKey.trim())
       ? 'a shot name (letters, digits, _ . -)'
-      : !draft.mark
+      : !draft.mark && !takeId
         ? 'a mark'
         : ''
 
@@ -385,6 +427,41 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
     setLocationId(r.data.setLocation.id)
   }
 
+  /** Build (or rebuild) a take from the editor: the performance cameras will film. */
+  async function handleSaveTake() {
+    if (!location) return
+    setBusy('take')
+    setError(null)
+    setNote(`Building ${takeName.trim()}: the set with ${takeWho.trim() || 'the actor'} moving through it.`)
+    const r = parseFlowJson<{ action: string; reason?: string; takeId?: string; warnings?: string[] }>(
+      await triggerFlow(flowId, {
+        action: 'save_take', movieId: movie.id, setLocationId: location.id,
+        take: {
+          takeKey: takeName.trim(), frames: Number(takeFrames),
+          performers: [{ name: takeWho.trim() || 'Actor', keys: takeKeys.filter((k) => k.mark).map((k) => ({ t: Number(k.t) || 0, mark: k.mark, facing: k.facing || undefined, pose: k.pose })) }],
+          cues: takeCues.filter((c) => c.text.trim()).map((c) => ({ t: Number(c.t) || 0, text: c.text.trim() }))
+        }
+      })
+    )
+    setBusy(null)
+    setNote(null)
+    if (!r.ok) return setError(r.message)
+    if (r.data.action === 'error') return setError(r.data.reason ?? 'The take did not build.')
+    if (r.data.warnings?.length) setNote('Built, with warnings: ' + r.data.warnings.join('; '))
+    await loadRows()
+    if (r.data.takeId) setTakeId(r.data.takeId)
+  }
+
+  /** Put a take back in the editor, to change and rebuild. */
+  function editTake(t: SetTake) {
+    const perf = t.take.performers[0]
+    setTakeName(t.take_key)
+    setTakeWho(perf?.display ?? '')
+    setTakeFrames(String(t.take.clock.frames))
+    setTakeKeys((perf?.keys ?? []).map((k) => ({ t: String(k.t), mark: k.mark ?? '', facing: k.facing ?? '', pose: k.pose ?? 'standing' })))
+    setTakeCues((t.take.cues ?? []).map((c) => ({ t: String(c.t), text: c.text })))
+  }
+
   async function handleStage() {
     if (blocked || !location) return
     setBusy('stage')
@@ -405,7 +482,7 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
       move: draft.move,
       endDistanceM: Number(draft.endDistanceM)
     }
-    const run = triggerFlow(flowId, { action: 'stage', movieId: movie.id, setLocationId: location.id, shot })
+    const run = triggerFlow(flowId, { action: 'stage', movieId: movie.id, setLocationId: location.id, shot, takeId: takeId || undefined })
     // The flow marks the row as staging before it starts rendering; show it.
     setTimeout(loadRows, 1500)
     const r = parseFlowJson<{ action: string; reason?: string }>(await run)
@@ -456,6 +533,8 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
     await loadRows()
   }
 
+  const locTakes = takes.filter((t) => t.set_location_id === locationId)
+  const takeSelected = takes.find((t) => t.id === takeId) ?? null
   const planCams = [
     ...locShots.filter((s) => s.shot.character).map((s) => ({
       key: s.shot_key,
@@ -601,7 +680,11 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
       {location && (
         <div className="sets-layout">
           <div>
-            <Plan facts={location.facts} cams={planCams} />
+            <Plan
+              facts={location.facts}
+              cams={takeId ? planCams.filter((c) => !('draft' in c)) : planCams}
+              paths={locTakes.map((t) => ({ key: t.take_key, marks: (t.take.performers[0]?.keys ?? []).map((k) => k.mark ?? '').filter(Boolean) }))}
+            />
             {location.facts.dimensions_m && (
               <p className="empty">
                 {location.facts.dimensions_m.width} × {location.facts.dimensions_m.depth} m ·{' '}
@@ -611,7 +694,112 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
           </div>
 
           <div>
+            <h4>Takes</h4>
+            <p className="empty">
+              A take is the scene's performance: who moves where, and when. Every camera filming it sees the same
+              action, so the angles cut together. Open its Blender file and press play to operate a camera against it.
+            </p>
+            {locTakes.map((t) => (
+              <div className="sets-take" key={t.id}>
+                <p>
+                  <strong>{t.take_key}</strong>{' '}
+                  <span className={t.status === 'failed' ? 'error' : t.status === 'built' ? 'run-status-ok' : 'badge'}>{t.status}</span>{' '}
+                  <span className="empty">
+                    {t.take.performers.map((p) => p.display).join(', ')} · {(t.take.clock.frames / 24).toFixed(1)} s ·{' '}
+                    {t.take.performers[0]?.keys.length ?? 0} moves · {t.take.cues.length} cues
+                  </span>
+                </p>
+                {t.error_message && <p className="error">{t.error_message}</p>}
+                {(t.manifest?.warnings ?? []).map((w) => <p className="error" key={w}>{w}</p>)}
+                <div className="edit-ref-actions">
+                  {t.blend_path && <a className="button-link" href={setsView(t.blend_path)} download={`${t.take_key}.blend`}>Blender file</a>}
+                  <button type="button" onClick={() => editTake(t)}>Edit</button>
+                  {t.status === 'built' && <button type="button" onClick={() => setTakeId(t.id)} disabled={takeId === t.id}>{takeId === t.id ? 'Filming this' : 'Film this take'}</button>}
+                </div>
+              </div>
+            ))}
+            <details className="sets-take-editor" open={locTakes.length === 0}>
+              <summary>{takeName && locTakes.some((t) => t.take_key === takeName) ? `Edit ${takeName}` : 'New take'}</summary>
+              <div className="camera-row">
+                <label>
+                  Take
+                  <input type="text" placeholder="TK_A1S1_01" value={takeName} onChange={(e) => setTakeName(e.target.value)} />
+                </label>
+                <label>
+                  Who
+                  <input type="text" list="take-characters" placeholder="TOMAS" value={takeWho} onChange={(e) => setTakeWho(e.target.value)} />
+                  <datalist id="take-characters">{characterNames.map((n) => <option key={n} value={n} />)}</datalist>
+                </label>
+                <label>
+                  Length
+                  <Select value={takeFrames} onValueChange={setTakeFrames} items={FRAMES} />
+                </label>
+              </div>
+              <p className="empty">Moves: where they are at each time. Between two places they walk; at one place they stay, and turn if the facing changes.</p>
+              {takeKeys.map((k, i) => (
+                <div className="camera-row" key={'k' + i}>
+                  <label>
+                    At (s)
+                    <input type="number" step="0.1" value={k.t} onChange={(e) => setTakeKeys((ks) => ks.map((x, j) => (j === i ? { ...x, t: e.target.value } : x)))} />
+                  </label>
+                  <label>
+                    On mark
+                    <Select value={k.mark} onValueChange={(v) => setTakeKeys((ks) => ks.map((x, j) => (j === i ? { ...x, mark: v } : x)))} items={anchorItems} placeholder="Mark…" />
+                  </label>
+                  <label>
+                    Facing
+                    <Select value={k.facing} onValueChange={(v) => setTakeKeys((ks) => ks.map((x, j) => (j === i ? { ...x, facing: v } : x)))} items={anchorItems} placeholder="Facing…" />
+                  </label>
+                  <label>
+                    Pose
+                    <Select value={k.pose} onValueChange={(v) => setTakeKeys((ks) => ks.map((x, j) => (j === i ? { ...x, pose: v } : x)))} items={POSES} />
+                  </label>
+                  <button type="button" className="danger" disabled={takeKeys.length < 2} onClick={() => setTakeKeys((ks) => ks.filter((_, j) => j !== i))}>Remove</button>
+                </div>
+              ))}
+              <div className="edit-ref-actions">
+                <button type="button" onClick={() => setTakeKeys((ks) => [...ks, { ...(ks[ks.length - 1] ?? NEW_KEY), t: String((Number(ks[ks.length - 1]?.t) || 0) + 1.5) }])}>Add a move</button>
+              </div>
+              <p className="empty">Cues: what happens when, on the timeline in Blender and in the clip's prompt.</p>
+              {takeCues.map((c, i) => (
+                <div className="camera-row" key={'c' + i}>
+                  <label>
+                    At (s)
+                    <input type="number" step="0.1" value={c.t} onChange={(e) => setTakeCues((cs) => cs.map((x, j) => (j === i ? { ...x, t: e.target.value } : x)))} />
+                  </label>
+                  <label className="grow">
+                    Cue
+                    <input type="text" placeholder="He frowns at the calendar" value={c.text} onChange={(e) => setTakeCues((cs) => cs.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
+                  </label>
+                  <button type="button" className="danger" onClick={() => setTakeCues((cs) => cs.filter((_, j) => j !== i))}>Remove</button>
+                </div>
+              ))}
+              <div className="edit-ref-actions">
+                <button type="button" onClick={() => setTakeCues((cs) => [...cs, { t: '0', text: '' }])}>Add a cue</button>
+                <button type="button" disabled={!!busy || !/^[A-Za-z0-9_.-]{1,80}$/.test(takeName.trim()) || !takeKeys.some((k) => k.mark)} onClick={handleSaveTake}>
+                  {busy === 'take' ? 'Building…' : 'Build take'}
+                </button>
+              </div>
+            </details>
+
             <h4>Stage a shot</h4>
+            {locTakes.some((t) => t.status === 'built') && (
+              <div className="camera-row">
+                <label>
+                  Film
+                  <Select
+                    value={takeId || 'none'}
+                    onValueChange={(v) => setTakeId(v === 'none' ? '' : v)}
+                    items={[{ value: 'none', label: 'An actor on a mark' }, ...locTakes.filter((t) => t.status === 'built').map((t) => ({ value: t.id, label: `Take ${t.take_key}` }))]}
+                  />
+                </label>
+              </div>
+            )}
+            {takeSelected && (
+              <p className="empty">
+                Filming {takeSelected.take_key}: the camera starts at this angle and distance from {takeSelected.take.performers[0]?.display} and pans to follow them.
+              </p>
+            )}
             <div className="camera-row">
               <label>
                 Shot
@@ -621,16 +809,16 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
                 Character
                 <input type="text" placeholder="Actor" value={draft.character} onChange={(e) => set('character')(e.target.value)} />
               </label>
-              <label>
+              {!takeId && <label>
                 Pose
                 <Select value={draft.pose} onValueChange={set('pose')} items={POSES} />
-              </label>
-              <label>
+              </label>}
+              {!takeId && <label>
                 Eye height (m)
                 <input type="number" step="0.01" value={draft.eyeHeightM} onChange={(e) => set('eyeHeightM')(e.target.value)} />
-              </label>
+              </label>}
             </div>
-            <div className="camera-row">
+            {!takeId && <div className="camera-row">
               <label>
                 On mark
                 <Select value={draft.mark} onValueChange={set('mark')} items={anchorItems} />
@@ -639,7 +827,7 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
                 Facing
                 <Select value={draft.facing} onValueChange={set('facing')} items={anchorItems} />
               </label>
-            </div>
+            </div>}
             <div className="camera-row">
               <label>
                 Lens (mm)
@@ -659,15 +847,16 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
               </label>
             </div>
             <div className="camera-row">
-              <label>
+              {/* A take sets the length, and the camera follows the action rather than pushing in. */}
+              {!takeId && <label>
                 Length
                 <Select value={draft.frames} onValueChange={set('frames')} items={FRAMES} />
-              </label>
-              <label className="checkbox">
+              </label>}
+              {!takeId && <label className="checkbox">
                 <input type="checkbox" checked={draft.move} onChange={(e) => set('move')(e.target.checked)} />
                 Push in
-              </label>
-              {draft.move && (
+              </label>}
+              {draft.move && !takeId && (
                 <label>
                   Ends at (m)
                   <input type="number" step="0.1" value={draft.endDistanceM} onChange={(e) => set('endDistanceM')(e.target.value)} />

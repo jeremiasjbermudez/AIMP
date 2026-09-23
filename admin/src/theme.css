@@ -1403,6 +1403,16 @@
   .sets-compare figcaption { font-size: 0.8rem; color: var(--text-dim); text-align: center; }
   .clip-grid .beat-card .ui-select { max-width: 100%; min-width: 0; }
   .clip-grid .beat-card .camera-row label { min-width: 0; max-width: 100%; }
+  .sets-plan-path polyline { fill: none; stroke: var(--ok); stroke-width: 0.035; stroke-linejoin: round; }
+  .sets-plan-path circle { fill: var(--ok); }
+  .sets-take { border-top: 1px solid var(--line); padding: 0.4rem 0; }
+  .sets-take-editor { margin: 0.5rem 0 1rem; }
+  .sets-take-editor summary { cursor: pointer; font-weight: 600; margin-bottom: 0.4rem; }
+  .button-link {
+    display: inline-flex; align-items: center; padding: 0.35rem 0.8rem; border: 1px solid var(--line);
+    border-radius: 6px; color: var(--text); text-decoration: none; font-size: 0.9rem;
+  }
+  .button-link:hover { border-color: var(--accent); }
   .sets-plates {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
