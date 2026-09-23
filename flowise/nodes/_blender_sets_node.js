@@ -26,7 +26,7 @@
 //   {"action":"revise_location","movieId":"...","setLocationId":"...","notes":"...","rounds":1}
 //       the next revision of any set, a script-built one included
 //   {"action":"make_clip","movieId":"...","setShotId":"...","directorShotId":"...",
-//       "characterId":"...", "controlStrength":0.7, "controlEnd":0.6, "render":true}
+//       "characterId":"...", "controlStrength":1.0, "controlEnd":1.0, "render":true}
 //       a staged shot as a MiniMax H3 control clip for a Director shot (and so a
 //       beat): the depth as the control video, photographic look plates of the
 //       set, the character's reference, and a prompt from all of it; with
@@ -443,8 +443,12 @@ async function makeClip() {
     mode: 'control', prompt, width: size[0], height: size[1], length: m.frames, status: 'queued',
     reference_image_paths: [identity, ...plates].filter(Boolean),
     control_video_path: 'input/sets/' + m.video, control_type: 'depth',
-    control_strength: Number(parsed.controlStrength) || 0.7,
-    control_end: Number(parsed.controlEnd) || (m.trajectory && m.trajectory.type === 'hold' ? 0.5 : 0.6),
+    // Full strength for the whole schedule. camera_lab's 0.7, released at 0.5-0.6,
+    // was for a different control node and came with frame anchors; on this one
+    // H3 ignored the depth at those settings and framed its own wide shot
+    // (Testies LK_S2_TOMAS_MCU, 23 September), and followed it at 1.0 / 1.0.
+    control_strength: Number(parsed.controlStrength) || 1.0,
+    control_end: Number(parsed.controlEnd) || 1.0,
     camera: { source: 'blender_set', set_shot_id: shotRow.id, location: loc.location_key, revision: loc.revision }
   });
   await update('set_shots', shotRow.id, {
