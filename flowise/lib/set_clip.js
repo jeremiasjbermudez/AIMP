@@ -39,6 +39,43 @@ function setClipVisibility(vis) {
   return out.join(' ');
 }
 
+/** A mark's name as words: ANCHOR_stand_stove -> "the stove", ANCHOR_stand_center -> "the middle of the room". */
+function setClipPlace(anchor) {
+  const w = String(anchor || '').replace(/^ANCHOR_/, '').replace(/^(stand|sit)_/, '').replace(/_/g, ' ').trim();
+  if (/^(center|centre|middle)$/i.test(w)) return 'the middle of the room';
+  return w ? 'the ' + w : 'their mark';
+}
+
+/**
+ * A take's performance as sentences with times, for the prompt: where each
+ * performer starts, when they walk, turn, sit or stand, and the cues.
+ */
+function setClipTimeline(take) {
+  const out = [];
+  const where = (k) => (k.mark ? setClipPlace(k.mark) : 'their place');
+  const facing = (k) => (k.facing ? setClipPlace(k.facing) : null);
+  for (const p of (take && take.performers) || []) {
+    const who = p.display || p.id;
+    const keys = [...(p.keys || [])].sort((a, b) => a.t - b.t);
+    if (!keys.length) continue;
+    const k0 = keys[0];
+    const f0 = facing(k0);
+    out.push(`At the start ${who} ${k0.pose === 'seated' ? 'sits' : 'stands'} at ${where(k0)}${f0 ? `, facing ${f0 === where(k0) ? 'it' : f0}` : ''}.`);
+    for (let i = 1; i < keys.length; i++) {
+      const a = keys[i - 1];
+      const b = keys[i];
+      const moved = (a.mark || JSON.stringify(a.at)) !== (b.mark || JSON.stringify(b.at));
+      if (moved) out.push(`From ${a.t.toFixed(1)}s to ${b.t.toFixed(1)}s ${who} walks from ${where(a)} to ${where(b)}${facing(b) && facing(b) !== where(b) ? `, and turns to face ${facing(b)}` : ''}.`);
+      else if (facing(b) && facing(b) !== facing(a)) out.push(`At ${b.t.toFixed(1)}s ${who} turns to face ${facing(b)}.`);
+      if (a.pose !== b.pose) out.push(`At ${b.t.toFixed(1)}s ${who} ${b.pose === 'seated' ? 'sits down' : 'stands up'}.`);
+    }
+  }
+  for (const c of [...((take && take.cues) || [])].sort((a, b) => a.t - b.t)) {
+    if (c.text) out.push(`At ${Number(c.t).toFixed(1)}s: ${c.text}.`.replace(/\.\.$/, '.'));
+  }
+  return out;
+}
+
 /**
  * The whole prompt.
  *   p.locationName, p.roomPrompt, p.lensMm, p.frames, p.fps
@@ -46,6 +83,8 @@ function setClipVisibility(vis) {
  *   p.view {start_deg, end_deg, start_m, end_m} or null
  *   p.trajectory {type, hold_until_s, move_end_s, total_s, radius_end_ratio}
  *   p.action: what happens, from the Director's shot or the beat
+ *   p.timeline: sentences from a take (setClipTimeline), when the shot is on one
+ *   p.cameraMotion {travel_m, pan_deg}; p.recorded: the camera was operated
  *   p.visibility: the shot's visibility result
  */
 function setClipPrompt(p) {
@@ -64,6 +103,7 @@ function setClipPrompt(p) {
       if (Math.abs(a0) > 35 || Math.abs(a1) > 35) lines.push(`${who} keeps facing the same direction in the room throughout and does not turn toward the camera.`);
     }
   }
+  if (p.timeline && p.timeline.length) lines.push(p.timeline.join(' '));
   if (p.action) lines.push(String(p.action).trim().replace(/\s+/g, ' '));
   lines.push('');
   lines.push(p.person
@@ -85,8 +125,16 @@ function setClipPrompt(p) {
   const total = Number(tr.total_s || p.frames / p.fps);
   const hold = Number(tr.hold_until_s || 0);
   const end = Number(tr.move_end_s || hold);
-  lines.push(`One continuous ${tr.type === 'hold' ? 'shot' : 'camera move'} over ${total.toFixed(3)}s at ${p.fps} fps.`);
-  if (tr.type === 'push') {
+  // A fixed camera that pans to follow is not a locked-off shot, whatever the stage calls it.
+  const cm = p.cameraMotion || {};
+  const pans = Number(cm.pan_deg) > 3 && Number(cm.travel_m) < 0.05;
+  const travels = Number(cm.travel_m) >= 0.05;
+  lines.push(`One continuous ${tr.type === 'hold' && !pans && !travels ? 'shot' : 'camera move'} over ${total.toFixed(3)}s at ${p.fps} fps.`);
+  if (pans) {
+    lines.push(`The camera stays where it is and pans to follow ${who}, turning about ${Math.round(cm.pan_deg)} degrees to keep them in frame as they move; it does not travel. Smooth, as on a fluid head.`);
+  } else if (p.recorded) {
+    lines.push(`The camera is operated by hand and moves exactly as the depth guide shows, travelling about ${Number(cm.travel_m).toFixed(1)} m; follow its path, including its small corrections.`);
+  } else if (tr.type === 'push') {
     lines.push(`From 0.000s to ${hold.toFixed(3)}s: hold the camera still.`);
     lines.push(`From ${hold.toFixed(3)}s to ${end.toFixed(3)}s: move the CAMERA straight toward ${who} along the lens axis, keeping the lens aimed at their eyes, from radius 1.00 to ${Number(tr.radius_end_ratio || 1).toFixed(2)} times the start; ${who} stays where they are.`);
     lines.push(`From ${end.toFixed(3)}s to ${total.toFixed(3)}s: hold the camera still. Smoothstep easing within each segment.`);

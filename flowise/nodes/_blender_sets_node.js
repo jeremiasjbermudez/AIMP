@@ -492,8 +492,9 @@ async function makeClip() {
   }
 
   clipStep = 'writing the prompt';
-  // 3. The prompt.
+  // 3. The prompt. A shot on a take gets the take's action with its times.
   const sh = shotRow.shot || {};
+  const takeRow = shotRow.take_id ? (await rows('set_takes', { id: `eq.${shotRow.take_id}`, select: 'take' }))[0] : null;
   // The Director's motion prompt is the action. Its frame prompt describes a
   // first-frame still (lens, framing, a different moment) and would contradict
   // the staged camera, so it stays out.
@@ -502,7 +503,9 @@ async function makeClip() {
     locationName: loc.name || loc.location_key, roomPrompt: facts.room_prompt, lensMm: m.lens_mm || (sh.camera || {}).lens_mm,
     frames: m.frames, fps: m.fps, person: character ? { name: character.name, look: character.visual_anchor } : null,
     pictures: plates.length, view: m.view, trajectory: m.trajectory,
-    action: action || (beat ? beat.summary : ''), visibility: shotRow.visibility
+    action: action || (beat ? beat.summary : ''), visibility: shotRow.visibility,
+    timeline: takeRow ? setClipTimeline(takeRow.take) : null,
+    cameraMotion: m.camera_motion, recorded: !!((sh.camera || {}).path)
   });
 
   clipStep = 'recording the clip';

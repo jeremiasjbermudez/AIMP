@@ -152,7 +152,16 @@ elif ch and ch.get('mark') in loc.get('anchors', {}) and ch.get('facing') in loc
     view = {'start_deg': round(rel_az(0), 1), 'end_deg': round(rel_az(len(fr) - 1), 1),
             'start_m': round(dist(0), 3), 'end_m': round(dist(len(fr) - 1), 3)}
 
+# How the camera itself moves: how far it travels, and how far it turns from where it
+# started. The stage calls a fixed camera that pans to follow a moving actor a 'hold';
+# the prompt has to say it pans.
+pos = [np.array(r['matrix'])[:3, 3] for r in fr]
+travel = float(sum(np.linalg.norm(pos[i] - pos[i - 1]) for i in range(1, len(pos))))
+f0 = forward_xy(fr[0]['matrix'])
+pan = max(math.degrees(math.acos(max(-1.0, min(1.0, float(np.dot(forward_xy(r['matrix']), f0)))))) for r in fr)
+
 manifest = {
+    'camera_motion': {'travel_m': round(travel, 3), 'pan_deg': round(pan, 1)},
     'video': 'control/control_depth.mp4', 'frames': frames, 'fps': fps, 'size': shot['clock']['size'],
     'convention': 'inverse depth, one clip-wide range (0.5-99.5 percentile of all frames), near=white, 8-bit RGB, lossless',
     'range_inverse_m': [lo, hi], 'near_m': near, 'far_m': far,
