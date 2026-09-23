@@ -357,8 +357,12 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
   const set = (k: keyof Draft) => (v: string | boolean) => setDraft((d) => ({ ...d, [k]: v }))
   // A camera placed outside the walls renders the back of a wall. Nothing stops
   // it (a set can be opened up), but it is nearly always a wrong angle.
-  const draftCam = location && draft.mark
-    ? cameraInPlan(location.facts.anchors ?? {}, draft.mark, draft.facing, Number(draft.azimuthDeg) || 0, Number(draft.distanceM) || 2)
+  // Filming a take, the camera is placed from where its performer starts, not from the form's mark.
+  const takeStart = takes.find((t) => t.id === takeId)?.take.performers[0]?.keys?.[0]
+  const effMark = takeStart ? takeStart.mark ?? '' : draft.mark
+  const effFacing = takeStart ? takeStart.facing ?? takeStart.mark ?? '' : draft.facing
+  const draftCam = location && effMark
+    ? cameraInPlan(location.facts.anchors ?? {}, effMark, effFacing, Number(draft.azimuthDeg) || 0, Number(draft.distanceM) || 2)
     : null
   const dims = location?.facts.dimensions_m
   const outside = !!(draftCam && dims && (Math.abs(draftCam.cam[0]) > dims.width / 2 || Math.abs(draftCam.cam[1]) > dims.depth / 2))
@@ -545,9 +549,9 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
       az: s.shot.camera?.azimuth_deg_from_character ?? 0,
       dist: s.shot.camera?.start_distance_m ?? 2
     })),
-    ...(draft.mark ? [{
+    ...(effMark ? [{
       key: draft.shotKey.trim() || 'new',
-      mark: draft.mark, facing: draft.facing, az: Number(draft.azimuthDeg) || 0, dist: Number(draft.distanceM) || 2, draft: true
+      mark: effMark, facing: effFacing, az: Number(draft.azimuthDeg) || 0, dist: Number(draft.distanceM) || 2, draft: true
     }] : [])
   ]
 
@@ -684,7 +688,7 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
           <div>
             <Plan
               facts={location.facts}
-              cams={takeId ? planCams.filter((c) => !('draft' in c)) : planCams}
+              cams={planCams}
               paths={locTakes.map((t) => ({ key: t.take_key, marks: (t.take.performers[0]?.keys ?? []).map((k) => k.mark ?? '').filter(Boolean) }))}
             />
             {location.facts.dimensions_m && (
@@ -807,10 +811,10 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
                 Shot
                 <input type="text" placeholder="WH_A_01" value={draft.shotKey} onChange={(e) => set('shotKey')(e.target.value)} />
               </label>
-              <label>
+              {!takeId && <label>
                 Character
                 <input type="text" placeholder="Actor" value={draft.character} onChange={(e) => set('character')(e.target.value)} />
-              </label>
+              </label>}
               {!takeId && <label>
                 Pose
                 <Select value={draft.pose} onValueChange={set('pose')} items={POSES} />
