@@ -98,11 +98,48 @@ function enqueue<T>(work: () => Promise<T>): Promise<T> {
   })
 }
 
+// ---------------------------------------------------------------- the project
+//
+// Which project this window is working on.
+//
+// These flows used to find their project by movies.is_active, a single row
+// flag in the database. With two windows open on different projects, the one
+// that was not "active" silently rendered characters and panoramas into the
+// other. So the app now tells each of them which project it means, as
+// `--movie <id>` on their text input. They still fall back to is_active when
+// no id is given, so a script or a hand-typed run behaves as it always did.
+let currentProjectId = ''
+
+/** Called by the shell whenever the project picker changes. */
+export function setCurrentProject(id: string): void {
+  currentProjectId = id
+}
+
+const PROJECT_SCOPED_FLOWS: Set<string> = new Set(
+  [
+    import.meta.env.VITE_TRIGGER_ORCHESTRATOR_ID,
+    import.meta.env.VITE_CHARACTER_GENERATOR_ID,
+    import.meta.env.VITE_CHARACTER_BIBLE_IMPORT_ID,
+    import.meta.env.VITE_SCENE_IMPORT_ID,
+    import.meta.env.VITE_PANORAMIC_GENERATOR_ID,
+    import.meta.env.VITE_WORLD_BUILDER_ID
+  ].filter(Boolean) as string[]
+)
+
+function withProject(flowId: string, input: string | object): string | object {
+  if (!currentProjectId || typeof input !== 'string' || !PROJECT_SCOPED_FLOWS.has(flowId)) return input
+  if (/--movie\s/i.test(input)) return input
+  return `${input} --movie ${currentProjectId}`.trim()
+}
+
 export async function triggerFlow(
   flowId: string,
   input: string | object,
   uploads?: FlowUpload[]
 ): Promise<RunStatus> {
+  // Fixed now, not when a queued job finally leaves: switching project while a
+  // render waits in line must not move that render to the new project.
+  input = withProject(flowId, input)
   // GPU work waits its turn; everything else goes straight out as before.
   if (needsGpu(flowId, input)) return enqueue(() => send(flowId, input, uploads))
   return send(flowId, input, uploads)

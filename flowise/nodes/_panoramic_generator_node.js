@@ -150,7 +150,7 @@ if (isCozy) {
 // The unoccupied clause is still appended: a panorama with a person baked into
 // it cannot be used as a plate, and that is a pipeline requirement rather than
 // a stylistic preference.
-const rawFlowInput = ($flow.input || '').toString();
+const rawFlowInput = (String($flow.input || '').replace(/--movie\s+\S+/gi, '')).toString();
 const manualPrompt = (rawFlowInput.match(/--prompt\s+"([\s\S]+?)"/i) || [])[1];
 if (manualPrompt && manualPrompt.trim()) {
   prompt = manualPrompt.trim().replace(/[,\s]+$/, '') + ', ' + EMPTY_ROOM_CLAUSE + ', ' + styleTag;

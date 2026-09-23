@@ -6,7 +6,7 @@ import { signIn, startSessionKeeper } from './session'
 import { ComfyJobsPanel } from './ComfyJobsPanel'
 import { ModelPicker } from './ui/ModelPicker'
 import { SettingsPanel } from './SettingsPanel'
-import { triggerFlow, parseFlowJson } from './flowise'
+import { triggerFlow, parseFlowJson, setCurrentProject } from './flowise'
 
 // What 15-Delete-Movie reports before anything is removed.
 type DeleteSurvey = {
@@ -128,13 +128,17 @@ function App() {
 
   const movie = movies.find((m) => m.id === movieId)
 
+  // Every flow call from this window is for this window's project, whatever
+  // another window has made "active" since (see setCurrentProject).
+  useEffect(() => setCurrentProject(movieId), [movieId])
+
   async function handleMovieChange(newMovieId: string) {
     setMovieId(newMovieId)
     setMovies((prev) => prev.map((m) => ({ ...m, is_active: m.id === newMovieId })))
 
-    // Selecting a movie here IS how the pipeline knows which movie is
-    // "active" - the Flowise flows look this up at runtime instead of
-    // having a movie hardcoded. Deactivate whichever was active, then
+    // The app sends each flow this window's project itself. is_active is still
+    // written because it is what a flow falls back to when run without one - a
+    // script, or a run typed into Flowise by hand. Deactivate whichever was active, then
     // activate the newly selected one (two steps so the partial unique
     // index on is_active is never asked to hold two true rows at once).
     await insforge.database.from('movies').update({ is_active: false }).eq('is_active', true)
@@ -146,9 +150,9 @@ function App() {
   // undo - it removes renders, panoramas and splats as well as rows.
   // Copy the film, not its pictures.
   //
-  // The new movie is never made active: nearly every flow finds its movie by
-  // is_active, so a copy that activated itself would quietly redirect work away
-  // from whatever is being made right now. You switch to it when you are ready.
+  // The new movie is never made active: a flow run without a project (a script,
+  // a hand-typed run) falls back to is_active, and a copy that activated itself
+  // would redirect that work. You switch to it when you are ready.
   async function handleCopyMovie(e: React.FormEvent) {
     e.preventDefault()
     if (!movie) return

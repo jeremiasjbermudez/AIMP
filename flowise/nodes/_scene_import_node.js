@@ -1,3 +1,6 @@
+// The project this run is for. The app sends `--movie <id>`; without one (a
+// script, a run typed into Flowise) the active movie is used, as before.
+const requestedMovieId = ((/--movie\s+([0-9a-f-]{36})/i.exec(String($flow.input || '')) || [])[1]) || '';
 // Builds the scenes table for the active movie from the beats already stored
 // for it. Nothing in the pipeline has ever written scenes - beats and
 // characters got flows, scenes did not - which is why panorama generation
@@ -20,7 +23,7 @@ const insforgeUrl = $insforgeUrl;
 const insforgeApiKey = $insforgeApiKey;
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 
-const rawInput = ($flow.input || '').toString().trim();
+const rawInput = (String($flow.input || '').replace(/--movie\s+\S+/gi, '')).toString().trim();
 const force = /--force\b/i.test(rawInput);
 // --no-prose skips the model entirely and writes only the rolled-up fields.
 const skipProse = /--no-prose\b/i.test(rawInput);
@@ -178,11 +181,11 @@ function llmRequireContent(res, cfg, body) {
 }
 // ---------------------------------------------------------------------------
 const activeRes = await axios.get(`${insforgeUrl}/api/database/records/movies`, {
-  params: { is_active: 'eq.true', select: 'id,title,slug' },
+  params: requestedMovieId ? { id: `eq.${requestedMovieId}`, select: 'id,title,slug' } : { is_active: 'eq.true', select: 'id,title,slug' },
   headers: authHeaders
 });
 const activeMovies = activeRes.data || [];
-if (activeMovies.length === 0) return { error: 'No active movie set. Select one in the pipeline-admin app first.' };
+if (activeMovies.length === 0) return { error: (requestedMovieId ? `Project ${requestedMovieId} not found.` : 'No active movie set. Select one in the pipeline-admin app first.') };
 if (activeMovies.length > 1) return { error: `Found ${activeMovies.length} active movies - exactly one must be active.` };
 const movie = activeMovies[0];
 

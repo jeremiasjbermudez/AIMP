@@ -1,4 +1,7 @@
-const rawInput = ($flow.input || '').trim();
+// The project this run is for. The app sends `--movie <id>`; without one (a
+// script, a run typed into Flowise) the active movie is used, as before.
+const requestedMovieId = ((/--movie\s+([0-9a-f-]{36})/i.exec(String($flow.input || '')) || [])[1]) || '';
+const rawInput = (String($flow.input || '').replace(/--movie\s+\S+/gi, '')).trim();
 const typeMatch = /--type\s+(\S+)/i.exec(rawInput);
 const requestedType = typeMatch ? typeMatch[1] : null;
 // --version N writes into that image version instead of overwriting v1,
@@ -23,12 +26,12 @@ const insforgeApiKey = $insforgeApiKey;
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 
 const activeRes = await axios.get(`${insforgeUrl}/api/database/records/movies`, {
-  params: { is_active: 'eq.true', select: 'id,bucket_name,title,slug' },
+  params: requestedMovieId ? { id: `eq.${requestedMovieId}`, select: 'id,bucket_name,title,slug' } : { is_active: 'eq.true', select: 'id,bucket_name,title,slug' },
   headers: authHeaders
 });
 const activeMovies = activeRes.data || [];
 if (activeMovies.length === 0) {
-  return { error: 'No active movie set. Select one in the pipeline-admin app first.' };
+  return { error: (requestedMovieId ? `Project ${requestedMovieId} not found.` : 'No active movie set. Select one in the pipeline-admin app first.') };
 }
 if (activeMovies.length > 1) {
   return { error: `Found ${activeMovies.length} active movies - this should be impossible.` };
