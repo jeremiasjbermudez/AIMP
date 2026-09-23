@@ -266,3 +266,18 @@ On Testies, Director shots 2 and 3 ("TOMAS frowns. He looks at the wall calendar
 |---|---|
 | gemma4:e4b | first a take whose reading and moves disagreed and whose line was at the wrong time; with the lines placed by code, twice a take standing him on the calendar: refused |
 | Claude | he studies the calendar, checks his watch at 5.3 s, turns toward the stairwell at 5.8 s and says the line at 6.0 s: "You're early" is said to someone heard but not seen, "the most plausible arrival point is the stairwell". The same blocking on a second draft |
+
+**Rendering a drafted take.** Claude's take, filmed by a 50 mm camera off Tomas's right
+(LK_S1_0203_MED, 260 frames, about 10 minutes to render), took three renders:
+
+1. **Two Tomases**: one where the depth put him, and a second at the window acting out
+   the timeline. The line also had two times: the take's 6.0 s and the Director
+   shot's own "At 00:00.800".
+2. With the Director text dropped on takes (the timeline carries the action and the
+   lines) and "no second figure" in the prompt: **still two**. The second now pointed
+   at the calendar.
+3. The cause was a contradiction: "not in this shot: the calendar" beside "he looks
+   at the wall calendar". Timeline sentences naming something the camera never sees
+   are now marked "out of frame in this shot: he looks off frame toward it; do not
+   draw it". **One Tomas**, holding the staged framing throughout. The calendar is
+   still drawn on the wall, but nobody acts it out.
