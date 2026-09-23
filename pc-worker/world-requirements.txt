@@ -7,3 +7,7 @@ loguru
 # decord has no Windows wheel for Python 3.12; eva-decord is the maintained
 # build and installs the same `decord` module.
 eva-decord
+# worldgen/src/seg_utils imports skimage; traj_generate swallows that ImportError
+# and reports a misleading "cannot import name utils3d_compat from src".
+scikit-image
+easydict
