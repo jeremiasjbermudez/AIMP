@@ -598,7 +598,8 @@
       .ref-remove,
       .grade-inline button,
       .grade-toggle,
-      .clip-thumb-card
+      .clip-thumb-card,
+      .stage-cam-chip
     )
   ) {
     background: var(--color-action);
@@ -623,7 +624,8 @@
       .ref-remove,
       .grade-inline button,
       .grade-toggle,
-      .clip-thumb-card
+      .clip-thumb-card,
+      .stage-cam-chip
     )
   ):hover:not(:disabled) {
     background: var(--color-action-hover);

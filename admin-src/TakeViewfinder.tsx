@@ -35,8 +35,8 @@ export function TakeViewfinder({ glbUrl, frame, matrix, lensMm }: {
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0x15181c)
     // The block-out's own lights do not travel in glTF: an even light to frame by.
-    scene.add(new THREE.HemisphereLight(0xfff4e6, 0x3a3530, 1.6))
-    const key = new THREE.PointLight(0xffe0bb, 12, 12, 1.6)
+    scene.add(new THREE.HemisphereLight(0xfff4e6, 0x3a3530, 0.7))
+    const key = new THREE.PointLight(0xffe0bb, 5, 12, 1.6)
     key.position.set(0, 2.3, 0)
     scene.add(key)
     const camera = new THREE.PerspectiveCamera(40, ASPECT, 0.05, 60)
