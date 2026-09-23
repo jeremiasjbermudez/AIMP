@@ -34,7 +34,10 @@ async function workerJob(body, opts) {
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, o.everyMs));
     const job = await workerCall('get', '/blender/jobs/' + sub.id);
-    if (job.error) continue;
+    // A failed job's record carries its own `error`, so the status decides; an
+    // error with no status is the call itself failing, which is worth a retry.
+    // Checking `error` first once made every failed job look like a lost
+    // connection, and the flow waited out its whole timeout on it.
     if (job.status === 'done') return { status: 'done', result: job.result, id: sub.id };
     if (job.status === 'error') return { status: 'error', error: job.error || 'the job failed', id: sub.id, log: job.log };
   }

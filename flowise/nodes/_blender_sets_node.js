@@ -248,6 +248,8 @@ async function reviseOnce(row, notes) {
   images.push(await setsImage(previews.find((p) => p.endsWith('plan.png'))));
   const change = await askModel(blockoutRevisePrompt(loc, await feedbackFor(row, notes), reference.length === 4), images);
   const next = blockoutNormalise(blockoutApply(loc, change));
+  const problems = blockoutProblems(next);
+  if (problems.length) throw new Error(`The revision of ${row.name} ${row.revision} could not be built: ${problems.join('; ')}`);
   return buildRevision(row.location_key, next, { source: row.source, parentId: row.id, changeNote: change.change_note });
 }
 
@@ -271,7 +273,18 @@ if (action === 'generate_location') {
   try {
     const images = [];
     for (const rel of source.views) images.push(await setsImage(rel));
-    const first = await askModel(blockoutFirstPrompt(name, parsed.notes), images);
+    const prompt = blockoutFirstPrompt(name, parsed.notes);
+    let first = await askModel(prompt, images);
+    let problems = blockoutProblems(blockoutNormalise(first.location || first));
+    if (problems.length) {
+      // One more try, told what was wrong: cheaper than a build that cannot work.
+      first = await askModel(prompt + '\n\nYour last answer could not be built: ' + problems.join('; ') + '. Answer again, complete.', images);
+      problems = blockoutProblems(blockoutNormalise(first.location || first));
+    }
+    if (problems.length) {
+      const settings = await llmSettings();
+      return { action: 'error', reason: `${settings.model || 'The model'} did not write a usable block-out (${problems.join('; ')}). A stronger vision model does this far better.` };
+    }
     const loc = blockoutNormalise(Object.assign({}, first.location || first, {
       name, reference_source: panoPath, reference_plates: source.views, status: 'block-out by a model; not surveyed'
     }));

@@ -132,6 +132,31 @@ function blockoutNormalise(loc) {
   return l;
 }
 
+/**
+ * What makes a location unbuildable, in words the model can act on. Checked
+ * before the render host is asked to build: a small model will sometimes answer
+ * with a well-formed reply that has no room in it at all.
+ */
+function blockoutProblems(loc) {
+  const out = [];
+  const d = loc.dimensions_m || {};
+  const bo = loc.blockout || {};
+  if (!(Number(d.width) > 0) || !(Number(d.eave_height) > 0)) out.push('dimensions_m needs width and eave_height in metres');
+  if ((bo.room || {}).shape !== 'round' && !(Number(d.depth) > 0)) out.push('a rect room needs dimensions_m.depth');
+  const objects = bo.objects || [];
+  if (objects.length < 3) out.push(`blockout.objects has ${objects.length} object(s): build the furniture and everything on the walls`);
+  const known = new Set(['box', 'cylinder', 'cone', 'torus', 'sphere', 'poly']);
+  const odd = objects.filter((o) => !known.has(o && o.shape)).map((o) => (o && o.name) || '?');
+  if (odd.length) out.push('these objects have no shape the builder knows: ' + odd.slice(0, 8).join(', '));
+  const stands = Object.keys(loc.anchors || {}).filter((k) => /stand/i.test(k));
+  if (stands.length < 2) out.push('give at least two ANCHOR_stand_ marks');
+  const half = (Number(d.width) || 0) / 2;
+  const halfD = (Number(d.depth) || Number(d.width) || 0) / 2;
+  const outside = Object.entries(loc.anchors || {}).filter(([, p]) => Math.abs(p[0]) > half || Math.abs(p[1]) > halfD).map(([k]) => k);
+  if (half && outside.length) out.push('these marks are outside the walls: ' + outside.join(', '));
+  return out;
+}
+
 /** The prompt that turns four views of a room into a first block-out. */
 function blockoutFirstPrompt(name, notes) {
   return [
