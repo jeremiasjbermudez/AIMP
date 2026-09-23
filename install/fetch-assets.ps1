@@ -114,6 +114,15 @@ if (-not $ModelsOnly) {
             Write-Warn "  no source recorded for $pack - install it from the ComfyUI registry by hand"
             continue
         }
+        if ($info.local) {
+            # Kept in this repository, versioned with the flows that use it.
+            $from = Join-Path (Split-Path -Parent $root) $info.local
+            if ($PSCmdlet.ShouldProcess($pack, "copy from $($info.local)")) {
+                Write-Step "  copying $pack from the repository"
+                Copy-Item $from $dest -Recurse
+            }
+            continue
+        }
         if ($info.manual) {
             Write-Warn "  $pack has no public source. $($info.manual)"
             continue

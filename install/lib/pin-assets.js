@@ -57,7 +57,7 @@ async function registryLatest(id) {
 
 async function pinPacks() {
   for (const [name, info] of Object.entries(assets.packs)) {
-    if (info.manual) continue
+    if (info.manual || info.local) continue
     if (onlyMissing && (info.ref || info.version)) continue
     const have = onMachine.get(name.toLowerCase())
     try {

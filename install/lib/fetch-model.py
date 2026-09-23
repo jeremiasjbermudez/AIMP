@@ -64,8 +64,18 @@ def main():
         # cache is what lets a second machine, or a re-run, skip the transfer.
         cached = hf_hub_download(repo_id=a.repo, filename=path, revision=a.revision)
     except Exception as e:
-        print(f'download failed for {a.repo}/{path}: {e}', file=sys.stderr)
-        return 1
+        # A saved login that has expired is still sent, and Hugging Face then
+        # refuses even a public file. A public file does not need it, so try
+        # once more without; a gated one still fails, with the real reason.
+        if 'expired' not in str(e).lower() and '401' not in str(e):
+            print(f'download failed for {a.repo}/{path}: {e}', file=sys.stderr)
+            return 1
+        try:
+            cached = hf_hub_download(repo_id=a.repo, filename=path, revision=a.revision, token=False)
+        except Exception as e2:
+            print(f'download failed for {a.repo}/{path}: {e2} (the saved Hugging Face login was also '
+                  f'refused: {str(e).splitlines()[-1]}. Log in again with: hf auth login)', file=sys.stderr)
+            return 1
 
     # Copied rather than linked: ComfyUI reads these directly and a link across
     # drives is not something to rely on. Copied under a temporary name and

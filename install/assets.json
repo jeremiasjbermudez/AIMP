@@ -14,7 +14,8 @@
     "  upstream head on pinned.on. Refresh with install/lib/pin-assets.js.",
     "  manual: no public source; the note says how to get it.",
     "models: a huggingface source also carries revision, sha256 and bytes once",
-    "  pinned; fetch-model.py downloads that revision and checks the hash."
+    "  pinned; fetch-model.py downloads that revision and checks the hash.",
+    "  local: a pack kept in this repository, copied into custom_nodes as it is."
   ],
   "models": {
     "minimax_h3_fl2va_pruned_int8_convrot.safetensors": {
@@ -964,7 +965,8 @@
       "manual": "Not published. Serves extensions/comfyui-gsplat-room-viewer/viewer_room.html, which the admin app's splat viewer loads. Copy it from a machine that has it."
     },
     "comfyui-rename-file": {
-      "manual": "Not published. Provides RenameFile (source_path, dest_path), used by the world builders to move a finished .ply into place. Copy it from a machine that has it."
+      "local": "comfyui/custom_nodes/comfyui-rename-file",
+      "note": "Written for this repository to the interface the world flows use; the original pack was never published."
     }
   }
 }

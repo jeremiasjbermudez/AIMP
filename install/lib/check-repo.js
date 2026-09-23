@@ -79,7 +79,9 @@ for (const name of names) {
   for (const pack of m.packs || []) {
     const info = assets.packs[pack]
     if (!info) fail(`modules.json ${name}: node pack ${pack} has no source in assets.json`)
-    else if (info.manual) warn.push(`assets.json pack ${pack}: no public source - fetch-assets cannot install it`)
+    else if (info.local) {
+      if (!fs.existsSync(at(info.local))) fail(`assets.json pack ${pack}: ${info.local} is not in the repository`)
+    } else if (info.manual) warn.push(`assets.json pack ${pack}: no public source - fetch-assets cannot install it`)
     else if (!info.ref && !info.version) warn.push(`assets.json pack ${pack}: not pinned (no ref or version)`)
   }
   for (const file of m.modelFiles || []) {
