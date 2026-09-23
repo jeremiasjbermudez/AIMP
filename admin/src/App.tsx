@@ -42,7 +42,7 @@ type Tab = string
 const GROUPS: { id: TabEntry['group']; label: string }[] = [
   { id: 'story', label: 'Story' },
   { id: 'cast', label: 'Cast' },
-  { id: 'sets', label: 'Sets' },
+  { id: 'sets', label: 'Locations' },
   { id: 'shots', label: 'Shots' },
   { id: 'finish', label: 'Finish' },
   { id: 'workshop', label: 'Workshop' }

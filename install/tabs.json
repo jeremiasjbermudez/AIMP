@@ -85,8 +85,8 @@
   },
   {
     "id": "director",
-    "label": "Director",
-    "hint": "Plan a shot list from the beats, then produce it in stages",
+    "label": "Shot List",
+    "hint": "The Director plans each scene as shots from its beats, then produces them",
     "icon": "Film",
     "module": "director",
     "component": "DirectorPanel",
@@ -106,32 +106,6 @@
     "group": "shots",
     "props": {},
     "takesMovie": true
-  },
-  {
-    "id": "camera",
-    "label": "Camera",
-    "hint": "Place each shot’s camera inside the scene’s 3D world and render its plate",
-    "icon": "CameraIcon",
-    "module": "camera",
-    "component": "CameraPanel",
-    "from": "./CameraPanel",
-    "props": {},
-    "takesMovie": true,
-    "group": "shots"
-  },
-  {
-    "id": "control",
-    "label": "Control to Video",
-    "hint": "A clip driven by a depth, pose or edge video: a staged Blender shot, or one you bring",
-    "icon": "Film",
-    "module": "video",
-    "component": "MinimaxVideoPanel",
-    "from": "./MinimaxVideoPanel",
-    "props": {
-      "kind": "control"
-    },
-    "takesMovie": true,
-    "group": "shots"
   },
   {
     "id": "faceqa",
@@ -317,6 +291,32 @@
     "module": "tools",
     "component": "ToolsPanel",
     "from": "./ToolsPanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "workshop"
+  },
+  {
+    "id": "control",
+    "label": "Control to Video",
+    "hint": "A clip driven by a depth, pose or edge video: a staged Blender shot, or one you bring",
+    "icon": "Film",
+    "module": "video",
+    "component": "MinimaxVideoPanel",
+    "from": "./MinimaxVideoPanel",
+    "props": {
+      "kind": "control"
+    },
+    "takesMovie": true,
+    "group": "workshop"
+  },
+  {
+    "id": "camera",
+    "label": "Splat Camera",
+    "hint": "Place each shot’s camera inside the scene’s 3D world and render its plate",
+    "icon": "CameraIcon",
+    "module": "camera",
+    "component": "CameraPanel",
+    "from": "./CameraPanel",
     "props": {},
     "takesMovie": true,
     "group": "workshop"

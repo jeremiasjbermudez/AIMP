@@ -163,6 +163,10 @@ export function StagePanel({ movie }: { movie: Movie }) {
   const [shots, setShots] = useState<Shot[]>([])
   const [clips, setClips] = useState<Record<string, Clip>>({})
   const loadedFor = useRef<string | null>(null)
+  // A new take from the shot list: the set it is in, and the shots it performs.
+  const [newSet, setNewSet] = useState('')
+  const [newShots, setNewShots] = useState<string[]>([])
+  const [newNotes, setNewNotes] = useState('')
 
   async function load() {
     const [l, t] = await Promise.all([
@@ -259,6 +263,27 @@ export function StagePanel({ movie }: { movie: Movie }) {
     setSelected(c.id)
   }
 
+  /** The model blocks the ticked shots on the set, and the take is built, ready for cameras. */
+  async function newTakeFromShots() {
+    const set = newSet || latestSets[latestSets.length - 1]?.id
+    if (!set || !newShots.length) return
+    setBusy('newtake')
+    setError(null)
+    setNote('The model is blocking the scene on the set, then the take is built. About a minute.')
+    const ordered = dshots.filter((d) => newShots.includes(d.id)).map((d) => d.id)
+    const r = parseFlowJson<{ action: string; reason?: string; takeId?: string; reading?: string }>(
+      await triggerFlow(flowId, { action: 'draft_take', movieId: movie.id, setLocationId: set, directorShotIds: ordered, notes: newNotes.trim() || undefined, build: true })
+    )
+    setBusy(null)
+    setNote(null)
+    if (!r.ok) return setError(r.message)
+    if (r.data.action === 'error') return setError(r.data.reason ?? 'The take was not made.')
+    if (r.data.reading) setNote('The model\'s blocking: ' + r.data.reading)
+    setNewShots([])
+    await load()
+    if (r.data.takeId) setTakeId(r.data.takeId)
+  }
+
   /** Bring an older take up to date: rebuilding exports its 3D and its eye points. */
   async function rebuildTake() {
     if (!take) return
@@ -318,16 +343,58 @@ export function StagePanel({ movie }: { movie: Movie }) {
     const s = shots.find((x) => x.shot_key === plain(`${take?.take_key}_${c.name}`))
     return s?.clip_id ? clips[s.clip_id] : undefined
   }
+  // The newest revision of each set, for making a take in.
+  const latestSets = Object.values(locs.reduce<Record<string, SetLocation>>((acc, l) => {
+    const cur = acc[l.location_key]
+    if (!cur || l.revision > cur.revision) acc[l.location_key] = l
+    return acc
+  }, {}))
+  const newTakeBox = (
+    <details className="sets-take-editor" open={!takes.length}>
+      <summary>New take from the shot list</summary>
+      <p className="empty">
+        Tick shots of one scene that run on from each other (one clip long at most). The model blocks where people
+        stand and move on the set's marks, the lines land at their script times, and the take is built for cameras.
+      </p>
+      <div className="camera-row">
+        <label>
+          Set
+          <Select
+            value={newSet || latestSets[latestSets.length - 1]?.id || ''}
+            onValueChange={setNewSet}
+            placeholder="Pick a set…"
+            items={latestSets.map((l) => ({ value: l.id, label: `${l.name} · ${l.revision}` }))}
+          />
+        </label>
+        <label className="grow">
+          Notes (optional)
+          <input type="text" placeholder="He starts at the stove" value={newNotes} onChange={(e) => setNewNotes(e.target.value)} />
+        </label>
+        <button type="button" disabled={!!busy || !newShots.length || !latestSets.length} onClick={newTakeFromShots}>
+          {busy === 'newtake' ? 'Blocking…' : `Block ${newShots.length || ''} shot${newShots.length === 1 ? '' : 's'}`}
+        </button>
+      </div>
+      <div className="sets-draft-shots">
+        {dshots.map((d) => (
+          <label className="checkbox" key={d.id}>
+            <input type="checkbox" checked={newShots.includes(d.id)} onChange={(e) => setNewShots((ids) => (e.target.checked ? [...ids, d.id] : ids.filter((x) => x !== d.id)))} />
+            {shotLabel(d)}
+          </label>
+        ))}
+      </div>
+      {!latestSets.length && <p className="empty">No sets yet: build one from a scene's panorama in Locations first.</p>}
+    </details>
+  )
   const cues = take?.take.cues ?? []
   const at = track[frame - 1] ?? null
 
   if (!takes.length) {
     return (
       <div>
-        <p>Camera setup works on a <strong>take</strong>: a scene's performance in its Blender set.</p>
-        <p className="empty">
-          Make one in Blender Sets › Takes (the model can draft it from the Director's shots), then come back to put cameras on it.
-        </p>
+        <p>Camera setup works on a <strong>take</strong>: a scene's performance in its set. Make one from the shot list:</p>
+        {newTakeBox}
+        {note && <p className="empty">{note}</p>}
+        {error && <p className="error">{error}</p>}
       </div>
     )
   }
@@ -351,6 +418,7 @@ export function StagePanel({ movie }: { movie: Movie }) {
           {busy === 'shoot' ? 'Shooting…' : `Shoot ${cams.length || ''} camera${cams.length === 1 ? '' : 's'}`}
         </button>
       </div>
+      {newTakeBox}
       {take && !ready && (
         <p className="error">
           {take.take_key} was built before camera setup existed.{' '}
