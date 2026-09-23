@@ -159,12 +159,18 @@ if (manualPrompt && manualPrompt.trim()) {
 const outputPresetHeight = parseInt((preset.split(/\s*x\s*/i)[1]) || '1024', 10);
 const state = JSON.stringify({ version: 1, projection_model: 'pinhole_rectilinear', alpha_mode: 'straight', bg_color: '#00ff00', output_preset: outputPresetHeight, assets: {}, stickers: [] });
 
+// PanoramaStickers 1.5 takes the ERP width alone ('1024' / '2048' / '4096')
+// where it used to take '2048 x 1024', and requires coverage and fps. fps
+// only drives the node's own preview.
+const stickersPreset = ['1024', '2048', '4096'].indexOf(String(parseInt(preset, 10))) >= 0
+  ? String(parseInt(preset, 10)) : '2048';
+
 const g = {
   48: { class_type: 'UNETLoader', inputs: { unet_name: 'flux-2-klein-9b.safetensors', weight_dtype: 'default' } },
   44: { class_type: 'CLIPLoader', inputs: { clip_name: 'qwen_3_8b_fp8mixed.safetensors', type: 'flux2', device: 'default' } },
   43: { class_type: 'VAELoader', inputs: { vae_name: 'flux2-vae.safetensors' } },
   63: { class_type: 'LoraLoaderModelOnly', inputs: { model: ['48', 0], lora_name: 'flux-2-klein-9B-360-erp-outpaint-lora_V1.safetensors', strength_model: 0.9 } },
-  56: { class_type: 'PanoramaStickers', inputs: { output_preset: preset, bg_color: '#00ff00', state_json: state } },
+  56: { class_type: 'PanoramaStickers', inputs: { output_preset: stickersPreset, coverage: '360', fps: 24, bg_color: '#00ff00', state_json: state } },
   52: { class_type: 'VAEEncode', inputs: { pixels: ['56', 0], vae: ['43', 0] } },
   6: { class_type: 'CLIPTextEncode', inputs: { clip: ['44', 0], text: prompt } },
   33: { class_type: 'CLIPTextEncode', inputs: { clip: ['44', 0], text: 'text, worst quality, blurry, ugly, people, person, human, man, woman, figure, character, crowd, staff, occupants' } },
@@ -173,13 +179,15 @@ const g = {
   31: { class_type: 'KSampler', inputs: { model: ['63', 0], positive: ['49', 0], negative: ['55', 0], latent_image: ['52', 0], seed, steps: 20, cfg: 5, sampler_name: 'euler', scheduler: 'simple', denoise: 1 } },
   8: { class_type: 'VAEDecode', inputs: { samples: ['31', 0], vae: ['43', 0] } },
   66: { class_type: 'SaveImage', inputs: { images: ['8', 0], filename_prefix: outputSubfolder + '/scene' + sceneNumber + '_pano' } },
-  98: { class_type: 'JWImageSaveToPath', inputs: { image: ['8', 0], path: 'C:/ComfyUI2/input/' + stagedRel, overwrite: 'true' } }
+  98: { class_type: 'JWImageSaveToPath', inputs: { image: ['8', 0], path: String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/input/' + stagedRel, overwrite: 'true' } }
 };
 
 await axios.post(comfyUrl + '/free', { unload_models: true, free_memory: true });
 const submitRes = await axios.post(comfyUrl + '/prompt', { prompt: g });
 const promptId = submitRes.data && submitRes.data.prompt_id;
-if (!promptId) return { action: 'error', reason: 'Pano enqueue failed: ' + JSON.stringify(submitRes.data && submitRes.data.node_errors).slice(0, 700) };
+// ComfyUI puts a missing node type or model in .error, not in .node_errors,
+// so reporting only node_errors printed {} for the commonest failure.
+if (!promptId) return { action: 'error', reason: 'Pano enqueue failed: ' + JSON.stringify({ error: submitRes.data && submitRes.data.error, node_errors: submitRes.data && submitRes.data.node_errors }).slice(0, 700) };
 
 let outRel = null;
 let renderError = null;

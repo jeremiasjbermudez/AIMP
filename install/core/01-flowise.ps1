@@ -85,7 +85,7 @@ if (-not (Test-Path (Join-Path $Path 'package.json'))) {
 }
 
 # ---------------------------------------------------------------- the patch
-$target = Join-Path $Path 'packages\components\nodes\agentflow\CustomFunction\CustomFunction.ts'
+$target = Join-Path $Path 'packages/components/nodes/agentflow/CustomFunction/CustomFunction.ts'
 if (-not (Test-Path $target)) {
     throw "Cannot find CustomFunction.ts under $Path. Is this a Flowise checkout?"
 }
@@ -96,11 +96,11 @@ if ($source -match 'uploads:\s*options\.uploads') {
 } else {
     $anchor = 'fileAnnotations: options.postProcessing?.fileAnnotations'
     if ($source -notmatch [regex]::Escape($anchor)) {
-        throw @"
+        throw @'
 The line this patch attaches to is not in CustomFunction.ts. That means Flowise
 has changed here. Apply it by hand: add `uploads: options.uploads` to the object
 that builds the sandbox variables, then re-run with -SkipBuild:false.
-"@
+'@
     }
     Write-Step 'Applying the uploads patch'
     if ($PSCmdlet.ShouldProcess('CustomFunction.ts', 'patch')) {
@@ -141,7 +141,7 @@ if (-not $SkipBuild) {
 # one looks like it worked and changes nothing: the server takes its defaults,
 # comes up on 3000 while this script polls 3010, and puts its state in ~/.flowise.
 # That was silent until someone went looking for the database.
-$envFile = Join-Path $Path 'packages\server\.env'
+$envFile = Join-Path $Path 'packages/server/.env'
 $dataDir = Join-Path $Path ('data' + $Port)
 $wanted = [ordered]@{
     'PORT' = $Port
@@ -199,7 +199,17 @@ if (-not $NoStart -and $PSCmdlet.ShouldProcess('Flowise', 'start')) {
     Write-Step 'Starting Flowise'
     # Its own window: it is a long-running server, and burying it inside this
     # script would make it die with the install.
-    Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', 'pnpm start' -WorkingDirectory $Path -WindowStyle Minimized
+    if ($IsWindows -or $PSVersionTable.PSEdition -eq 'Desktop') {
+        Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', 'pnpm start' -WorkingDirectory $Path -WindowStyle Minimized
+    } else {
+        # No separate window on macOS/Linux: detach it with nohup and log to
+        # the data folder, so it outlives this script and the terminal.
+        $log = Join-Path $dataDir 'logs/flowise.out'
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $log) | Out-Null
+        Start-Process -FilePath 'nohup' -ArgumentList 'pnpm', 'start' -WorkingDirectory $Path `
+            -RedirectStandardOutput $log -RedirectStandardError "$log.err"
+        Write-Host "  logging to $log" -ForegroundColor DarkGray
+    }
     $url = "http://localhost:$Port"
     $ready = $false
     foreach ($attempt in 1..60) {

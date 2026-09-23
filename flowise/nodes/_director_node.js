@@ -934,7 +934,7 @@ if (mode === 'chainplan' || mode === 'render' || mode === 'assemble') {
   // stages already do, so stop and resume keep working.
   const fs = require('fs');
   const path = require('path');
-  const COMFY_ROOT = 'C:/ComfyUI2';
+  const COMFY_ROOT = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '');
   const PACK_WF = COMFY_ROOT + '/custom_nodes/ComfyUI-MiniMaxH3-Context-Loop/example_workflows/Ref2V Tagged - MiniMax H3 0.6.json';
   const scene = Math.max(1, Math.min(chainShots.length, Math.round(Number(parsed.scene) || 1)));
   // Stable per plan, so every scene of the same plan resumes the same run.
@@ -1412,7 +1412,7 @@ if (mode === 'review') {
 
   const fs2 = require('fs');
   const path2 = require('path');
-  const COMFY_ROOT2 = 'C:/ComfyUI2';
+  const COMFY_ROOT2 = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '');
 
   // Specific questions, not "do these match". A similarity judgement from a
   // vision model is a number nobody can act on; a list of who is where compares

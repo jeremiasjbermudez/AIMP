@@ -118,7 +118,10 @@ if (action === 'uninstall') {
 
 const run = await new Promise((resolve) => {
   // No shell: arguments are passed as an array, so nothing is re-parsed.
-  const p = spawn('powershell.exe', args, { windowsHide: true, cwd: installRoot });
+  // Windows PowerShell on Windows; PowerShell 7 (pwsh) on macOS and Linux.
+  // path.sep rather than process.platform: the Flowise sandbox has no process.
+  const shell = path.sep === '\\' ? 'powershell.exe' : 'pwsh';
+  const p = spawn(shell, args, { windowsHide: true, cwd: installRoot });
   let out = '';
   let err = '';
   p.stdout.on('data', (d) => (out += d.toString()));

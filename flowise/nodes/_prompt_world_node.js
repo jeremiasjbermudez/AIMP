@@ -126,7 +126,7 @@ const panoGraph = {
   // meet, and the world builder reads it as a sphere.
   '8': { class_type: 'HYWorld2QwenPanoSeamBlend', inputs: { image: ['7', 0], blend_width: 32, crop_right_edge: true } },
   '9': { class_type: 'SaveImage', inputs: { images: ['8', 0], filename_prefix: panoPrefix } },
-  '10': { class_type: 'JWImageSaveToPath', inputs: { image: ['8', 0], path: 'C:/ComfyUI2/input/' + flatPanoName, overwrite: 'true' } }
+  '10': { class_type: 'JWImageSaveToPath', inputs: { image: ['8', 0], path: String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/input/' + flatPanoName, overwrite: 'true' } }
 };
 
 let pr;
@@ -163,7 +163,7 @@ await update({ pano_path: panoPath, workspace_name: workspaceName });
 // The world builder's graph, unchanged. `finalPlyPath` follows the same layout
 // so a prompt world sits beside the scene worlds rather than in a tree of its
 // own - inside the movie's folder, which is where everything else lives.
-const rootDir = 'C:/ComfyUI2/output/' + movie.slug + '/hyworld2_worldgen';
+const rootDir = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/output/' + movie.slug + '/hyworld2_worldgen';
 const finalPlyName = workspaceName + '_point_cloud_5000.ply';
 const finalPlyPath = rootDir + '/' + workspaceName + '/gs_results/ply/' + finalPlyName;
 

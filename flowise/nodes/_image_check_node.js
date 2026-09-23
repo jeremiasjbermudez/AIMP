@@ -186,7 +186,7 @@ if (!prompt) return { error: 'Give the prompt it was rendered from.' };
 
 // Read from ComfyUI's own folder rather than over HTTP: the file is on this
 // machine and a round trip through /view only adds a way to fail.
-const COMFY_ROOT = 'C:/ComfyUI2';
+const COMFY_ROOT = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '');
 let bytes;
 try {
   const rel = String(imagePath).split('\\').join('/');

@@ -106,7 +106,7 @@ function Register-Flow {
         Write-Warn "  neither an export nor a node source for $Name"
         return $null
     }
-    $script = Join-Path $script:InstallRoot 'lib\create-flow.js'
+    $script = Join-Path $script:InstallRoot 'lib/create-flow.js'
     $output = node $script --name $Name --source $Source 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Warn "  could not register $Name : $($output -join ' ')"
@@ -159,8 +159,8 @@ and the installer decides which of them a given install actually has.
 #>
 function Copy-PanelFile {
     param([string]$Relative)
-    $from = Join-Path $script:RepoRoot "admin-src\$Relative"
-    $to = Join-Path $env:ADMIN_DIR "src\$Relative"
+    $from = Join-Path $script:RepoRoot "admin-src/$Relative"
+    $to = Join-Path $env:ADMIN_DIR "src/$Relative"
     if (-not (Test-Path $from)) { Write-Warn "  panel source missing, skipped: $Relative"; return }
     $parent = Split-Path -Parent $to
     if ($parent -and -not (Test-Path $parent)) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
@@ -183,7 +183,7 @@ The app imports only this file, so a tab whose panel was never copied in is
 never imported, and the bundle stays as small as the install.
 #>
 function Update-TabRegistry {
-    $node = Join-Path $script:InstallRoot 'lib\write-registry.js'
+    $node = Join-Path $script:InstallRoot 'lib/write-registry.js'
     $out = node $node 2>&1
     if ($LASTEXITCODE -ne 0) { Write-Warn "  tab registry not regenerated: $($out -join ' ')" }
 }
@@ -203,9 +203,9 @@ function Install-EdgeFunctions {
     $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
     $mine = @($manifest | Where-Object { $_.module -eq $Module })
     if (-not $mine.Count) { return }
-    $deployer = Join-Path $script:InstallRoot 'lib\deploy-function.js'
+    $deployer = Join-Path $script:InstallRoot 'lib/deploy-function.js'
     foreach ($fn in $mine) {
-        $file = Join-Path $script:InstallRoot "functions\$($fn.file)"
+        $file = Join-Path $script:InstallRoot "functions/$($fn.file)"
         if (-not (Test-Path $file)) { Write-Warn "  edge function file missing: $($fn.file)"; continue }
         Write-Step "  edge function: $($fn.slug)"
         $out = node $deployer --slug $fn.slug --file $file --name $fn.name --description $fn.description 2>&1

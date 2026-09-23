@@ -28,6 +28,10 @@ const llmInstalled = {
 // the INSTALLED model; llmSettings() below is what a call actually uses.
 const ollamaUrl = llmInstalled.url;
 const ollamaModel = llmInstalled.model;
+// llmSettings() reads the app's model choice from the database with these.
+// Without them it threw, and every call quietly used the installed model.
+const insforgeUrl = $insforgeUrl;
+const insforgeApiKey = $insforgeApiKey;
 
 // Read once per invocation. A flow that makes four model calls should not ask
 // four times, and the answer cannot change mid-run anyway.

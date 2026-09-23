@@ -39,7 +39,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSCommandPath
 $repo = Split-Path -Parent $root
 
-. (Join-Path $root 'lib\common.ps1')
+. (Join-Path $root 'lib/common.ps1')
 
 $map = Get-ModuleMap
 if (-not $map.PSObject.Properties.Name.Contains($Module)) {
@@ -102,9 +102,17 @@ foreach ($opt in @($spec.optional)) {
 }
 
 # ---------------------------------------------------------------- 2. node packs
+# COMFY_ROOT is ComfyUI's folder as ComfyUI sees it. When ComfyUI runs on another
+# machine (reached over Tailscale, say) that path is not on this one, so the
+# disk checks below cannot be made here: fetch-assets.ps1 on that machine does them.
+$comfyLocal = [bool](Test-Path -LiteralPath $env:COMFY_ROOT -ErrorAction SilentlyContinue)
+if (-not $comfyLocal -and (@($spec.packs).Count -or @($spec.modelFiles).Count)) {
+    Write-Host "  ComfyUI's folder ($env:COMFY_ROOT) is not on this machine; node packs and models" -ForegroundColor DarkGray
+    Write-Host "  are not checked here. On the ComfyUI machine:  .\fetch-assets.ps1 -Module $Module" -ForegroundColor DarkGray
+}
 $missingPacks = @()
-foreach ($pack in @($spec.packs)) {
-    if ($pack -and -not (Test-Path (Join-Path $env:COMFY_ROOT "custom_nodes\$pack"))) { $missingPacks += $pack }
+foreach ($pack in @($spec.packs | Where-Object { $comfyLocal })) {
+    if ($pack -and -not (Test-Path (Join-Path $env:COMFY_ROOT "custom_nodes/$pack"))) { $missingPacks += $pack }
 }
 if ($missingPacks.Count) {
     Write-Warn "ComfyUI node packs not found: $($missingPacks -join ', ')"
@@ -117,7 +125,7 @@ if ($missingPacks.Count) {
 # it - and a missing model is the single most common reason a fresh install
 # cannot render anything.
 $modelFiles = @($spec.modelFiles)
-if ($modelFiles.Count) {
+if ($modelFiles.Count -and $comfyLocal) {
     $modelRoot = Join-Path $env:COMFY_ROOT 'models'
     $present = @{}
     if (Test-Path $modelRoot) {
@@ -136,14 +144,14 @@ if ($modelFiles.Count) {
     } else {
         Write-Host "  All $($modelFiles.Count) model file(s) this module loads are present." -ForegroundColor DarkGray
     }
-} elseif (@($spec.models).Count) {
+} elseif (@($spec.models).Count -and $comfyLocal) {
     Write-Host "  Models this module loads:" -ForegroundColor DarkGray
     foreach ($m in $spec.models) { Write-Host "    - $m" -ForegroundColor DarkGray }
     Write-Host "  See docs/MODELS.md for the files and where they go." -ForegroundColor DarkGray
 }
 
 # ---------------------------------------------------------------- 3. schema
-$moduleDir = Join-Path $root "modules\$Module"
+$moduleDir = Join-Path $root "modules/$Module"
 foreach ($sql in @('prelude.sql', 'registry.sql', 'settings.sql', 'schema.sql')) {
     $path = Join-Path $moduleDir $sql
     if (Test-Path $path) {
@@ -161,7 +169,7 @@ foreach ($sql in @('prelude.sql', 'registry.sql', 'settings.sql', 'schema.sql'))
 foreach ($other in (Get-ModuleNames $map)) {
     if ($other -eq $Module -or $installed -notcontains $other) { continue }
     if (@($map.$other.linksTo) -notcontains $Module) { continue }
-    $otherSchema = Join-Path $root "modules\$other\schema.sql"
+    $otherSchema = Join-Path $root "modules/$other/schema.sql"
     if (-not (Test-Path $otherSchema)) { continue }
     if ($PSCmdlet.ShouldProcess($other, 'add the foreign keys it was waiting for')) {
         Write-Step "  linking $other to $Module"
@@ -188,7 +196,7 @@ foreach ($flow in @($spec.flows)) {
     # and every node of the seven flows that have more than one. The node file
     # named here is the readable copy of the same code and is only used when no
     # export exists.
-    $source = Join-Path $repo "flowise\nodes\$($flow.source)"
+    $source = Join-Path $repo "flowise/nodes/$($flow.source)"
     if ($PSCmdlet.ShouldProcess($flow.name, 'register Flowise flow')) {
         Write-Step "  flow: $($flow.name)"
         $id = Register-Flow -Name $flow.name -Source $source
@@ -238,7 +246,13 @@ if ($tabs.Count) { Write-Host "Restart the admin dev server to see: $($tabs -joi
 # skips anything already present, so re-installing costs nothing here.
 $fetchFor = @(@($toAdd) + $Module | Where-Object { $_ } | Select-Object -Unique |
     Where-Object { @($map.$_.modelFiles).Count -or @($map.$_.packs).Count })
-if ($fetchFor.Count -and -not $NoAssets -and -not $WhatIfPreference) {
+$onWindows = $IsWindows -or $PSVersionTable.PSEdition -eq 'Desktop'
+if ($fetchFor.Count -and -not $NoAssets -and -not $WhatIfPreference -and -not $onWindows) {
+    # Off Windows the render host is another machine: models and node packs
+    # belong on it, not here. Run the fetch there.
+    Write-Warn "Models and node packs were not fetched: they belong on the ComfyUI machine."
+    Write-Host "  On that machine:  .\fetch-assets.ps1 -Module $($fetchFor -join ', ')" -ForegroundColor DarkGray
+} elseif ($fetchFor.Count -and -not $NoAssets -and -not $WhatIfPreference) {
     $fetch = Join-Path $root 'fetch-assets.ps1'
     $logDir = Join-Path $root 'logs'
     New-Item -ItemType Directory -Force -Path $logDir | Out-Null

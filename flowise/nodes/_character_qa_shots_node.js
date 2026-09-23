@@ -25,7 +25,7 @@ const insforgeApiKey = $insforgeApiKey;
 const comfyUrl = $comfyUrl;
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 
-const COMFY_ROOT = 'C:/ComfyUI2';
+const COMFY_ROOT = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '');
 const COMFY_INPUT = COMFY_ROOT + '/input';
 
 const SHEET = {

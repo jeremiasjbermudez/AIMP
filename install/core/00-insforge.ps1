@@ -42,7 +42,7 @@ catch { throw 'Docker is not running. Start Docker Desktop and try again.' }
 if ($LASTEXITCODE -ne 0) { throw 'Docker is installed but its daemon is not responding.' }
 
 # ---------------------------------------------------------------- the repo
-$composeDir = Join-Path $Path 'deploy\docker-compose'
+$composeDir = Join-Path $Path 'deploy/docker-compose'
 if (-not (Test-Path (Join-Path $composeDir 'docker-compose.yml'))) {
     Write-Step "Cloning InsForge into $Path"
     if ($PSCmdlet.ShouldProcess($Path, 'git clone insforge')) {

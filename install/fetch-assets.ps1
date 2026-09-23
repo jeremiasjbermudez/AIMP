@@ -33,7 +33,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSCommandPath
-. (Join-Path $root 'lib\common.ps1')
+. (Join-Path $root 'lib/common.ps1')
 
 if (-not $Module -and -not $All) { throw 'Name a module with -Module, or pass -All.' }
 
@@ -67,9 +67,9 @@ $modelRoot = Join-Path $comfy 'models'
 # disk. That environment is ComfyUI's own, never whatever `python` is on PATH.
 function Get-ComfyPython {
     foreach ($candidate in @(
-            (Join-Path $comfy '.venv\Scripts\python.exe'),
-            (Join-Path $comfy 'venv\Scripts\python.exe'),
-            (Join-Path (Split-Path -Parent $comfy.TrimEnd('/\')) 'python_embeded\python.exe'))) {
+            (Join-Path $comfy '.venv/Scripts/python.exe'),
+            (Join-Path $comfy 'venv/Scripts/python.exe'),
+            (Join-Path (Split-Path -Parent $comfy.TrimEnd('/\')) 'python_embeded/python.exe'))) {
         if (Test-Path $candidate) { return $candidate }
     }
     $null
@@ -153,7 +153,7 @@ if (-not $PacksOnly) {
         $size = ($fetchable | ForEach-Object { [double]($_.Info.sizeGb) } | Measure-Object -Sum).Sum
         if ($size -gt 0) { Write-Host ("  about {0:N0} GB to download" -f $size) -ForegroundColor DarkGray }
         $python = 'python'
-        $helper = Join-Path $root 'lib\fetch-model.py'
+        $helper = Join-Path $root 'lib/fetch-model.py'
         foreach ($item in $fetchable) {
             $folder = Join-Path $modelRoot $item.Info.folder
             if ($PSCmdlet.ShouldProcess($item.File, "download from $($item.Info.source.repo)")) {

@@ -53,10 +53,10 @@ async function upsertSplat(patch) {
 // plan and cameras were made in, and the point of a rebuild is to improve
 // THAT world, not to start another beside it.
 const workspaceName = (build.workspace && String(build.workspace)) || ('Act' + act + 'Scene' + sceneNumber + locationSlug);
-const rootDir = 'C:/ComfyUI2/output/' + movieSlug + '/hyworld2_worldgen';
+const rootDir = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/output/' + movieSlug + '/hyworld2_worldgen';
 const finalPlyName = workspaceName + '_point_cloud_5000.ply';
 const plyDir = movieSlug + '/hyworld2_worldgen/' + workspaceName + '/gs_results/ply';
-const finalPlyPath = 'C:/ComfyUI2/output/' + plyDir + '/' + finalPlyName;
+const finalPlyPath = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/output/' + plyDir + '/' + finalPlyName;
 
 const existingRes = await axios.get(`${insforgeUrl}/api/database/records/scene_splats`, {
   params: { movie_id: `eq.${movieId}`, act_number: `eq.${act}`, scene_number: `eq.${sceneNumber}`, select: 'id,ply_path,workspace_name' },
@@ -108,11 +108,11 @@ if (existing && (force || resume) && sameWorkspace) {
 const panoRel = build.panorama || !build.workspace
   ? panoImagePath
   : 'output/' + movieSlug + '/hyworld2_worldgen/' + workspaceName + '/panorama.png';
-const srcPanoAbs = 'C:/ComfyUI2/' + panoRel;
+const srcPanoAbs = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/' + panoRel;
 const flatPanoName = movieSlug + '_scene' + sceneNumber + '_panorama.png';
 const copyGraph = {
   '1': { class_type: 'JWImageLoadRGB', inputs: { path: srcPanoAbs } },
-  '2': { class_type: 'JWImageSaveToPath', inputs: { image: ['1', 0], path: 'C:/ComfyUI2/input/' + flatPanoName, overwrite: 'true' } }
+  '2': { class_type: 'JWImageSaveToPath', inputs: { image: ['1', 0], path: String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/input/' + flatPanoName, overwrite: 'true' } }
 };
 const cr = await axios.post(comfyUrl + '/prompt', { prompt: copyGraph });
 const cpid = cr.data && cr.data.prompt_id;
