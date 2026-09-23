@@ -56,8 +56,11 @@ async function rows(table, params) {
   return r.data || [];
 }
 async function insert(table, row) {
-  const r = await axios.post(`${insforgeUrl}/api/database/records/${table}`, [row], { headers: { ...headers, Prefer: 'return=representation' } });
-  return (r.data || [])[0];
+  const r = await axios.post(`${insforgeUrl}/api/database/records/${table}`, [row], { headers: { ...headers, Prefer: 'return=representation' }, validateStatus: () => true });
+  const made = Array.isArray(r.data) ? r.data[0] : null;
+  // A refused insert must say why: an empty answer read as a row fails later, far from the cause.
+  if (r.status >= 300 || !made) throw new Error(`${table} refused the row (HTTP ${r.status}): ${(r.data && (r.data.message || r.data.details)) || JSON.stringify(r.data).slice(0, 300)}`);
+  return made;
 }
 async function update(table, id, patch) {
   await axios.patch(`${insforgeUrl}/api/database/records/${table}`, patch, { params: { id: `eq.${id}` }, headers });
@@ -431,7 +434,9 @@ async function makeClip() {
   // 4. The clip, recorded against the Director's shot and beat so it lands where they look for it.
   const size = m.size || [1344, 576];
   const clip = await insert('minimax_clips', {
-    movie_id: movieId, beat_id: (dshot && dshot.beat_id) || shotRow.beat_id || null, source_shot_id: dshot ? dshot.id : null,
+    // Not source_shot_id: that points at the screenplay breakdown's shots table.
+    // A Director shot finds its clip through director_shots.clip_id, set below.
+    movie_id: movieId, beat_id: (dshot && dshot.beat_id) || shotRow.beat_id || null,
     mode: 'control', prompt, width: size[0], height: size[1], length: m.frames, status: 'queued',
     reference_image_paths: [identity, ...plates].filter(Boolean),
     control_video_path: 'input/sets/' + m.video, control_type: 'depth',
@@ -447,7 +452,10 @@ async function makeClip() {
   const summary = { clipId: clip.id, controlVideo: 'input/sets/' + m.video, references: clip.reference_image_paths,
     identity: !!identity, character: character ? character.name : null, directorShot: dshot ? dshot.id : null,
     beat: beat ? beat.summary : null, prompt };
-  if (!parsed.render) return Object.assign({ action: 'clip_ready' }, summary);
+  if (!parsed.render) {
+    if (dshot) await axios.patch(`${insforgeUrl}/api/database/records/director_shots`, { clip_id: clip.id }, { params: { id: `eq.${dshot.id}` }, headers });
+    return Object.assign({ action: 'clip_ready' }, summary);
+  }
 
   clipStep = 'rendering';
   // 5. Render through Control to Video, the same flow the Video tab uses.
@@ -460,7 +468,7 @@ async function makeClip() {
   } catch (e) {
     return Object.assign({ action: 'error', reason: 'Control to Video could not be reached: ' + e.message }, summary);
   }
-  if (out.action === 'complete' && dshot) await axios.patch(`${insforgeUrl}/api/database/records/director_shots`, { clip_id: clip.id }, { params: { id: `eq.${dshot.id}` }, headers });
+  if (dshot) await axios.patch(`${insforgeUrl}/api/database/records/director_shots`, { clip_id: clip.id }, { params: { id: `eq.${dshot.id}` }, headers });
   // Control to Video stops watching after about 17 minutes and says 'pending';
   // the render carries on and the clip row is completed when it lands.
   const state = out.action === 'complete' ? 'rendered' : out.action === 'pending' ? 'rendering' : 'error';
