@@ -11,6 +11,14 @@ eva-decord
 # and reports a misleading "cannot import name utils3d_compat from src".
 scikit-image
 easydict
+# The world-expansion stage uses ftfy (imported only if present, then used
+# regardless) and tensorly (lib_bilagrid). pymeshlab is optional but cheap.
+# A scan of every import in the pack against this environment finds the rest
+# missing are optional: flash_attn, sageattention, torch_xla, llama_cpp, the
+# Gradio demo's pieces, and trainer extras behind try/flags.
+ftfy
+tensorly
+pymeshlab
 # ComfyUI_HYWorld2's requirements say plain `utils3d`, which pip resolves to an
 # old, unrelated PyPI package (0.0.2). The real one is EasternJournalist/utils3d,
 # at the commit MoGe pins: MoGe calls utils3d.torch.depth_to_points, which newer
