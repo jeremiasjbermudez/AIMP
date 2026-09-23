@@ -79,8 +79,9 @@ picture. Cameras, control passes and visibility then belong to the camera module
    Still to port: Director's Stage (`director_web`) into the Camera tab, writing
    `stageCamera` into the same `stage` action.
 7. **Takes: the performance. Done: takes, and drafting them with the model.** See
-   [Takes](#takes). Next: recording camera passes with VirtuCamera on the Mac; a rigged
-   mannequin with walk and turn clips; captured motion.
+   [Takes](#takes). **Operated camera passes with VirtuCamera: working, by script.**
+   See [Operating a camera](#operating-a-camera). Next: a "Send pass to AIMP" button
+   in Blender; a rigged mannequin with walk and turn clips; captured motion.
 8. **Next.** Proposed coverage: from a scene's shot list (the Director tab), place
    cameras on the set's marks (wide, singles, overs), reject angles the visibility
    pass says see only bare wall, and lay them out on a scout sheet for approval.
@@ -281,3 +282,52 @@ On Testies, Director shots 2 and 3 ("TOMAS frowns. He looks at the wall calendar
    are now marked "out of frame in this shot: he looks off frame toward it; do not
    draw it". **One Tomas**, holding the staged framing throughout. The calendar is
    still drawn on the wall, but nobody acts it out.
+
+## Operating a camera
+
+A take's `.blend` is operated with [VirtuCamera](https://virtucamera.com): an iPhone or
+iPad (ARKit, iOS 16+, the paid app) drives a Blender camera live and records it.
+Checked in its plugin code: recording plays Blender's timeline (`animation_play`,
+synced), so the take's performer walks on the phone's screen while you operate, and the
+camera is keyframed (position, rotation, focal length).
+
+Set up on the Mac (23 September):
+- Blender 4.5.9 at `movie-mvp/experiment/.tools/Blender.app`, with the VirtuCamera
+  add-on p2.0 (`VirtuCameraBlender_4.5-5.0_py311_mac_v3.5.0_p2.0.zip` from
+  [the add-on's releases](https://github.com/theweirdbyte/VirtuCamera-Blender/releases/))
+  installed and enabled.
+- The take from Blender Sets' **Blender file** button, saved as
+  `~/Documents/AIMP Takes/<take>.blend`.
+
+To record: in Blender, **N** > VirtuCamera > **Start Serving**, scan the QR code with
+the app, pick **TAKE_CAM**, tap **link** (the camera follows the phone; **unlink** to
+reposition), frame 1, **record** (it runs to the take's last frame; tap again to stop
+early). Save (**Cmd+S**). Movement is 1:1 in metres: the set is the size of a room.
+
+To stage it (for now, by script; a button in Blender is next):
+```
+blender -b "<take>.blend" --python blender/export_camera_pass.py -- pass.json
+AIMP_URL=http://<render host>:5185 AIMP_FLOW_KEY=... AIMP_SETS_FLOW=<48-Blender-Sets id> \
+  python3 blender/send_camera_pass.py pass.json <SHOT_KEY> --take <take id> \
+  --set <set location id> --movie <project id> --director-shot <id> --clip
+```
+
+**The first operated pass** (take TK_A1S1_01, shot LK_TK01_OPERATED_01): 0.59 m of
+handheld travel, from over Tomas's shoulder at the stove to a close-up 0.64 m from his
+eyes as he walks up. Staging followed it frame for frame.
+
+The clip's first render held the move for half its length, then pulled back to a wide
+shot of a bare, daylit room with a window the camera cannot see. The inputs were at
+fault, not the control strength:
+- the **look plates** (Z-Image over the Blender coverage plates) carry the block-out's
+  bright lighting, so they told H3 "a bare white room by day";
+- the prompt no longer said **it is night** (it went with the room description);
+- it told an operated camera "no handheld sway".
+
+So a set made from a panorama now gives its clips the **panorama's own views** facing
+the camera's way (the scene's real look: night, the stove alight, the dark window) in
+place of the look plates, and the prompt states the time of day and the room's lights.
+The re-render is night in the panorama's room, Tomas as his reference, and **holds the
+move to the final close-up**. Still open: the window and the table appear although
+this camera faces away from them; the panorama views bring the room's features in too
+readily.
