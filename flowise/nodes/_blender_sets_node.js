@@ -40,7 +40,8 @@
 //       (one clip long at most) on this set's marks; returns it for the Takes editor,
 //       or builds it straight away with build:true
 //   {"action":"make_clip","movieId":"...","setShotId":"...","directorShotId":"...",
-//       "characterId":"...", "controlStrength":1.0, "controlEnd":1.0, "lookPlates":2, "render":true}
+//       "characterId":"...", "controlStrength":1.0, "controlEnd":1.0, "lookPlates":2,
+//       "lookFrom":"scene"|"plates", "render":true}
 //       a staged shot as a MiniMax H3 control clip for a Director shot (and so a
 //       beat): the depth as the control video, photographic look plates of the
 //       set, the character's reference, and a prompt from all of it; with
@@ -509,7 +510,7 @@ async function makeClip() {
   if (dId) {
     dshot = (await rows('director_shots', { id: `eq.${dId}`, movie_id: `eq.${movieId}`, select: '*' }).catch(() => []))[0] || null;
     if (!dshot) return { error: 'That Director shot is not in this project (is the director module installed?).' };
-    if (dshot.beat_id) beat = (await rows('beats', { id: `eq.${dshot.beat_id}`, select: 'id,summary,raw_text' }).catch(() => []))[0] || null;
+    if (dshot.beat_id) beat = (await rows('beats', { id: `eq.${dshot.beat_id}`, select: 'id,summary,raw_text,time_of_day' }).catch(() => []))[0] || null;
   }
 
   clipStep = 'finding the character and their reference';
@@ -536,12 +537,23 @@ async function makeClip() {
   const m = ctl.result;
 
   clipStep = 'making the look plates';
-  // 2. Look plates for the coverage plates this camera faces: made once per set revision.
+  // 2. The room's look. A set made from a panorama has the scene's own look in that panorama's
+  // views, cut facing north, east, south and west: the ones this camera faces are the pictures.
+  // Otherwise, look plates: Z-Image over the Blender coverage plates. Those carry the block-out's
+  // bright lighting (a night scene came back as day), so the panorama is preferred.
+  const panoViews = ((loc.source || {}).views || []).filter(Boolean);
+  const lookFromScene = parsed.lookFrom !== 'plates' && panoViews.length === 4 && Array.isArray(m.forward) && plateCount > 0;
   const look = Object.assign({}, loc.look || {});
   const lookPrompt = setClipLookPrompt(facts.room_prompt || loc.name);
   const plates = [];
+  if (lookFromScene) {
+    const dirs = { N: [0, 1], E: [1, 0], S: [0, -1], W: [-1, 0] };
+    const score = (t) => Math.max(...m.forward.map((f) => f[0] * dirs[t][0] + f[1] * dirs[t][1]));
+    const order = Object.keys(dirs).sort((a, b) => score(b) - score(a)).slice(0, plateCount);
+    for (const t of order) plates.push('input/sets/' + panoViews.find((v) => v.endsWith(`view_${t}.png`)));
+  }
   try {
-    for (const cam of (m.plates || []).slice(0, plateCount)) {
+    for (const cam of (lookFromScene ? [] : (m.plates || []).slice(0, plateCount))) {
       if (!look[cam]) {
         look[cam] = await lookPlate(`sets/${shotRow.stage.blenderDir}/plates/${cam}.png`, lookPrompt,
           `${movie.slug}/_sets/look/${loc.location_key}_${loc.revision}_${cam}`);
@@ -567,7 +579,9 @@ async function makeClip() {
     pictures: plates.length, view: m.view, trajectory: m.trajectory,
     action: action || (beat ? beat.summary : ''), visibility: shotRow.visibility,
     timeline: takeRow ? setClipTimeline(takeRow.take) : null,
-    cameraMotion: m.camera_motion, recorded: !!((sh.camera || {}).path)
+    cameraMotion: m.camera_motion, recorded: !!((sh.camera || {}).path),
+    timeOfDay: beat ? beat.time_of_day : null, lookFromScene,
+    lights: ((facts.blockout || {}).lights || []).map((l) => l.name).filter(Boolean)
   });
 
   clipStep = 'recording the clip';

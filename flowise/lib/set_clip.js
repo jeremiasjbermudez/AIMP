@@ -103,6 +103,8 @@ function setClipOffFrame(sentences, vis) {
  *   p.action: what happens, from the Director's shot or the beat
  *   p.timeline: sentences from a take (setClipTimeline), when the shot is on one
  *   p.cameraMotion {travel_m, pan_deg}; p.recorded: the camera was operated
+ *   p.timeOfDay (NIGHT, DAY...), p.lights (the set's light names), p.lookFromScene: the
+ *   pictures are the scene's own panorama, so they also set the light and colour
  *   p.visibility: the shot's visibility result
  */
 function setClipPrompt(p) {
@@ -134,12 +136,20 @@ function setClipPrompt(p) {
   lines.push(p.person
     ? `The camera path and ${who}'s position, size and pose at every frame are given by the structural depth guide; render the real person from <Picture 1> in that place, at that scale.`
     : 'The camera path is given by the structural depth guide.');
+  // The time of day and what lights the room: without it H3 lit a night scene as day.
+  if (p.timeOfDay) {
+    const night = /night|evening|dusk/i.test(p.timeOfDay);
+    const lamps = (p.lights || []).map((l) => String(l).toLowerCase());
+    lines.push(night
+      ? `It is night${/evening|dusk/i.test(p.timeOfDay) ? ` (${p.timeOfDay.toLowerCase()})` : ''}.${lamps.length ? ` The room is lit only by the ${lamps.join(', the ')}.` : ''} Outside it is dark: no daylight anywhere.`
+      : `It is ${p.timeOfDay.toLowerCase()}.${lamps.length ? ` Light comes from the ${lamps.join(', the ')}.` : ''}`);
+  }
   const vis = setClipVisibility(p.visibility);
   if (vis) lines.push(vis);
   if (p.pictures > 0) {
     const first = p.person ? 2 : 1;
     const tags = Array.from({ length: p.pictures }, (_, i) => `<Picture ${first + i}>`).join(', ');
-    lines.push(`${tags} ${p.pictures === 1 ? 'is a photograph' : 'are photographs'} of this same ${String(p.locationName).toLowerCase()} taken from other positions. They define the room's real materials, furniture, props, windows and walls. Reproduce that exact room wherever the camera looks; do not invent furniture or fittings that are not in them. They are not camera views for this shot.`);
+    lines.push(`${tags} ${p.pictures === 1 ? 'is a photograph' : 'are photographs'} of this same ${String(p.locationName).toLowerCase()} taken from other positions. They define the room's real materials, furniture, props, windows, walls${p.lookFromScene ? ', light and colour' : ''}. Reproduce that exact room wherever the camera looks; do not invent furniture or fittings that are not in them. They are not camera views for this shot.`);
   }
   // No room description here: it names everything in the room (the window, the
   // stove), and H3 then puts them in shots whose camera never sees them. The
@@ -168,7 +178,8 @@ function setClipPrompt(p) {
   } else {
     lines.push(`From ${hold.toFixed(3)}s to ${end.toFixed(3)}s the camera travels as the depth guide shows, keeping the lens aimed at ${who}; real continuous parallax, the room passing behind them. Hold before and after. Smoothstep easing.`);
   }
-  lines.push(`${p.person ? '<Picture 1> is the identity and wardrobe reference, not the framing. ' : ''}Keep the focal length fixed and the camera roll zero. No cuts, no digital zoom, no handheld sway, no lighting changes, no titles or captions. ${p.frames} frames at ${p.fps} fps.`);
+  // An operated camera has its own small movements; asking for no sway would contradict them.
+  lines.push(`${p.person ? '<Picture 1> is the identity and wardrobe reference, not the framing. ' : ''}Keep the focal length fixed and the camera roll zero. No cuts, no digital zoom, ${p.recorded ? '' : 'no handheld sway, '}no lighting changes, no titles or captions. ${p.frames} frames at ${p.fps} fps.`);
   return lines.join('\n');
 }
 

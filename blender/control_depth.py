@@ -166,6 +166,9 @@ manifest = {
     'convention': 'inverse depth, one clip-wide range (0.5-99.5 percentile of all frames), near=white, 8-bit RGB, lossless',
     'range_inverse_m': [lo, hi], 'near_m': near, 'far_m': far,
     'plates': plates, 'plate_scores': {c: round(score[c], 3) for c in plates},
+    # Which way the camera looks (x, y) at the start, middle and end: to pick the
+    # panorama views that show what this camera faces.
+    'forward': [[round(float(v[0]), 4), round(float(v[1]), 4)] for v in views],
     'view': view, 'trajectory': cm.get('trajectory'), 'lens_mm': cm.get('lens_mm'),
 }
 (out / 'control_manifest.json').write_text(json.dumps(manifest, indent=1), encoding='utf-8')
