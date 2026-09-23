@@ -71,7 +71,8 @@ function setClipTimeline(take) {
     }
   }
   for (const c of [...((take && take.cues) || [])].sort((a, b) => a.t - b.t)) {
-    if (c.text) out.push(`At ${Number(c.t).toFixed(1)}s: ${c.text}.`.replace(/\.\.$/, '.'));
+    // No full stop after a cue that already ends a sentence (a quoted line).
+    if (c.text) out.push(`At ${Number(c.t).toFixed(1)}s: ${c.text}${/[.!?]"?$/.test(c.text) ? '' : '.'}`);
   }
   return out;
 }
@@ -94,6 +95,9 @@ function setClipPrompt(p) {
   lines.push(`One continuous photorealistic live-action shot in the ${p.locationName}, ${p.lensMm}mm lens.`);
   if (p.person) {
     lines.push(`${p.person.name} from <Picture 1>${p.person.look ? ` (${p.person.look})` : ''} is the only person in the shot.`);
+    // A take's timeline lists things he does; without this, H3 has been seen to add a second
+    // him in an empty background to act them out (Testies LK_S1_0203_MED).
+    lines.push(`There is no one else anywhere in the room: no second figure, no double or reflection of ${p.person.name}. Everything in the timeline is done by the one ${p.person.name} the depth guide places.`);
     if (p.view) {
       const a0 = p.view.start_deg;
       const a1 = p.view.end_deg;
@@ -105,8 +109,10 @@ function setClipPrompt(p) {
       if (!(p.timeline && p.timeline.length) && (Math.abs(a0) > 35 || Math.abs(a1) > 35)) lines.push(`${who} keeps facing the same direction in the room throughout and does not turn toward the camera.`);
     }
   }
+  // On a take the timeline is the action, lines included, at the take's times; the Director
+  // shot's own text would give the same line a second time, counted from its own start.
   if (p.timeline && p.timeline.length) lines.push(p.timeline.join(' '));
-  if (p.action) lines.push(String(p.action).trim().replace(/\s+/g, ' '));
+  else if (p.action) lines.push(String(p.action).trim().replace(/\s+/g, ' '));
   lines.push('');
   lines.push(p.person
     ? `The camera path and ${who}'s position, size and pose at every frame are given by the structural depth guide; render the real person from <Picture 1> in that place, at that scale.`
