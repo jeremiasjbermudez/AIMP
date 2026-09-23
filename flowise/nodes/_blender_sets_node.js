@@ -355,7 +355,8 @@ async function lookPlate(initRel, prompt, prefix) {
   return 'output/' + (img[0].subfolder ? img[0].subfolder + '/' : '') + img[0].filename;
 }
 
-if (action === 'make_clip') {
+// Any failure comes back as a reason, not a flow crash (which reaches the app as a bare HTTP 500).
+async function makeClip() {
   const shotRow = (await rows('set_shots', { id: `eq.${parsed.setShotId}`, movie_id: `eq.${movieId}`, select: '*' }))[0];
   if (!shotRow) return { error: 'That shot is not in this project.' };
   if (shotRow.status !== 'staged' || !shotRow.stage) return { error: `${shotRow.shot_key} has not been staged yet.` };
@@ -455,6 +456,15 @@ if (action === 'make_clip') {
   // the render carries on and the clip row is completed when it lands.
   const state = out.action === 'complete' ? 'rendered' : out.action === 'pending' ? 'rendering' : 'error';
   return Object.assign({ action: state, reason: out.reason || out.error, videoPath: out.videoPath, promptId: out.promptId }, summary);
+}
+
+if (action === 'make_clip') {
+  try {
+    return await makeClip();
+  } catch (e) {
+    const at = String((e && e.stack) || '').split('\n').slice(1, 3).map((l) => l.trim()).join(' / ');
+    return { action: 'error', reason: (e && e.message ? e.message : String(e)) + (at ? ` (${at})` : '') };
+  }
 }
 
 return { error: `Unknown action '${action}'.` };
