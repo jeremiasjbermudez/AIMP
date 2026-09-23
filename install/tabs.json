@@ -8,7 +8,8 @@
     "component": "ScreenplayPanel",
     "from": "./screenplay/ScreenplayPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "story"
   },
   {
     "id": "documents",
@@ -19,7 +20,8 @@
     "component": "DocumentsPanel",
     "from": "./DocumentsPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "story"
   },
   {
     "id": "beats",
@@ -30,7 +32,8 @@
     "component": "BeatsPanel",
     "from": "./BeatsPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "story"
   },
   {
     "id": "characters",
@@ -41,7 +44,8 @@
     "component": "CharactersPanel",
     "from": "./CharactersPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "cast"
   },
   {
     "id": "props",
@@ -52,7 +56,8 @@
     "component": "PropsPanel",
     "from": "./PropsPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "cast"
   },
   {
     "id": "director",
@@ -63,7 +68,8 @@
     "component": "DirectorPanel",
     "from": "./DirectorPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "shots"
   },
   {
     "id": "camera",
@@ -74,7 +80,8 @@
     "component": "CameraPanel",
     "from": "./CameraPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "sets"
   },
   {
     "id": "world",
@@ -85,7 +92,8 @@
     "component": "WorldPanel",
     "from": "./WorldPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "sets"
   },
   {
     "id": "hyworld",
@@ -96,7 +104,8 @@
     "component": "HyWorldPanel",
     "from": "./HyWorldPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "qwen",
@@ -107,7 +116,8 @@
     "component": "QwenCleanupPanel",
     "from": "./QwenCleanupPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "imageedit",
@@ -118,7 +128,8 @@
     "component": "ImageEditPanel",
     "from": "./ImageEditPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "palette",
@@ -129,7 +140,8 @@
     "component": "ColorPalettePanel",
     "from": "./ColorPalettePanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "lighting",
@@ -140,7 +152,8 @@
     "component": "LightingPanel",
     "from": "./LightingPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "i2v",
@@ -153,7 +166,8 @@
     "props": {
       "kind": "i2v"
     },
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "t2v",
@@ -166,7 +180,8 @@
     "props": {
       "kind": "t2v"
     },
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "shots",
@@ -179,7 +194,8 @@
     "props": {
       "kind": "ref"
     },
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "v2v",
@@ -192,7 +208,8 @@
     "props": {
       "kind": "v2v"
     },
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "control",
@@ -205,7 +222,8 @@
     "props": {
       "kind": "control"
     },
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "postvoice",
@@ -216,7 +234,8 @@
     "component": "PostVoicePanel",
     "from": "./PostVoicePanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "finish"
   },
   {
     "id": "score",
@@ -227,7 +246,8 @@
     "component": "ScorePanel",
     "from": "./ScorePanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "finish"
   },
   {
     "id": "faceqa",
@@ -238,7 +258,8 @@
     "component": "FaceQaPanel",
     "from": "./FaceQaPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "shots"
   },
   {
     "id": "resolve",
@@ -249,7 +270,8 @@
     "component": "ResolvePanel",
     "from": "./ResolvePanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "finish"
   },
   {
     "id": "contextloop",
@@ -260,7 +282,8 @@
     "component": "ContextLoopPanel",
     "from": "./ContextLoopPanel",
     "props": {},
-    "takesMovie": false
+    "takesMovie": false,
+    "group": "workshop"
   },
   {
     "id": "tools",
@@ -271,6 +294,7 @@
     "component": "ToolsPanel",
     "from": "./ToolsPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   }
 ]

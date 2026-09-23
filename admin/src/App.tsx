@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { insforge, type Movie } from './insforge'
-import { TAB_ENTRIES } from './modules.generated'
+import { TAB_ENTRIES, type TabEntry } from './modules.generated'
 import { AtSign, Code2, ExternalLink, MessageCircle, PanelLeftClose, PanelLeftOpen, PlayCircle, Settings } from 'lucide-react'
 import { signIn, startSessionKeeper } from './session'
 import { ComfyJobsPanel } from './ComfyJobsPanel'
@@ -36,7 +36,20 @@ const TABS = TAB_ENTRIES
 // install time, not at compile time.
 type Tab = string
 
-const DEFAULT_TAB: Tab = 'documents'
+// The menu follows the order a film is made in: five steps, then the workshop
+// of free-form tools that no step depends on. A group with no installed tab is
+// left out.
+const GROUPS: { id: TabEntry['group']; label: string }[] = [
+  { id: 'story', label: 'Story' },
+  { id: 'cast', label: 'Cast' },
+  { id: 'sets', label: 'Sets' },
+  { id: 'shots', label: 'Shots' },
+  { id: 'finish', label: 'Finish' },
+  { id: 'workshop', label: 'Workshop' }
+]
+
+// A new project starts at the beginning: the first Story tab, not Documents.
+const DEFAULT_TAB: Tab = (TABS.find((t) => t.group === 'story') ?? TABS[0])?.id ?? ''
 
 // The open tab lives in the URL hash rather than component state alone, so a
 // refresh comes back to the page you were on. Treating the hash as the single
@@ -77,6 +90,27 @@ function App() {
       return false
     }
   })
+
+  // The workshop starts folded away: nobody has to go through it to make a
+  // film. It opens by itself when the open tab is one of its tools.
+  const [workshopOpen, setWorkshopOpen] = useState(() => {
+    try {
+      return localStorage.getItem('workshop-open') === '1'
+    } catch {
+      return false
+    }
+  })
+  function toggleWorkshop() {
+    setWorkshopOpen((v) => {
+      const next = !v
+      try {
+        localStorage.setItem('workshop-open', next ? '1' : '0')
+      } catch {
+        /* Not worth failing the click over. */
+      }
+      return next
+    })
+  }
 
   function toggleRail() {
     setRailed((v) => {
@@ -286,19 +320,38 @@ function App() {
         </div>
         {movie && (
           <nav className="side-nav">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                className={tab === t.id ? 'active' : ''}
-                onClick={() => {
-                  window.location.hash = t.id
-                }}
-                title={t.hint}
-              >
-                <t.Icon size={16} strokeWidth={1.9} />
-                <span>{t.label}</span>
-              </button>
-            ))}
+            {GROUPS.map((g) => {
+              const inGroup = TABS.filter((t) => t.group === g.id)
+              if (!inGroup.length) return null
+              const workshop = g.id === 'workshop'
+              const open = !workshop || workshopOpen || inGroup.some((t) => t.id === tab)
+              return (
+                <div key={g.id} className={'nav-group' + (workshop ? ' nav-group-workshop' : '')}>
+                  {workshop ? (
+                    <button type="button" className="nav-group-heading nav-group-toggle" onClick={toggleWorkshop} aria-expanded={open}>
+                      <span>{g.label}</span>
+                      <span className="nav-group-count">{open ? '−' : inGroup.length}</span>
+                    </button>
+                  ) : (
+                    <div className="nav-group-heading">{g.label}</div>
+                  )}
+                  {open &&
+                    inGroup.map((t) => (
+                      <button
+                        key={t.id}
+                        className={tab === t.id ? 'active' : ''}
+                        onClick={() => {
+                          window.location.hash = t.id
+                        }}
+                        title={t.hint}
+                      >
+                        <t.Icon size={16} strokeWidth={1.9} />
+                        <span>{t.label}</span>
+                      </button>
+                    ))}
+                </div>
+              )
+            })}
           </nav>
         )}
 
@@ -333,13 +386,13 @@ function App() {
               value={movieId}
               onValueChange={handleMovieChange}
               items={movies.map((m) => ({ value: m.id, label: m.title }))}
-              placeholder="Choose a movie"
+              placeholder="Choose a project"
             />
           )}
           {!showNewMovie ? (
             <>
               <button type="button" className="primary" onClick={() => setShowNewMovie(true)}>
-                + New Movie
+                + New project
               </button>
               {movie && (
                 <button
@@ -348,7 +401,7 @@ function App() {
                   disabled={deleting !== 'idle'}
                   onClick={handleDeleteSurvey}
                 >
-                  {deleting === 'surveying' ? 'Checking…' : 'Delete movie'}
+                  {deleting === 'surveying' ? 'Checking…' : 'Delete project'}
                 </button>
               )}
               {movie && copying === 'idle' && (
@@ -360,7 +413,7 @@ function App() {
                   }}
                   title="Makes the same film again in another medium: the script, scenes, cast, props, wardrobe, staging and the whole shot list come across. No pictures do - those are what you regenerate."
                 >
-                  Copy movie
+                  Copy project
                 </button>
               )}
               {movie && copying !== 'idle' && (
@@ -398,7 +451,7 @@ function App() {
               <input
                 type="text"
                 autoFocus
-                placeholder="Movie title"
+                placeholder="Project title"
                 value={newMovieTitle}
                 onChange={(e) => setNewMovieTitle(e.target.value)}
               />
@@ -494,7 +547,7 @@ function App() {
       {error && <p className="error">{error}</p>}
 
       {!loading && movies.length === 0 && (
-        <p className="empty">No movies yet. Create one via the InsForge CLI or backend.</p>
+        <p className="empty">No projects yet. Start one with <strong>+ New project</strong> at the top.</p>
       )}
 
       {movie && (
