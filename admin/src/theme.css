@@ -287,6 +287,46 @@
     color: var(--color-accent-fg);
   }
 
+  /* The menu in the order a film is made: a heading per step, then the
+     workshop, folded away by default. */
+  .nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .nav-group + .nav-group {
+    margin-top: 0.7rem;
+  }
+  .nav-group-heading {
+    padding: 0 0.7rem 0.2rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-faint);
+  }
+  .side-nav .nav-group-toggle {
+    justify-content: space-between;
+    padding: 0.25rem 0.7rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-faint);
+  }
+  .side-nav .nav-group-toggle:hover {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+  }
+  .nav-group-count {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+  .nav-group-workshop {
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--color-line);
+  }
+
   /* The reference leans on two motifs: a small lavender pill above a heading,
      and a rounded violet tile holding a glyph. Both are recreated from the
      section headings the panels already emit, so no panel markup changes. */
@@ -1996,6 +2036,17 @@
 .app.railed .site-footer a,
 .app.railed .site-footer-copy {
   display: none;
+}
+/* Icons only: a step's heading becomes a thin rule between its icons. */
+.app.railed .nav-group-heading {
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--color-line);
+}
+.app.railed .side-nav .nav-group-toggle {
+  height: 1rem;
+  font-size: 0;
 }
 .app.railed .side-nav button {
   justify-content: center;
