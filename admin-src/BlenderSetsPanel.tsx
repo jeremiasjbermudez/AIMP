@@ -267,7 +267,8 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
     const locs = (l.data ?? []) as SetLocation[]
     setLocations(locs)
     setShots((s.data ?? []) as SetShot[])
-    setLocationId((cur) => (cur && locs.some((x) => x.id === cur) ? cur : locs[0]?.id ?? ''))
+    // Opens on the newest set - the latest revision of whatever was worked on last - not the oldest.
+    setLocationId((cur) => (cur && locs.some((x) => x.id === cur) ? cur : locs[locs.length - 1]?.id ?? ''))
   }
 
   async function loadAvailable() {
