@@ -137,6 +137,12 @@ export async function triggerFlow(
   input: string | object,
   uploads?: FlowUpload[]
 ): Promise<RunStatus> {
+  // No id means the flow's module is not installed (its VITE_..._ID is blank).
+  // Sent anyway, Flowise answers 412 "id not provided" - the World tab did that
+  // on every open, asking the camera module's flow for its splat list.
+  if (!flowId) {
+    return { state: 'error', message: 'This needs a module that is not installed yet - add it from the settings page.' }
+  }
   // Fixed now, not when a queued job finally leaves: switching project while a
   // render waits in line must not move that render to the new project.
   input = withProject(flowId, input)
