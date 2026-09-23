@@ -85,6 +85,8 @@ $config = [ordered]@{
 }
 if ($PSCmdlet.ShouldProcess($configPath, 'write')) {
     [System.IO.File]::WriteAllText($configPath, ($config | ConvertTo-Json -Depth 5))
+    # ComfyUI refuses a --user-directory that does not exist yet.
+    New-Item -ItemType Directory -Force -Path (Join-Path $BaseDir 'user-world') | Out-Null
 }
 
 # Registered like ComfyUI-Server: at boot, as this user, without a window.
