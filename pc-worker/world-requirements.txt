@@ -11,3 +11,9 @@ eva-decord
 # and reports a misleading "cannot import name utils3d_compat from src".
 scikit-image
 easydict
+# ComfyUI_HYWorld2's requirements say plain `utils3d`, which pip resolves to an
+# old, unrelated PyPI package (0.0.2). Its utils3d_compat layer needs
+# EasternJournalist/utils3d with intrinsics_from_fov(aspect_ratio=...); the
+# commit MoGe pins (c5daf6f) predates that. This one satisfies both, and MoGe
+# still imports. Install with --force-reinstall --no-deps.
+utils3d @ git+https://github.com/EasternJournalist/utils3d.git@ca3e9ac015ab3473a37ea60f2f55063696638416
