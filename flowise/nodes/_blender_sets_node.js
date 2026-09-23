@@ -40,7 +40,7 @@
 //       (one clip long at most) on this set's marks; returns it for the Takes editor,
 //       or builds it straight away with build:true
 //   {"action":"make_clip","movieId":"...","setShotId":"...","directorShotId":"...",
-//       "characterId":"...", "controlStrength":1.0, "controlEnd":1.0, "render":true}
+//       "characterId":"...", "controlStrength":1.0, "controlEnd":1.0, "lookPlates":2, "render":true}
 //       a staged shot as a MiniMax H3 control clip for a Director shot (and so a
 //       beat): the depth as the control video, photographic look plates of the
 //       set, the character's reference, and a prompt from all of it; with
@@ -529,7 +529,9 @@ async function makeClip() {
 
   clipStep = 'making the control video';
   // 1. The control video, and the facts about the camera the prompt needs.
-  const ctl = await workerJob({ kind: 'control', shotDir: shotRow.stage.shotDir, plateCount: 2 }, { timeoutMs: 20 * 60 * 1000 });
+  // How many look plates the clip is given (0 = none: the character's reference only).
+  const plateCount = parsed.lookPlates === undefined ? 2 : Math.max(0, Math.min(4, Number(parsed.lookPlates) || 0));
+  const ctl = await workerJob({ kind: 'control', shotDir: shotRow.stage.shotDir, plateCount: Math.max(1, plateCount) }, { timeoutMs: 20 * 60 * 1000 });
   if (ctl.status !== 'done') return { action: 'error', reason: 'Could not make the control video: ' + ctl.error };
   const m = ctl.result;
 
@@ -539,7 +541,7 @@ async function makeClip() {
   const lookPrompt = setClipLookPrompt(facts.room_prompt || loc.name);
   const plates = [];
   try {
-    for (const cam of m.plates || []) {
+    for (const cam of (m.plates || []).slice(0, plateCount)) {
       if (!look[cam]) {
         look[cam] = await lookPlate(`sets/${shotRow.stage.blenderDir}/plates/${cam}.png`, lookPrompt,
           `${movie.slug}/_sets/look/${loc.location_key}_${loc.revision}_${cam}`);
