@@ -110,7 +110,8 @@ function Plan({ facts, cams }: {
   const pts = Object.values(anchors).map((v) => [v[0], v[1]])
   const w = dims?.width ?? Math.max(2, ...pts.map((p) => Math.abs(p[0]) * 2 + 0.5))
   const d = dims?.depth ?? Math.max(2, ...pts.map((p) => Math.abs(p[1]) * 2 + 0.5))
-  const pad = 0.6
+  // Room outside the walls for the labels of cameras standing near them.
+  const pad = 1.1
   // Blender is Z-up with +Y away; the plan draws +Y toward the top of the page.
   const vb = `${-w / 2 - pad} ${-d / 2 - pad} ${w + pad * 2} ${d + pad * 2}`
   const y = (v: number) => -v
@@ -221,13 +222,26 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
   const locShots = shots.filter((s) => s.set_location_id === locationId)
   const notAdded = available.filter((a) => !locations.some((l) => l.location_key === a.id && l.revision === a.revision))
 
-  // A new location starts the form on its first two marks, so the plan has a camera to show.
+  // A new location starts the form on two standing marks, so the plan has a
+  // camera to show. Anchors also name the window, the door and the table,
+  // which are things to face rather than places to stand.
   useEffect(() => {
     const names = Object.keys(location?.facts.anchors ?? {})
-    setDraft((d) => (names.includes(d.mark) ? d : { ...d, mark: names[0] ?? '', facing: names[1] ?? names[0] ?? '' }))
+    const stand = [...names.filter((n) => /stand/i.test(n)), ...names.filter((n) => /sit|chair/i.test(n))]
+    const mark = stand[0] ?? names[0] ?? ''
+    const facing = stand[1] ?? names.find((n) => n !== mark) ?? mark
+    setDraft((d) => (names.includes(d.mark) ? d : { ...d, mark, facing }))
   }, [location])
 
   const set = (k: keyof Draft) => (v: string | boolean) => setDraft((d) => ({ ...d, [k]: v }))
+  // A camera placed outside the walls renders the back of a wall. Nothing stops
+  // it (a set can be opened up), but it is nearly always a wrong angle.
+  const draftCam = location && draft.mark
+    ? cameraInPlan(location.facts.anchors ?? {}, draft.mark, draft.facing, Number(draft.azimuthDeg) || 0, Number(draft.distanceM) || 2)
+    : null
+  const dims = location?.facts.dimensions_m
+  const outside = !!(draftCam && dims && (Math.abs(draftCam.cam[0]) > dims.width / 2 || Math.abs(draftCam.cam[1]) > dims.depth / 2))
+
   const blocked = !location
     ? 'a set'
     : !/^[A-Za-z0-9_.-]{1,80}$/.test(draft.shotKey.trim())
@@ -436,6 +450,7 @@ export function BlenderSetsPanel({ movie }: { movie: Movie }) {
                 {busy === 'stage' ? 'Staging…' : 'Stage the shot'}
               </button>
             </div>
+            {outside && <p className="error">That puts the camera outside the walls. Try a smaller distance or another angle.</p>}
             {!busy && blocked && <p className="empty">Staging needs: {blocked}.</p>}
           </div>
         </div>

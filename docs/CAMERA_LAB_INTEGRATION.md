@@ -56,27 +56,29 @@ location revision it was shot against.
 
 ## Pieces, in order
 
-1. **Tables.** Add `locations` and the new columns above, in a new `sets` module
-   (`install/modules/sets/`), guarded like every other schema.
-2. **Worker endpoints.** On `pc-worker/aimp_worker.py`:
-   - `/blender/stage`: depth, masks, edges, plates for one shot;
-   - `/blender/visibility`: the object-index pass;
-   - `/blender/scout`: the tech-scout sheet.
-   Each takes a shot built from database rows. They wrap `blender_stage.py`,
-   `visibility.py`, `tech_scout.py` and `stage_assets.py`, with camera_lab's hardcoded
-   folders replaced by arguments. Outputs go under ComfyUI's `input/<project>/sets/`,
-   where the control-to-video graph reads them.
-3. **Flows.** A "Blender Stage" flow calls the worker and writes `camera_plates`.
-   Port `compile_shot.py` (look plates and prompt facts) and `prepare_take.py`'s depth
-   plus Canny binding into `flowise/lib` as JS graph builders. Merge the recipe
-   settings into 46-MiniMax-Control-To-Video instead of reusing the patched `C_T02`
-   base graph.
-4. **Admin.** Bring Director's Stage (`director_web/app/page.tsx`, `viewfinder.tsx`,
-   `lib/scene.ts`) into the Camera tab as a "Blender set" mode, driven by the
-   location's GLB and floor plan. `validateScene`'s single-location lock goes; a
-   location comes from the `locations` row. Add a tech-scout sheet and visibility
-   badges on each shot row.
-5. **Later.** Build a Blender block-out from AIMP's panorama or splat. Neither project
+A Blender set is the world module's third kind of set, beside the panorama and the
+splat world: the same step (Sets), with exact geometry instead of a generated
+picture. Cameras, control passes and visibility then belong to the camera module.
+
+1. **Tables. Done.** `set_locations` (a project's copy of one location revision,
+   with its `location.json` as `facts`) and `set_shots` (a shot/v0, its status, the
+   stage and visibility results, the scout sheet), in `install/modules/world/schema.sql`.
+2. **Worker. Done.** `pc-worker/aimp_worker.py` runs Blender jobs one at a time,
+   after freeing ComfyUI's models: `POST /blender/jobs` with kind `stage`,
+   `visibility`, `scout` or `assets`, polled at `GET /blender/jobs/<id>`, and
+   `GET /blender/locations`. The scripts are in `blender/`, with camera_lab's
+   folders and Metal-only GPU choice replaced by `blender/_sets.py`. Everything is
+   under the sets root, `<ComfyUI>/input/sets`, so ComfyUI's `/view` serves it.
+3. **Flow. Done.** `48-Blender-Sets`: `locations`, `add_location`, `stage` (stage, then
+   visibility) and `scout`.
+4. **Admin. Done, first version.** The Blender Sets tab: add a set, a plan of the room
+   with its marks and every staged camera, a shot form with a live preview, shot cards
+   with the first frame, visibility and plates, and the tech-scout sheet.
+5. **Next.** Bring Director's Stage (`director_web`) into the Camera tab, writing
+   `stageCamera` into the same `stage` action. Port `compile_shot.py` and
+   `prepare_take.py`'s depth and Canny binding into `flowise/lib`, and feed a staged
+   shot's depth into 46-MiniMax-Control-To-Video.
+6. **Later.** Build a Blender block-out from AIMP's panorama or splat. Neither project
    does this yet; ai-filmmaker's pano-depth-mesh approach is the nearest start.
 
 ## Not coming across
