@@ -579,7 +579,10 @@ async function makeClip() {
     const master = (await rows('minimax_clips', { id: `eq.${parsed.canonClipId}`, movie_id: `eq.${movieId}`, select: 'id,status,video_path,length' }))[0];
     if (!master || master.status !== 'complete' || !master.video_path) return { action: 'error', reason: 'The master camera has no finished clip to match.' };
     const n = Number(master.length) || m.frames;
-    const fr = await workerJob({ kind: 'frames', video: master.video_path, outDir: `${shotRow.stage.shotDir}/canon/${master.id.slice(0, 8)}`, frames: [1, Math.round(n / 2), n] }, { timeoutMs: 5 * 60 * 1000 });
+    // Which moments of the master to show, as fractions of its length (default start, middle, end).
+    const at = Array.isArray(parsed.canonAt) && parsed.canonAt.length ? parsed.canonAt.map(Number) : [0, 0.5, 1];
+    const frameNos = [...new Set(at.map((q) => Math.max(1, Math.min(n, Math.round(q * (n - 1)) + 1))))];
+    const fr = await workerJob({ kind: 'frames', video: master.video_path, outDir: `${shotRow.stage.shotDir}/canon/${master.id.slice(0, 8)}`, frames: frameNos }, { timeoutMs: 5 * 60 * 1000 });
     if (fr.status !== 'done') return { action: 'error', reason: 'Could not take frames from the master camera: ' + fr.error };
     for (const f of fr.result.frames) canon.push('input/sets/' + f);
   }
