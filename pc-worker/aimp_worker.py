@@ -30,6 +30,7 @@ What it does now:
                         {"kind": "scout", "name": "...", "shotDirs": ["shots/...", ...]}
                         -> {"id": "..."}
     GET  /blender/jobs/<id> -> {"status": "queued|running|done|error", "result": {...}, "log": "..."}
+    GET  /blender/locations -> every location revision in the sets folder, with its location.json
 
 Every request needs `Authorization: Bearer <token>`, the token in the config.
 
@@ -225,7 +226,8 @@ class BlenderJobs:
         if kind == 'stage':
             shot = body.get('shot') or {}
             shot_id, project = str(shot.get('shot_id', '')), str(body.get('project', ''))
-            if not re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', shot_id) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', project):
+            plain = lambda v: re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', v) and not set(v) <= {'.'}
+            if not plain(shot_id) or not plain(project):
                 raise ValueError('a stage job needs a shot with a plain shot_id, and a plain project name')
             shot_dir = self.inside(os.path.join('shots', project, shot_id))
             os.makedirs(shot_dir, exist_ok=True)
@@ -255,6 +257,20 @@ class BlenderJobs:
             self.jobs[job_id] = {'id': job_id, 'kind': kind, 'status': 'queued', 'queued_at': time.time(), 'log': '', 'result': None}
         self.queue.put((job_id, kind, args))
         return job_id
+
+    def locations(self):
+        """Every locations/<id>/<revision> that has a location.json and a location.blend."""
+        base = os.path.join(self.root, 'locations')
+        found = []
+        for loc_id in sorted(os.listdir(base)) if os.path.isdir(base) else []:
+            for rev in sorted(os.listdir(os.path.join(base, loc_id))):
+                d = os.path.join(base, loc_id, rev)
+                meta = self._read(os.path.join(d, 'location.json'))
+                blend = os.path.join(d, 'location.blend')
+                if meta and os.path.exists(blend):
+                    found.append({'id': loc_id, 'revision': rev, 'blend': f'locations/{loc_id}/{rev}/location.blend',
+                                  'blendBytes': os.path.getsize(blend), 'location': meta})
+        return found
 
     def get(self, job_id):
         job = self.jobs.get(job_id)
@@ -356,6 +372,8 @@ class Handler(BaseHTTPRequestHandler):
                 length = int(self.headers.get('Content-Length') or 0)
                 body = json.loads(self.rfile.read(length) or b'{}') if length else {}
                 return self._send(200, {'id': BLENDER.submit(body)})
+            if method == 'GET' and self.path == '/blender/locations':
+                return self._send(200, {'locations': BLENDER.locations()})
             if method == 'GET' and self.path.startswith('/blender/jobs/'):
                 try:
                     return self._send(200, BLENDER.get(self.path.rsplit('/', 1)[1]))
