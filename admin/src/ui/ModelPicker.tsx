@@ -29,19 +29,38 @@ export type LlmProfile = {
 
 type LlmSettings = { selected: string; profiles: LlmProfile[] }
 
+/**
+ * What the add form offers. 'claude' is not a provider of its own: it is the
+ * Claude Code CLI behind bridge/claude-bridge.js, which speaks the OpenAI API,
+ * so it is saved as an 'openai' profile and every flow's shim works unchanged.
+ */
+type Kind = 'ollama' | 'openai' | 'claude'
+type Draft = Omit<LlmProfile, 'id' | 'provider'> & { kind: Kind }
+
+// 127.0.0.1, not localhost: the bridge listens on IPv4 loopback only, and
+// Node can resolve localhost to ::1 first.
+const CLAUDE_BRIDGE_URL = 'http://127.0.0.1:11435'
+const CLAUDE_MODELS = [
+  { value: 'sonnet', label: 'Sonnet' },
+  { value: 'opus', label: 'Opus' },
+  { value: 'haiku', label: 'Haiku' },
+  { value: 'fable', label: 'Fable' }
+]
+
 const EMPTY: LlmSettings = { selected: '', profiles: [] }
 
-/** A new profile's starting point, per provider. */
-function blank(provider: 'ollama' | 'openai'): Omit<LlmProfile, 'id'> {
-  return provider === 'ollama'
-    ? { label: '', provider, url: 'http://localhost:11434', model: '', apiKey: '' }
-    : { label: '', provider, url: 'https://api.openai.com', model: '', apiKey: '' }
+/** A new profile's starting point, per kind. */
+function blank(kind: Kind): Draft {
+  if (kind === 'claude') return { kind, label: '', url: CLAUDE_BRIDGE_URL, model: 'sonnet', apiKey: '' }
+  return kind === 'ollama'
+    ? { kind, label: '', url: 'http://localhost:11434', model: '', apiKey: '' }
+    : { kind, label: '', url: 'https://api.openai.com', model: '', apiKey: '' }
 }
 
 export function ModelPicker() {
   const [settings, setSettings] = useState<LlmSettings>(EMPTY)
   const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState(blank('ollama'))
+  const [draft, setDraft] = useState<Draft>(blank('claude'))
   const [note, setNote] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -98,10 +117,17 @@ export function ModelPicker() {
       setNote('A URL and a model name are needed.')
       return
     }
+    const { kind, ...fields } = draft
+    const provider = kind === 'ollama' ? 'ollama' : 'openai'
+    const fallbackLabel =
+      kind === 'claude'
+        ? `Claude ${CLAUDE_MODELS.find((m) => m.value === draft.model)?.label ?? draft.model} (CLI)`
+        : `${draft.model} (${provider})`
     const profile: LlmProfile = {
-      ...draft,
-      id: `${draft.provider}-${Date.now()}`,
-      label: draft.label.trim() || `${draft.model} (${draft.provider})`,
+      ...fields,
+      provider,
+      id: `${kind}-${Date.now()}`,
+      label: draft.label.trim() || fallbackLabel,
       url: draft.url.trim().replace(/\/$/, ''),
       model: draft.model.trim()
     }
@@ -109,7 +135,7 @@ export function ModelPicker() {
     const ok = await save({ selected: profile.id, profiles: [...settings.profiles, profile] })
     if (ok) {
       setOpen(false)
-      setDraft(blank('ollama'))
+      setDraft(blank('claude'))
       setNote(`Added ${profile.label}, and everything now uses it.`)
     }
   }
@@ -153,9 +179,10 @@ export function ModelPicker() {
           <label className="empty">
             Kind
             <Select
-              value={draft.provider}
-              onValueChange={(v) => setDraft(blank(v === 'openai' ? 'openai' : 'ollama'))}
+              value={draft.kind}
+              onValueChange={(v) => setDraft(blank(v === 'openai' || v === 'ollama' ? v : 'claude'))}
               items={[
+                { value: 'claude', label: 'Claude Code (CLI)' },
                 { value: 'ollama', label: 'Ollama (local)' },
                 { value: 'openai', label: 'OpenAI-compatible API' }
               ]}
@@ -181,14 +208,29 @@ export function ModelPicker() {
           </label>
           <label className="empty">
             Model
-            <input
-              type="text"
-              value={draft.model}
-              placeholder={draft.provider === 'ollama' ? 'e.g. the name ollama list shows' : 'the provider’s model name'}
-              onChange={(e) => setDraft({ ...draft, model: e.target.value })}
-            />
+            {draft.kind === 'claude' ? (
+              <Select
+                value={draft.model}
+                onValueChange={(v) => setDraft({ ...draft, model: v })}
+                items={CLAUDE_MODELS}
+              />
+            ) : (
+              <input
+                type="text"
+                value={draft.model}
+                placeholder={draft.kind === 'ollama' ? 'e.g. the name ollama list shows' : 'the provider’s model name'}
+                onChange={(e) => setDraft({ ...draft, model: e.target.value })}
+              />
+            )}
           </label>
-          {draft.provider === 'openai' && (
+          {draft.kind === 'claude' && (
+            <p className="empty">
+              Runs the Claude Code CLI on this machine through bridge/claude-bridge.js, signed in as
+              whoever the CLI is signed in as. start-all starts the bridge; by hand:
+              node bridge/claude-bridge.js
+            </p>
+          )}
+          {draft.kind === 'openai' && (
             <label className="empty">
               API key
               <input
@@ -204,7 +246,7 @@ export function ModelPicker() {
           <button type="button" disabled={busy} onClick={() => setOpen(false)}>
             Cancel
           </button>
-          {draft.provider === 'openai' && (
+          {draft.kind === 'openai' && (
             <p className="empty">
               The key is stored in this project’s database, readable by anyone signed in to this
               app. Fine on a machine only you reach; think twice anywhere else.

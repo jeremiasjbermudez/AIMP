@@ -1,3 +1,5 @@
+// @include comfy_paths
+
 // A 3D world from a prompt alone, with no scene behind it.
 //
 // Both halves of this already existed but only ever ran scene-first: the
@@ -19,7 +21,10 @@ const axios = require('axios');
 
 const insforgeUrl = $insforgeUrl;
 const insforgeApiKey = $insforgeApiKey;
-const comfyUrl = $comfyUrl;
+// @include comfy_world
+
+// HY-World graphs run on the world ComfyUI, started on demand (see lib/comfy_world.js).
+const comfyUrl = await worldComfyUrl();
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -126,11 +131,12 @@ const panoGraph = {
   // meet, and the world builder reads it as a sphere.
   '8': { class_type: 'HYWorld2QwenPanoSeamBlend', inputs: { image: ['7', 0], blend_width: 32, crop_right_edge: true } },
   '9': { class_type: 'SaveImage', inputs: { images: ['8', 0], filename_prefix: panoPrefix } },
-  '10': { class_type: 'JWImageSaveToPath', inputs: { image: ['8', 0], path: 'C:/ComfyUI2/input/' + flatPanoName, overwrite: 'true' } }
+  '10': { class_type: 'JWImageSaveToPath', inputs: { image: ['8', 0], path: String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/input/' + flatPanoName, overwrite: 'true' } }
 };
 
 let pr;
 try {
+  ensureSaveDirs(panoGraph);
   pr = await axios.post(comfyUrl + '/prompt', { prompt: panoGraph });
 } catch (e) {
   const body = (e && e.response && e.response.data) || (e && e.message) || String(e);
@@ -163,7 +169,7 @@ await update({ pano_path: panoPath, workspace_name: workspaceName });
 // The world builder's graph, unchanged. `finalPlyPath` follows the same layout
 // so a prompt world sits beside the scene worlds rather than in a tree of its
 // own - inside the movie's folder, which is where everything else lives.
-const rootDir = 'C:/ComfyUI2/output/' + movie.slug + '/hyworld2_worldgen';
+const rootDir = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/output/' + movie.slug + '/hyworld2_worldgen';
 const finalPlyName = workspaceName + '_point_cloud_5000.ply';
 const finalPlyPath = rootDir + '/' + workspaceName + '/gs_results/ply/' + finalPlyName;
 
@@ -186,6 +192,7 @@ const wf = {
 
 let wr;
 try {
+  ensureSaveDirs(wf);
   wr = await axios.post(comfyUrl + '/prompt', { prompt: wf });
 } catch (e) {
   const body = (e && e.response && e.response.data) || (e && e.message) || String(e);

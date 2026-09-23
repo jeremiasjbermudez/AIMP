@@ -1,3 +1,6 @@
+// The project this run is for. The app sends `--movie <id>`; without one (a
+// script, a run typed into Flowise) the active movie is used, as before.
+const requestedMovieId = ((/--movie\s+([0-9a-f-]{36})/i.exec(String($flow.input || '')) || [])[1]) || '';
 // Seeds the characters table for the active movie straight from its character
 // bible, so a brand-new movie has characters (with descriptions) before any
 // beat or orchestration run. Without this the Characters tab has nothing to
@@ -14,15 +17,15 @@ const insforgeUrl = $insforgeUrl;
 const insforgeApiKey = $insforgeApiKey;
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 
-const rawInput = ($flow.input || '').toString().trim();
+const rawInput = (String($flow.input || '').replace(/--movie\s+\S+/gi, '')).toString().trim();
 const force = /--force\b/i.test(rawInput);
 
 const activeRes = await axios.get(`${insforgeUrl}/api/database/records/movies`, {
-  params: { is_active: 'eq.true', select: 'id,bucket_name,title,slug' },
+  params: requestedMovieId ? { id: `eq.${requestedMovieId}`, select: 'id,bucket_name,title,slug' } : { is_active: 'eq.true', select: 'id,bucket_name,title,slug' },
   headers: authHeaders
 });
 const activeMovies = activeRes.data || [];
-if (activeMovies.length === 0) return { error: 'No active movie set. Select one in the pipeline-admin app first.' };
+if (activeMovies.length === 0) return { error: (requestedMovieId ? `Project ${requestedMovieId} not found.` : 'No active movie set. Select one in the pipeline-admin app first.') };
 if (activeMovies.length > 1) return { error: `Found ${activeMovies.length} active movies - exactly one must be active.` };
 const movie = activeMovies[0];
 

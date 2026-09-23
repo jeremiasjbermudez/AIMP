@@ -1,5 +1,5 @@
 -- Locations & 3D worlds
--- Tables: scene_panos, scene_splats, hyworlds, prompt_worlds
+-- Tables: scene_panos, scene_splats, hyworlds, prompt_worlds, set_locations, set_shots, set_takes
 --
 -- Replayed by install/install-module.ps1. Safe to run twice: every
 -- statement is guarded, and the installer stops on the first real error.
@@ -294,3 +294,154 @@ ALTER TABLE public.scene_panos ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.scene_splats ENABLE ROW LEVEL SECURITY;
+
+--
+-- Blender sets (from camera_lab): a location's versioned Blender block-out, and
+-- the shots staged in it. The set itself - location.json and location.blend -
+-- lives on the render host under the sets folder; these rows are the project's
+-- record of it. Signed-in users only: unlike the tables above, never anon.
+--
+
+CREATE TABLE IF NOT EXISTS public.set_locations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    movie_id uuid NOT NULL,
+    location_key text NOT NULL,
+    revision text NOT NULL,
+    name text,
+    blend_path text NOT NULL,
+    facts jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.set_shots (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    movie_id uuid NOT NULL,
+    set_location_id uuid NOT NULL,
+    -- The screenplay scene it is for, when it is for one (no FK: scenes belong
+    -- to another module, which may be installed later).
+    scene_id uuid,
+    shot_key text NOT NULL,
+    shot jsonb NOT NULL,
+    status text DEFAULT 'draft'::text NOT NULL,
+    job_id text,
+    stage jsonb,
+    visibility jsonb,
+    scout_sheet text,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+DO $guard$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_locations_pkey' AND conrelid = 'public.set_locations'::regclass) THEN
+        ALTER TABLE ONLY public.set_locations ADD CONSTRAINT set_locations_pkey PRIMARY KEY (id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_locations_movie_key_rev' AND conrelid = 'public.set_locations'::regclass) THEN
+        ALTER TABLE ONLY public.set_locations ADD CONSTRAINT set_locations_movie_key_rev UNIQUE (movie_id, location_key, revision);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_locations_movie_id_fkey' AND conrelid = 'public.set_locations'::regclass) THEN
+        ALTER TABLE ONLY public.set_locations ADD CONSTRAINT set_locations_movie_id_fkey FOREIGN KEY (movie_id) REFERENCES public.movies(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_shots_pkey' AND conrelid = 'public.set_shots'::regclass) THEN
+        ALTER TABLE ONLY public.set_shots ADD CONSTRAINT set_shots_pkey PRIMARY KEY (id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_shots_movie_key' AND conrelid = 'public.set_shots'::regclass) THEN
+        ALTER TABLE ONLY public.set_shots ADD CONSTRAINT set_shots_movie_key UNIQUE (movie_id, shot_key);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_shots_movie_id_fkey' AND conrelid = 'public.set_shots'::regclass) THEN
+        ALTER TABLE ONLY public.set_shots ADD CONSTRAINT set_shots_movie_id_fkey FOREIGN KEY (movie_id) REFERENCES public.movies(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_shots_location_fkey' AND conrelid = 'public.set_shots'::regclass) THEN
+        ALTER TABLE ONLY public.set_shots ADD CONSTRAINT set_shots_location_fkey FOREIGN KEY (set_location_id) REFERENCES public.set_locations(id) ON DELETE CASCADE;
+    END IF;
+END $guard$;
+
+CREATE INDEX IF NOT EXISTS idx_set_shots_location ON public.set_shots USING btree (set_location_id, created_at);
+
+ALTER TABLE public.set_locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.set_shots ENABLE ROW LEVEL SECURITY;
+
+DO $guard$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'set_locations' AND policyname = 'signed in') THEN
+        CREATE POLICY "signed in" ON public.set_locations TO authenticated USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'set_shots' AND policyname = 'signed in') THEN
+        CREATE POLICY "signed in" ON public.set_shots TO authenticated USING (true) WITH CHECK (true);
+    END IF;
+END $guard$;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.set_locations, public.set_shots TO authenticated;
+
+DROP TRIGGER IF EXISTS set_shots_updated_at ON public.set_shots;
+CREATE TRIGGER set_shots_updated_at BEFORE UPDATE ON public.set_shots
+    FOR EACH ROW EXECUTE FUNCTION system.update_updated_at();
+
+-- Block-outs written by a model (48-Blender-Sets generate_location / revise_location).
+-- Each pass is a revision: where it came from, what it looks like, what the build
+-- said about it, the revision it fixes, and which model wrote it.
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS source jsonb;
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS previews jsonb;
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS build_report jsonb;
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS parent_id uuid;
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS change_note text;
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS made_by text;
+
+-- A staged shot as the input to a clip (48-Blender-Sets make_clip): the Director
+-- shot and beat it is for, the control video and prompt made from it, and the
+-- clip. No foreign keys: the director and video modules may be installed later.
+ALTER TABLE public.set_shots ADD COLUMN IF NOT EXISTS director_shot_id uuid;
+ALTER TABLE public.set_shots ADD COLUMN IF NOT EXISTS beat_id uuid;
+ALTER TABLE public.set_shots ADD COLUMN IF NOT EXISTS control jsonb;
+ALTER TABLE public.set_shots ADD COLUMN IF NOT EXISTS clip_id uuid;
+-- Photographic look plates of a location revision, made once and shared by
+-- every shot in it: {"R03": "output/<project>/_sets/look/...png", ...}.
+ALTER TABLE public.set_locations ADD COLUMN IF NOT EXISTS look jsonb;
+
+-- A take (build_take.py): performers moving through a set on a timeline, so every
+-- camera pass over it - operated or set in the shot form - films the same action.
+CREATE TABLE IF NOT EXISTS public.set_takes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    movie_id uuid NOT NULL,
+    set_location_id uuid NOT NULL,
+    -- The screenplay scene it performs (no FK, as for set_shots).
+    scene_id uuid,
+    take_key text NOT NULL,
+    take jsonb NOT NULL,
+    status text DEFAULT 'draft'::text NOT NULL,
+    blend_path text,
+    manifest jsonb,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+DO $guard$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_takes_pkey' AND conrelid = 'public.set_takes'::regclass) THEN
+        ALTER TABLE ONLY public.set_takes ADD CONSTRAINT set_takes_pkey PRIMARY KEY (id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_takes_movie_key' AND conrelid = 'public.set_takes'::regclass) THEN
+        ALTER TABLE ONLY public.set_takes ADD CONSTRAINT set_takes_movie_key UNIQUE (movie_id, take_key);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_takes_movie_id_fkey' AND conrelid = 'public.set_takes'::regclass) THEN
+        ALTER TABLE ONLY public.set_takes ADD CONSTRAINT set_takes_movie_id_fkey FOREIGN KEY (movie_id) REFERENCES public.movies(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'set_takes_location_fkey' AND conrelid = 'public.set_takes'::regclass) THEN
+        ALTER TABLE ONLY public.set_takes ADD CONSTRAINT set_takes_location_fkey FOREIGN KEY (set_location_id) REFERENCES public.set_locations(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'set_takes' AND policyname = 'signed in') THEN
+        CREATE POLICY "signed in" ON public.set_takes TO authenticated USING (true) WITH CHECK (true);
+    END IF;
+END $guard$;
+
+ALTER TABLE public.set_takes ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.set_takes TO authenticated;
+
+DROP TRIGGER IF EXISTS set_takes_updated_at ON public.set_takes;
+CREATE TRIGGER set_takes_updated_at BEFORE UPDATE ON public.set_takes
+    FOR EACH ROW EXECUTE FUNCTION system.update_updated_at();
+
+-- A shot staged on a take films that take's performance.
+ALTER TABLE public.set_shots ADD COLUMN IF NOT EXISTS take_id uuid;

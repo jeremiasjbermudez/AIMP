@@ -27,6 +27,10 @@ param(
     # Write fresh secrets even though the deployment is already running. Only
     # safe when it holds nothing: it changes the key its data is encrypted with.
     [switch]$RotateSecrets,
+    # The address the API and console are published on. Loopback by default:
+    # the browser app runs on this machine, and the API holds every project.
+    # Pass 0.0.0.0 only if another machine really needs to reach it.
+    [string]$BindAddress = '127.0.0.1',
     # The console's root admin. The admin app signs in as this.
     [string]$AdminUser = 'admin'
 )
@@ -42,7 +46,7 @@ catch { throw 'Docker is not running. Start Docker Desktop and try again.' }
 if ($LASTEXITCODE -ne 0) { throw 'Docker is installed but its daemon is not responding.' }
 
 # ---------------------------------------------------------------- the repo
-$composeDir = Join-Path $Path 'deploy\docker-compose'
+$composeDir = Join-Path $Path 'deploy/docker-compose'
 if (-not (Test-Path (Join-Path $composeDir 'docker-compose.yml'))) {
     Write-Step "Cloning InsForge into $Path"
     if ($PSCmdlet.ShouldProcess($Path, 'git clone insforge')) {
@@ -89,7 +93,8 @@ if (-not (Test-Path $envFile) -and $alreadyRunning -and -not $RotateSecrets) {
     $lines = @(
         '# Written by install/core/00-insforge.ps1. Keep it: the stored data is',
         '# encrypted with these, and the admin login is here.',
-        "APP_PORT=$Port",
+        # host:port, so Docker publishes it on $BindAddress only.
+        "APP_PORT=${BindAddress}:$Port",
         "JWT_SECRET=$(New-Secret)",
         "POSTGRES_PASSWORD=$(New-Secret)",
         "ROOT_ADMIN_USERNAME=$AdminUser",
@@ -104,7 +109,8 @@ if (-not (Test-Path $envFile) -and $alreadyRunning -and -not $RotateSecrets) {
     }
 } else {
     Write-Host '  keeping the existing .env - secrets unchanged' -ForegroundColor DarkGray
-    $existing = Select-String -Path $envFile -Pattern '^APP_PORT=(\d+)' | Select-Object -First 1
+    # APP_PORT is either a bare port or address:port.
+    $existing = Select-String -Path $envFile -Pattern '^APP_PORT=(?:[\d.]+:)?(\d+)\s*$' | Select-Object -First 1
     if ($existing) {
         $found = [int]$existing.Matches[0].Groups[1].Value
         if ($found -ne $Port) {

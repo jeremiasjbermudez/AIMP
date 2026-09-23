@@ -19,7 +19,7 @@ param([switch]$SkipNpm)
 $ErrorActionPreference = 'Stop'
 $installRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $repoRoot = Split-Path -Parent $installRoot
-. (Join-Path $installRoot 'lib\common.ps1')
+. (Join-Path $installRoot 'lib/common.ps1')
 
 # ---------------------------------------------------------------- 1. preflight
 Write-Step 'Checking the tools this needs'
@@ -40,7 +40,7 @@ if ($major -lt 20) { Write-Warn "Node $major is older than this was built agains
 # ---------------------------------------------------------------- 2. database
 Write-Step 'Creating the core tables'
 foreach ($sql in @('prelude.sql', 'schema.sql', 'registry.sql', 'settings.sql')) {
-    $path = Join-Path $installRoot "modules\core\$sql"
+    $path = Join-Path $installRoot "modules/core/$sql"
     if (Test-Path $path) {
         if ($PSCmdlet.ShouldProcess($sql, 'apply')) {
             Write-Host "  $sql" -ForegroundColor DarkGray
@@ -72,7 +72,7 @@ if ($PSCmdlet.ShouldProcess('core', 'deploy edge functions')) { Install-EdgeFunc
 Write-Step 'Registering the core Flowise flows'
 $coreFlowIds = @{}
 foreach ($flow in @((Get-ModuleMap).core.flows)) {
-    $source = Join-Path $repoRoot "flowise\nodes\$($flow.source)"
+    $source = Join-Path $repoRoot "flowise/nodes/$($flow.source)"
     if ($PSCmdlet.ShouldProcess($flow.name, 'register Flowise flow')) {
         Write-Host "  flow: $($flow.name)" -ForegroundColor DarkGray
         $id = Register-Flow -Name $flow.name -Source $source
@@ -99,6 +99,17 @@ $values = @{
     'VITE_INSFORGE_URL'  = $env:INSFORGE_URL
     'VITE_FLOWISE_URL'   = $env:FLOWISE_URL
     'VITE_COMFY_URL'     = $env:COMFY_URL
+}
+# ComfyUI served through the dev server's proxy (see admin/vite.config.ts):
+# the app must keep calling /comfy, not the URL the proxy forwards to.
+if (Select-String -Path $envFile -Pattern '^\s*COMFY_PROXY_TARGET\s*=\s*\S' -Quiet) { $values['VITE_COMFY_URL'] = '/comfy' }
+# ADMIN_PROXY=1: every service through the dev server, so the app is opened
+# from another machine while InsForge and Flowise stay on loopback here.
+if ($env:ADMIN_PROXY -eq '1') {
+    $values['VITE_INSFORGE_URL'] = '/';         $values['INSFORGE_PROXY_TARGET'] = $env:INSFORGE_URL
+    $values['VITE_FLOWISE_URL'] = '/flowise';   $values['FLOWISE_PROXY_TARGET'] = $env:FLOWISE_URL
+    $values['VITE_COMFY_URL'] = '/comfy';       $values['COMFY_PROXY_TARGET'] = $env:COMFY_URL
+    if ($env:ADMIN_HOST) { $values['ADMIN_HOST'] = $env:ADMIN_HOST }
 }
 foreach ($k in $coreFlowIds.Keys) { $values[$k] = $coreFlowIds[$k] }
 Set-EnvValues -Values $values

@@ -22,7 +22,7 @@ const insforgeUrl = $insforgeUrl;
 const insforgeApiKey = $insforgeApiKey;
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 
-const COMFY_ROOT = 'C:/ComfyUI2';
+const COMFY_ROOT = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '');
 const ALLOWED = [path.resolve(COMFY_ROOT, 'output'), path.resolve(COMFY_ROOT, 'input')];
 
 let parsed;

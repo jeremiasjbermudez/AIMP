@@ -1,7 +1,13 @@
 import { createClient } from '@insforge/sdk'
 
+// "/" means "through the dev server's proxy" (see vite.config.ts): the SDK calls
+// its own /api/... paths on this page's origin, and the dev server forwards
+// them. A prefix would not survive - the SDK builds absolute paths.
+const configuredBase = String(import.meta.env.VITE_INSFORGE_URL || '')
+const insforgeBase = configuredBase.startsWith('/') ? window.location.origin : configuredBase
+
 export const insforge = createClient({
-  baseUrl: import.meta.env.VITE_INSFORGE_URL,
+  baseUrl: insforgeBase,
   anonKey: import.meta.env.VITE_INSFORGE_ANON_KEY
 })
 

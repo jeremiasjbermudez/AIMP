@@ -8,7 +8,8 @@
     "component": "ScreenplayPanel",
     "from": "./screenplay/ScreenplayPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "story"
   },
   {
     "id": "documents",
@@ -19,7 +20,8 @@
     "component": "DocumentsPanel",
     "from": "./DocumentsPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "story"
   },
   {
     "id": "beats",
@@ -30,7 +32,8 @@
     "component": "BeatsPanel",
     "from": "./BeatsPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "story"
   },
   {
     "id": "characters",
@@ -41,7 +44,8 @@
     "component": "CharactersPanel",
     "from": "./CharactersPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "cast"
   },
   {
     "id": "props",
@@ -51,6 +55,31 @@
     "module": "characters",
     "component": "PropsPanel",
     "from": "./PropsPanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "cast"
+  },
+  {
+    "id": "world",
+    "label": "Panoramas & Worlds",
+    "hint": "Location panoramas and 3D worlds",
+    "icon": "Mountain",
+    "module": "world",
+    "component": "WorldPanel",
+    "from": "./WorldPanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "sets"
+  },
+  {
+    "id": "blendersets",
+    "label": "Blender Sets",
+    "hint": "Stage shots inside a location built in Blender: depth, mask, plates and what the camera sees",
+    "icon": "Box",
+    "module": "world",
+    "component": "BlenderSetsPanel",
+    "from": "./BlenderSetsPanel",
+    "group": "sets",
     "props": {},
     "takesMovie": true
   },
@@ -63,7 +92,8 @@
     "component": "DirectorPanel",
     "from": "./DirectorPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "shots"
   },
   {
     "id": "camera",
@@ -74,18 +104,70 @@
     "component": "CameraPanel",
     "from": "./CameraPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "shots"
   },
   {
-    "id": "world",
-    "label": "Panoramas & Worlds",
-    "hint": "Location panoramas and 3D worlds",
-    "icon": "Mountain",
-    "module": "world",
-    "component": "WorldPanel",
-    "from": "./WorldPanel",
+    "id": "control",
+    "label": "Control to Video",
+    "hint": "A clip driven by a depth, pose or edge video: a staged Blender shot, or one you bring",
+    "icon": "Film",
+    "module": "video",
+    "component": "MinimaxVideoPanel",
+    "from": "./MinimaxVideoPanel",
+    "props": {
+      "kind": "control"
+    },
+    "takesMovie": true,
+    "group": "shots"
+  },
+  {
+    "id": "faceqa",
+    "label": "Face QA",
+    "hint": "Score a clip against a character to find face drift",
+    "icon": "ScanFace",
+    "module": "faceqa",
+    "component": "FaceQaPanel",
+    "from": "./FaceQaPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "shots"
+  },
+  {
+    "id": "postvoice",
+    "label": "Post Voice",
+    "hint": "Replace a voice after rendering, keeping music and sync",
+    "icon": "Mic",
+    "module": "audio",
+    "component": "PostVoicePanel",
+    "from": "./PostVoicePanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "finish"
+  },
+  {
+    "id": "score",
+    "label": "Score",
+    "hint": "Generate music once for a scene, to lay under the edit",
+    "icon": "Music",
+    "module": "audio",
+    "component": "ScorePanel",
+    "from": "./ScorePanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "finish"
+  },
+  {
+    "id": "resolve",
+    "label": "DaVinci Resolve",
+    "hint": "Send this movie to Resolve as a project, in screenplay order",
+    "icon": "Clapperboard",
+    "module": "delivery",
+    "component": "ResolvePanel",
+    "from": "./ResolvePanel",
+    "props": {},
+    "takesMovie": true,
+    "group": "finish"
   },
   {
     "id": "hyworld",
@@ -96,7 +178,8 @@
     "component": "HyWorldPanel",
     "from": "./HyWorldPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "qwen",
@@ -107,7 +190,8 @@
     "component": "QwenCleanupPanel",
     "from": "./QwenCleanupPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "imageedit",
@@ -118,7 +202,8 @@
     "component": "ImageEditPanel",
     "from": "./ImageEditPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "palette",
@@ -129,7 +214,8 @@
     "component": "ColorPalettePanel",
     "from": "./ColorPalettePanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "lighting",
@@ -140,7 +226,8 @@
     "component": "LightingPanel",
     "from": "./LightingPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "i2v",
@@ -153,7 +240,8 @@
     "props": {
       "kind": "i2v"
     },
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "t2v",
@@ -166,7 +254,8 @@
     "props": {
       "kind": "t2v"
     },
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "shots",
@@ -179,7 +268,8 @@
     "props": {
       "kind": "ref"
     },
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "v2v",
@@ -192,64 +282,8 @@
     "props": {
       "kind": "v2v"
     },
-    "takesMovie": true
-  },
-  {
-    "id": "control",
-    "label": "Control to Video",
-    "hint": "Drive a shot with a depth or pose video, e.g. rendered in Blender",
-    "icon": "Film",
-    "module": "video",
-    "component": "MinimaxVideoPanel",
-    "from": "./MinimaxVideoPanel",
-    "props": {
-      "kind": "control"
-    },
-    "takesMovie": true
-  },
-  {
-    "id": "postvoice",
-    "label": "Post Voice",
-    "hint": "Replace a voice after rendering, keeping music and sync",
-    "icon": "Mic",
-    "module": "audio",
-    "component": "PostVoicePanel",
-    "from": "./PostVoicePanel",
-    "props": {},
-    "takesMovie": true
-  },
-  {
-    "id": "score",
-    "label": "Score",
-    "hint": "Generate music once for a scene, to lay under the edit",
-    "icon": "Music",
-    "module": "audio",
-    "component": "ScorePanel",
-    "from": "./ScorePanel",
-    "props": {},
-    "takesMovie": true
-  },
-  {
-    "id": "faceqa",
-    "label": "Face QA",
-    "hint": "Score a clip against a character to find face drift",
-    "icon": "ScanFace",
-    "module": "faceqa",
-    "component": "FaceQaPanel",
-    "from": "./FaceQaPanel",
-    "props": {},
-    "takesMovie": true
-  },
-  {
-    "id": "resolve",
-    "label": "DaVinci Resolve",
-    "hint": "Send this movie to Resolve as a project, in screenplay order",
-    "icon": "Clapperboard",
-    "module": "delivery",
-    "component": "ResolvePanel",
-    "from": "./ResolvePanel",
-    "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   },
   {
     "id": "contextloop",
@@ -260,7 +294,8 @@
     "component": "ContextLoopPanel",
     "from": "./ContextLoopPanel",
     "props": {},
-    "takesMovie": false
+    "takesMovie": false,
+    "group": "workshop"
   },
   {
     "id": "tools",
@@ -271,6 +306,7 @@
     "component": "ToolsPanel",
     "from": "./ToolsPanel",
     "props": {},
-    "takesMovie": true
+    "takesMovie": true,
+    "group": "workshop"
   }
 ]

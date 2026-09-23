@@ -19,158 +19,7 @@ const insforgeApiKey = $insforgeApiKey;
 // The flow has carried this variable all along (it comes across from the Image
 // Edit clone), but nothing bound it until render mode needed to talk to ComfyUI.
 const comfyUrl = $comfyUrl;
-// ---------------------------------------------------------------- language model
-// Set once at install time and injected into every flow, so local and hosted
-// models are the same switch rather than a code change.
-//
-//   $llmProvider  'ollama' for a local Ollama, 'openai' for anything that
-//                 speaks the OpenAI chat-completions API - OpenAI itself,
-//                 OpenRouter, Together, vLLM, LM Studio, llama.cpp
-//   $llmUrl       its base URL, no trailing path
-//   $llmModel     the model name that provider knows
-//   $llmApiKey    sent as a bearer token; empty for a local server
-// What was chosen at install time. Used when the app has not been given a
-// choice of its own, which is the case on a fresh install.
-const llmInstalled = {
-  provider: ($llmProvider || 'ollama').toLowerCase(),
-  url: String($llmUrl || '').replace(/\/$/, ''),
-  model: $llmModel,
-  apiKey: $llmApiKey || ''
-};
-
-// The old names, kept so nothing that reads them has to change. They describe
-// the INSTALLED model; llmSettings() below is what a call actually uses.
-const ollamaUrl = llmInstalled.url;
-const ollamaModel = llmInstalled.model;
-
-// Read once per invocation. A flow that makes four model calls should not ask
-// four times, and the answer cannot change mid-run anyway.
-let _llmCache = null;
-
-/**
- * The model this call should use.
- *
- * The app writes its choice to app_settings, so changing model is a click
- * rather than a re-install. A missing row, an unreadable one or a profile that
- * has been deleted all fall back to the installed settings: a flow should not
- * stop working because a preference could not be read.
- */
-async function llmSettings() {
-  if (_llmCache) return _llmCache;
-  _llmCache = llmInstalled;
-  try {
-    const axios = require('axios');
-    const res = await axios.get(insforgeUrl + '/api/database/records/app_settings', {
-      params: { key: 'eq.llm', select: 'value' },
-      headers: { Authorization: 'Bearer ' + insforgeApiKey },
-      timeout: 5000
-    });
-    const value = ((res.data || [])[0] || {}).value;
-    const chosen = (value && (value.profiles || []).filter(function (p) { return p.id === value.selected; })[0]) || null;
-    if (chosen && chosen.url) {
-      _llmCache = {
-        provider: String(chosen.provider || 'ollama').toLowerCase(),
-        url: String(chosen.url).replace(/\/$/, ''),
-        model: chosen.model,
-        apiKey: chosen.apiKey || ''
-      };
-    }
-  } catch (e) {
-    // Left on the installed settings on purpose.
-  }
-  return _llmCache;
-}
-
-/**
- * One chat call, in Ollama's request and response shape, against either provider.
- *
- * Returning the Ollama shape is deliberate: every caller already reads
- * res.data.message.content, and translating the response here means none of
- * them had to be touched beyond the call itself.
- */
-async function llmChat(body, options) {
-  const axios = require('axios');
-  const opts = Object.assign({ timeout: 300000 }, options || {});
-  const cfg = await llmSettings();
-  if (!cfg.url) {
-    throw new Error('No language model is configured. Choose one at the top of the admin app, or re-run install/core/02-settings.ps1.');
-  }
-  // The chosen model wins over whatever the caller hardcoded, so switching
-  // model in the app changes every flow rather than only the ones that ask.
-  body = Object.assign({}, body, { model: cfg.model || body.model });
-
-  if (cfg.provider === 'ollama') {
-    let res = await axios.post(cfg.url + '/api/chat', body, opts);
-    if (!llmContentOf(res)) {
-      // Empty happens intermittently, usually on a reasoning model that spent
-      // its budget thinking. One more ask is cheaper than failing the job.
-      res = await axios.post(cfg.url + '/api/chat', body, opts);
-    }
-    llmRequireContent(res, cfg, body);
-    return res;
-  }
-
-  // OpenAI-compatible. Ollama's extras have no equivalent and are dropped
-  // rather than sent, because some servers reject unknown fields outright.
-  const messages = (body.messages || []).map(function (m) {
-    if (!m.images || !m.images.length) return { role: m.role, content: m.content };
-    // Vision: Ollama takes bare base64 alongside the text, OpenAI takes parts.
-    const parts = [{ type: 'text', text: m.content }];
-    m.images.forEach(function (b64) {
-      parts.push({ type: 'image_url', image_url: { url: 'data:image/png;base64,' + b64 } });
-    });
-    return { role: m.role, content: parts };
-  });
-
-  const payload = { model: body.model || cfg.model, messages: messages, stream: false };
-  if (body.options && typeof body.options.temperature === 'number') {
-    payload.temperature = body.options.temperature;
-  }
-  // Ollama's format:'json' is response_format here. num_ctx has no equivalent:
-  // a hosted model's context is whatever it is.
-  if (body.format === 'json') payload.response_format = { type: 'json_object' };
-
-  const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
-  if (cfg.apiKey) headers.Authorization = 'Bearer ' + cfg.apiKey;
-
-  const res = await axios.post(cfg.url + '/v1/chat/completions', payload,
-    Object.assign({}, opts, { headers: headers }));
-  llmRequireContent(res, cfg, body);
-  const choice = (res.data && res.data.choices && res.data.choices[0]) || {};
-  const content = (choice.message && choice.message.content) || '';
-  // Shaped like Ollama's reply so callers need no branch of their own.
-  return { data: { message: { content: content }, done: true, _raw: res.data } };
-}
-/** The text of a reply, in either provider's shape. */
-function llmContentOf(res) {
-  const d = (res && res.data) || {};
-  const fromOllama = d.message && d.message.content;
-  const fromApi = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-  return String(fromOllama || fromApi || '').trim();
-}
-
-/**
- * Refuse an empty reply, with enough detail to tell why.
- *
- * Callers parse the content as JSON. An empty string fails as "Unexpected end
- * of JSON input", which names neither the model nor the reason, and sends
- * whoever reads it looking in the wrong place.
- */
-function llmRequireContent(res, cfg, body) {
-  if (llmContentOf(res)) return;
-  const d = (res && res.data) || {};
-  const thinking = ((d.message && d.message.thinking) || '').length;
-  const why = d.done_reason || (d.choices && d.choices[0] && d.choices[0].finish_reason) || 'unknown';
-  const asked = (body.messages || []).reduce(function (n, m) { return n + String(m.content || '').length; }, 0);
-  throw new Error(
-    'The model returned an empty reply, twice. model=' + (cfg.model || '?') +
-    ' at ' + cfg.url + ', stopped because: ' + why +
-    (thinking ? ', and it returned ' + thinking + ' characters of reasoning instead of an answer' : '') +
-    ', prompt was ' + asked + ' characters. ' +
-    'A reasoning model can spend its whole budget thinking: try a larger context, ' +
-    'a shorter input, or a different model in the picker at the top of the app.'
-  );
-}
+// @include llm
 // ---------------------------------------------------------------------------
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 const jsonHeaders = { ...authHeaders, 'Content-Type': 'application/json', Prefer: 'return=representation' };
@@ -934,7 +783,7 @@ if (mode === 'chainplan' || mode === 'render' || mode === 'assemble') {
   // stages already do, so stop and resume keep working.
   const fs = require('fs');
   const path = require('path');
-  const COMFY_ROOT = 'C:/ComfyUI2';
+  const COMFY_ROOT = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '');
   const PACK_WF = COMFY_ROOT + '/custom_nodes/ComfyUI-MiniMaxH3-Context-Loop/example_workflows/Ref2V Tagged - MiniMax H3 0.6.json';
   const scene = Math.max(1, Math.min(chainShots.length, Math.round(Number(parsed.scene) || 1)));
   // Stable per plan, so every scene of the same plan resumes the same run.
@@ -1412,7 +1261,7 @@ if (mode === 'review') {
 
   const fs2 = require('fs');
   const path2 = require('path');
-  const COMFY_ROOT2 = 'C:/ComfyUI2';
+  const COMFY_ROOT2 = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '');
 
   // Specific questions, not "do these match". A similarity judgement from a
   // vision model is a number nobody can act on; a list of who is where compares

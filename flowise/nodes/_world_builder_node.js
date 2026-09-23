@@ -1,3 +1,5 @@
+// @include comfy_paths
+
 const resolved = JSON.parse($resolveOutput);
 if (resolved.error) return { action: 'error', reason: resolved.error };
 
@@ -15,7 +17,10 @@ const build = resolved.build || {
 const axios = require('axios');
 const insforgeUrl = $insforgeUrl;
 const insforgeApiKey = $insforgeApiKey;
-const comfyUrl = $comfyUrl;
+// @include comfy_world
+
+// HY-World graphs run on the world ComfyUI, started on demand (see lib/comfy_world.js).
+const comfyUrl = await worldComfyUrl();
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
@@ -53,10 +58,10 @@ async function upsertSplat(patch) {
 // plan and cameras were made in, and the point of a rebuild is to improve
 // THAT world, not to start another beside it.
 const workspaceName = (build.workspace && String(build.workspace)) || ('Act' + act + 'Scene' + sceneNumber + locationSlug);
-const rootDir = 'C:/ComfyUI2/output/' + movieSlug + '/hyworld2_worldgen';
+const rootDir = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/output/' + movieSlug + '/hyworld2_worldgen';
 const finalPlyName = workspaceName + '_point_cloud_5000.ply';
 const plyDir = movieSlug + '/hyworld2_worldgen/' + workspaceName + '/gs_results/ply';
-const finalPlyPath = 'C:/ComfyUI2/output/' + plyDir + '/' + finalPlyName;
+const finalPlyPath = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/output/' + plyDir + '/' + finalPlyName;
 
 const existingRes = await axios.get(`${insforgeUrl}/api/database/records/scene_splats`, {
   params: { movie_id: `eq.${movieId}`, act_number: `eq.${act}`, scene_number: `eq.${sceneNumber}`, select: 'id,ply_path,workspace_name' },
@@ -90,6 +95,7 @@ const sameWorkspace = !existing || !existing.workspace_name || existing.workspac
 if (existing && (force || resume) && sameWorkspace) {
   backupPath = finalPlyPath.replace(/\.ply$/, '_backup_' + Date.now() + '.ply');
   const backupGraph = { '1': { class_type: 'RenameFile', inputs: { source_path: existing.ply_path, dest_path: backupPath } } };
+  ensureSaveDirs(backupGraph);
   const br = await axios.post(comfyUrl + '/prompt', { prompt: backupGraph });
   const bpid = br.data && br.data.prompt_id;
   if (!bpid) return { action: 'error', reason: 'Forced retrain aborted: could not enqueue backup of the existing splat. Nothing was touched.' };
@@ -108,12 +114,13 @@ if (existing && (force || resume) && sameWorkspace) {
 const panoRel = build.panorama || !build.workspace
   ? panoImagePath
   : 'output/' + movieSlug + '/hyworld2_worldgen/' + workspaceName + '/panorama.png';
-const srcPanoAbs = 'C:/ComfyUI2/' + panoRel;
+const srcPanoAbs = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/' + panoRel;
 const flatPanoName = movieSlug + '_scene' + sceneNumber + '_panorama.png';
 const copyGraph = {
   '1': { class_type: 'JWImageLoadRGB', inputs: { path: srcPanoAbs } },
-  '2': { class_type: 'JWImageSaveToPath', inputs: { image: ['1', 0], path: 'C:/ComfyUI2/input/' + flatPanoName, overwrite: 'true' } }
+  '2': { class_type: 'JWImageSaveToPath', inputs: { image: ['1', 0], path: String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/input/' + flatPanoName, overwrite: 'true' } }
 };
+ensureSaveDirs(copyGraph);
 const cr = await axios.post(comfyUrl + '/prompt', { prompt: copyGraph });
 const cpid = cr.data && cr.data.prompt_id;
 if (!cpid) return { action: 'error', reason: 'Stage failed: could not enqueue copy of the panorama into the flat input root.' };
@@ -140,6 +147,7 @@ const wf = {
 };
 
 await axios.post(comfyUrl + '/free', { unload_models: true, free_memory: true });
+ensureSaveDirs(wf);
 const r = await axios.post(comfyUrl + '/prompt', { prompt: wf });
 const pid = r.data && r.data.prompt_id;
 if (!pid) return { action: 'error', reason: 'World build enqueue failed', details: (r.data && r.data.node_errors) || r.data };

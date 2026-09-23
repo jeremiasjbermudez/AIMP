@@ -26,7 +26,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSCommandPath
-. (Join-Path $root 'lib\common.ps1')
+. (Join-Path $root 'lib/common.ps1')
 
 $map = Get-ModuleMap
 if (-not $map.PSObject.Properties.Name.Contains($Module)) { throw "No module called '$Module'." }
@@ -48,7 +48,7 @@ Write-Step "Removing $($spec.title)"
 # ---------------------------------------------------------------- panels
 foreach ($panel in @($spec.panels)) {
     foreach ($file in @($panel.files)) {
-        $path = Join-Path $env:ADMIN_DIR "src\$file"
+        $path = Join-Path $env:ADMIN_DIR "src/$file"
         if (Test-Path $path) {
             if ($PSCmdlet.ShouldProcess($file, 'remove from the admin app')) {
                 Remove-Item $path -Recurse -Force

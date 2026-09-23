@@ -8,7 +8,14 @@
     "  file inside it by name, so no path has to be guessed.",
     "  source.type \"manual\" means the origin was never recorded: the fetcher",
     "  says so and points at docs/MODELS.md rather than inventing a URL.",
-    "packs: folder name -> { git } or { registry }"
+    "packs: folder name -> { git, ref } or { registry, version }, or { manual: why }",
+    "  ref / version pin the pack; pinned.tested says whether the flows were",
+    "  run against that version (from the ComfyUI machine) or it is simply the",
+    "  upstream head on pinned.on. Refresh with install/lib/pin-assets.js.",
+    "  manual: no public source; the note says how to get it.",
+    "models: a huggingface source also carries revision, sha256 and bytes once",
+    "  pinned; fetch-model.py downloads that revision and checks the hash.",
+    "  local: a pack kept in this repository, copied into custom_nodes as it is."
   ],
   "models": {
     "minimax_h3_fl2va_pruned_int8_convrot.safetensors": {
@@ -17,7 +24,10 @@
       "source": {
         "type": "huggingface",
         "repo": "Comfy-Org/MiniMax-H3",
-        "path": "diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors"
+        "path": "diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+        "revision": "7e75982b97cd5a41d2dcfa1904ee88d0686d6fd1",
+        "sha256": "e889202c41dafb67b10d67b97f0d8541508036a6090af23425a5c2615d03c47a",
+        "bytes": 20970379616
       }
     },
     "minimax_h3_ref2va_pruned_int8_convrot.safetensors": {
@@ -26,7 +36,10 @@
       "source": {
         "type": "huggingface",
         "repo": "Comfy-Org/MiniMax-H3",
-        "path": "diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors"
+        "path": "diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+        "revision": "7e75982b97cd5a41d2dcfa1904ee88d0686d6fd1",
+        "sha256": "9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779",
+        "bytes": 20970379616
       }
     },
     "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors": {
@@ -35,7 +48,10 @@
       "source": {
         "type": "huggingface",
         "repo": "Comfy-Org/MiniMax-H3",
-        "path": "text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+        "path": "text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "revision": "7e75982b97cd5a41d2dcfa1904ee88d0686d6fd1",
+        "sha256": "35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6",
+        "bytes": 15687142551
       }
     },
     "minimax_h3_video_vae_fp16.safetensors": {
@@ -44,7 +60,10 @@
       "source": {
         "type": "huggingface",
         "repo": "Comfy-Org/MiniMax-H3",
-        "path": "vae/minimax_h3_video_vae_fp16.safetensors"
+        "path": "vae/minimax_h3_video_vae_fp16.safetensors",
+        "revision": "7e75982b97cd5a41d2dcfa1904ee88d0686d6fd1",
+        "sha256": "7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522",
+        "bytes": 5207808496
       }
     },
     "minimax_h3_audio_vae_fp32.safetensors": {
@@ -53,7 +72,10 @@
       "source": {
         "type": "huggingface",
         "repo": "Comfy-Org/MiniMax-H3",
-        "path": "vae/minimax_h3_audio_vae_fp32.safetensors"
+        "path": "vae/minimax_h3_audio_vae_fp32.safetensors",
+        "revision": "7e75982b97cd5a41d2dcfa1904ee88d0686d6fd1",
+        "sha256": "8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48",
+        "bytes": 605254808
       }
     },
     "minimax_h3_fun_controlnet_union_pruned_bf16.safetensors": {
@@ -63,7 +85,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/MiniMax-H3",
         "path": "model_patches/minimax_h3_fun_controlnet_union_pruned_bf16.safetensors",
-        "via": "repo listing"
+        "via": "repo listing",
+        "revision": "7e75982b97cd5a41d2dcfa1904ee88d0686d6fd1",
+        "sha256": "57fe1e64928a63a55e3cd4586b55cd5d0eb4980648b6f31e5d9dac16fe7f1c48",
+        "bytes": 4222169456
       }
     },
     "minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors": {
@@ -91,7 +116,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/vae-text-encorder-for-flux-klein-9b",
         "path": "split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "3f62d9d8ae1fec33c6e91453d5c712855b096b55",
+        "sha256": "abad16806e0cbabc54e0325d6565847443fe396d5f0be38bb3cd3fe75a1201d6",
+        "bytes": 8664848742
       }
     },
     "flux2-vae.safetensors": {
@@ -101,7 +129,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/flux2-dev",
         "path": "split_files/vae/flux2-vae.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "ab9055628ea245000e610f2aa2c96f4746093546",
+        "sha256": "d64f3a68e1cc4f9f4e29b6e0da38a0204fe9a49f2d4053f0ec1fa1ca02f9c4b5",
+        "bytes": 336213556
       }
     },
     "flux-2-klein-9B-360-erp-outpaint-lora_V1.safetensors": {
@@ -119,7 +150,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/Qwen-Image-Edit_ComfyUI",
         "path": "split_files/diffusion_models/qwen_image_edit_2511_bf16.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "7d41107b653d3039be20972fb82398b01b3213eb",
+        "sha256": "ae42d927b5fac4f278b9a894554c727e619727a63622976f2d95625be4bce08c",
+        "bytes": 40861031560
       }
     },
     "Qwen-Image-Edit-2509_fp8_e4m3fn.safetensors": {
@@ -137,7 +171,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/Qwen-Image_ComfyUI",
         "path": "split_files/text_encoders/qwen_2.5_vl_7b.safetensors",
-        "via": "download cache"
+        "via": "download cache",
+        "revision": "7beb7b647f04469fbe64ba8adc2bb0d7e5e9f73f",
+        "sha256": "cfafd739459bc86257397259f612a9aee88e5b98e85b5c0d0d1717e898b3463a",
+        "bytes": 16584415576
       }
     },
     "qwen-image/qwen_image_vae.safetensors": {
@@ -147,7 +184,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/Qwen-Image_ComfyUI",
         "path": "split_files/vae/qwen_image_vae.safetensors",
-        "via": "repo listing"
+        "via": "repo listing",
+        "revision": "7beb7b647f04469fbe64ba8adc2bb0d7e5e9f73f",
+        "sha256": "a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f",
+        "bytes": 253806246
       }
     },
     "Qwen-Rapid-AIO-NSFW-v23.safetensors": {
@@ -173,7 +213,10 @@
         "type": "huggingface",
         "repo": "lightx2v/Qwen-Image-Edit-2511-Lightning",
         "path": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
-        "via": "download cache"
+        "via": "download cache",
+        "revision": "d74eba145674fd7e31b949324e148e21e7118abd",
+        "sha256": "22226e8d05d354bb356627d428809f5afd7819399b077238a2b70a82883a904f",
+        "bytes": 849608296
       }
     },
     "Qwen-Image-Edit-F2P.safetensors": {
@@ -231,7 +274,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/z_image_turbo",
         "path": "split_files/diffusion_models/z_image_turbo_bf16.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "08d04455279082882deaabc8d0d09fc914c071e1",
+        "sha256": "2407613050b809ffdff18a4ac99af83ea6b95443ecebdf80e064a79c825574a6",
+        "bytes": 12309866400
       }
     },
     "qwen_3_4b.safetensors": {
@@ -241,7 +287,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/z_image_turbo",
         "path": "split_files/text_encoders/qwen_3_4b.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "08d04455279082882deaabc8d0d09fc914c071e1",
+        "sha256": "6c671498573ac2f7a5501502ccce8d2b08ea6ca2f661c458e708f36b36edfc5a",
+        "bytes": 8044982048
       }
     },
     "ae.safetensors": {
@@ -251,7 +300,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/z_image_turbo",
         "path": "split_files/vae/ae.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "08d04455279082882deaabc8d0d09fc914c071e1",
+        "sha256": "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38",
+        "bytes": 335304388
       }
     },
     "WorldStereo_umt5-xxl-encoder-fp8.safetensors": {
@@ -261,7 +313,10 @@
         "type": "huggingface",
         "repo": "MIUProject/VNCCS_WorldStereoLight",
         "path": "clip/WorldStereo_umt5-xxl-encoder-fp8.safetensors",
-        "via": "download cache"
+        "via": "download cache",
+        "revision": "9e7723e4944b7ed4e061bfc72c63eb845ba8e004",
+        "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+        "bytes": 6735906897
       }
     },
     "WorldStereo_wan_2.1_vae.safetensors": {
@@ -271,7 +326,10 @@
         "type": "huggingface",
         "repo": "MIUProject/VNCCS_WorldStereoLight",
         "path": "vae/WorldStereo_wan_2.1_vae.safetensors",
-        "via": "download cache"
+        "via": "download cache",
+        "revision": "9e7723e4944b7ed4e061bfc72c63eb845ba8e004",
+        "sha256": "d6e524b3fffede1787a74e81b30976dce5400c4439ba64222168e607ed19e793",
+        "bytes": 507591892
       }
     },
     "ace_step_1.5_turbo_aio.safetensors": {
@@ -281,7 +339,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/ace_step_1.5_ComfyUI_files",
         "path": "checkpoints/ace_step_1.5_turbo_aio.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "694a9723ff772285c73f0700caacf944d3f02f8d",
+        "sha256": "67b0f43aa5c51c840bd0228e6a935d8ff416ec87e5df2fc0637da17a561252bc",
+        "bytes": 10025478736
       }
     },
     "acestep_v1.5_xl_sft_bf16.safetensors": {
@@ -291,7 +352,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/ace_step_1.5_ComfyUI_files",
         "path": "split_files/diffusion_models/acestep_v1.5_xl_sft_bf16.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "694a9723ff772285c73f0700caacf944d3f02f8d",
+        "sha256": "3c05ae268353b3540fb1fd7db4fd77ffbda9802ec641b624e15648e030ecf3ce",
+        "bytes": 9974719930
       }
     },
     "ace_1.5_vae.safetensors": {
@@ -301,7 +365,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/ace_step_1.5_ComfyUI_files",
         "path": "split_files/vae/ace_1.5_vae.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "694a9723ff772285c73f0700caacf944d3f02f8d",
+        "sha256": "6de92e3a862acd287e08b024ac90f0783a8635451b728721a33ff03565bcb2bb",
+        "bytes": 337431732
       }
     },
     "qwen_0.6b_ace15.safetensors": {
@@ -311,7 +378,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/ace_step_1.5_ComfyUI_files",
         "path": "split_files/text_encoders/qwen_0.6b_ace15.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "694a9723ff772285c73f0700caacf944d3f02f8d",
+        "sha256": "fd4590c82153b8ddb67e15a2e7aaa8afa8b83a858c8a9b82a4831063156aa7a7",
+        "bytes": 1191588248
       }
     },
     "qwen_1.7b_ace15.safetensors": {
@@ -321,7 +391,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/ace_step_1.5_ComfyUI_files",
         "path": "split_files/text_encoders/qwen_1.7b_ace15.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "694a9723ff772285c73f0700caacf944d3f02f8d",
+        "sha256": "ed63e9247d1f55f3ace04fa11e95b085fc82d459c82c5626f0b2e37b91ebd710",
+        "bytes": 3708523360
       }
     },
     "minimax_music3_dit_fp16.safetensors": {
@@ -331,7 +404,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/MiniMax-Music-3",
         "path": "diffusion_models/minimax_music3_dit_fp16.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "6baad88896848433857c170ba4f05d2ea9d5f218",
+        "sha256": "45494a2b6b69af115902ff28eaf54118d19067aa54da01000f3e3efce7ba0e34",
+        "bytes": 4914197682
       }
     },
     "minimax_music3_text_encoder_pruned_int8_convrot.safetensors": {
@@ -341,7 +417,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/MiniMax-Music-3",
         "path": "text_encoders/minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "6baad88896848433857c170ba4f05d2ea9d5f218",
+        "sha256": "010b7416d2336a08c711bc22ee65849c9623069ddb7d89bec011a75699e52014",
+        "bytes": 9196611886
       }
     },
     "minimax_music3_dav.safetensors": {
@@ -351,7 +430,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/MiniMax-Music-3",
         "path": "vae/minimax_music3_dav.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "6baad88896848433857c170ba4f05d2ea9d5f218",
+        "sha256": "2a32155b769be01445fcc2a8663b910fc9e1751e18dc1c3ec528064512d9ef0c",
+        "bytes": 216696128
       }
     },
     "groundingdino_swint_ogc.pth": {
@@ -385,7 +467,10 @@
         "type": "huggingface",
         "repo": "Comfy-Org/SCAIL-2",
         "path": "diffusion_models/wan2.1_14B_SCAIL_2_fp16.safetensors",
-        "via": "repo search"
+        "via": "repo search",
+        "revision": "3bd725f20edad6967a65792af3017e251a5bd853",
+        "sha256": "e3f9cd52184949ee8ffdc01ba14de4c619e0ddfa09ae105cb7efce5c8dc9fe43",
+        "bytes": 32794040328
       }
     },
     "ApexQwenEdit2511_int8_convrot.safetensors": {
@@ -424,167 +509,464 @@
   "packs": {
     "ComfyMath": {
       "git": "https://github.com/evanspearman/ComfyMath",
-      "registry": "comfymath"
+      "registry": "comfymath",
+      "ref": "c01177221c31b8e5fbc062778fc8254aeb541638",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-Chibi-Nodes": {
-      "git": "https://github.com/chibiace/ComfyUI-Chibi-Nodes"
+      "git": "https://github.com/chibiace/ComfyUI-Chibi-Nodes",
+      "ref": "9a9734f9c17bab3b4775c04291d26f48cbff2791",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-Conditioning-Rebalance": {
-      "registry": "ComfyUI-Conditioning-Rebalance"
+      "registry": "ComfyUI-Conditioning-Rebalance",
+      "version": "1.5.0",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-DepthCrafter-Nodes": {
       "git": "https://github.com/akatz-ai/ComfyUI-DepthCrafter-Nodes.git",
-      "registry": "comfyui-depthcrafter-nodes"
+      "registry": "comfyui-depthcrafter-nodes",
+      "ref": "f469414d48cd0393ed43ae47af692009ca071706",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-Florence2": {
       "git": "https://github.com/kijai/ComfyUI-Florence2.git",
-      "registry": "comfyui-florence2"
+      "registry": "comfyui-florence2",
+      "ref": "9ece3de914214c5f581d725167bc9d0eeb0d1120",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-GGUF": {
-      "registry": "ComfyUI-GGUF"
+      "registry": "ComfyUI-GGUF",
+      "version": "2.0.0",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "installed",
+        "tested": true
+      }
     },
     "ComfyUI-H3-FunControl": {
       "git": "https://github.com/wyzborrero/ComfyUI-H3-FunControl",
-      "registry": "comfyui-h3-funcontrol"
+      "registry": "comfyui-h3-funcontrol",
+      "ref": "d2a3faa7e29f45b8cb03685368c1243f08143910",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-H3-Motion-Context-MultiRef": {
-      "git": "https://github.com/seitanism/ComfyUI-H3-Motion-Context-MultiRef.git"
+      "git": "https://github.com/seitanism/ComfyUI-H3-Motion-Context-MultiRef.git",
+      "ref": "361624fb406b63eb6694442eac6c895fc1533a70",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-Impact-Subpack": {
       "git": "https://github.com/ltdrdata/ComfyUI-Impact-Subpack",
-      "registry": "comfyui-impact-subpack"
+      "registry": "comfyui-impact-subpack",
+      "ref": "50c7b71a6a224734cc9b21963c6d1926816a97f1",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-LTXVideo": {
-      "git": "https://github.com/Lightricks/ComfyUI-LTXVideo"
+      "git": "https://github.com/Lightricks/ComfyUI-LTXVideo",
+      "ref": "ac4d99839020b983e956a8ab67ec38aec1b6e65a",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "installed",
+        "tested": true
+      }
     },
     "ComfyUI-MiniMaxH3-Context-Loop": {
       "git": "https://github.com/ethanfel/ComfyUI-MiniMaxH3-Context-Loop.git",
-      "registry": "comfyui-minimaxh3-contex-loop"
+      "registry": "comfyui-minimaxh3-contex-loop",
+      "ref": "1a74e5c147b4d112cc3e6d1d9d0064a04bbab7d8",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-MoGe2-360": {
-      "git": "https://github.com/cedarconnor/ComfyUI-MoGe2-360.git"
+      "git": "https://github.com/cedarconnor/ComfyUI-MoGe2-360.git",
+      "ref": "b8190b73a44199684fa1fef27248605d447ec517",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-PromptRelay": {
-      "git": "https://github.com/kijai/ComfyUI-PromptRelay"
+      "git": "https://github.com/kijai/ComfyUI-PromptRelay",
+      "ref": "ca5d4e3edb6abd9c2a4c68a3a6798eec1980f450",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-ReActor": {
       "git": "https://github.com/Gourieff/ComfyUI-ReActor.git",
-      "registry": "comfyui-reactor"
+      "registry": "comfyui-reactor",
+      "ref": "a12c5b19dcac9ae8b47e592da39c9711c8f8c756",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-Sharp": {
       "git": "https://github.com/PozzettiAndrea/ComfyUI-Sharp",
-      "registry": "comfyui-sharp"
+      "registry": "comfyui-sharp",
+      "ref": "92c0015af61b71e6fd88301cfb336e7034f19796",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-Spectrum-MiniMax-H3": {
       "git": "https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3.git",
-      "registry": "comfyui-spectrum-minimax-h3"
+      "registry": "comfyui-spectrum-minimax-h3",
+      "ref": "5161f0457bc8c52535212d6783eee73f439e1537",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-Studio-nodes": {
-      "git": "https://github.com/comfyuistudio/ComfyUI-Studio-nodes"
+      "git": "https://github.com/comfyuistudio/ComfyUI-Studio-nodes",
+      "ref": "bf2033a57c9add688b7bbcb97def54423bd8ca99",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-Styles_CSV_Loader": {
       "git": "https://github.com/theUpsider/ComfyUI-Styles_CSV_Loader",
-      "registry": "comfyui-styles_csv_loader"
+      "registry": "comfyui-styles_csv_loader",
+      "ref": "255a4af7fcc818c756286c885483a1f97e4f1e9a",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-Viggle-Animate-H3": {
       "git": "https://github.com/Saganaki22/ComfyUI-Viggle-Animate-H3.git",
-      "registry": "comfyui-viggle-animate-h3"
+      "registry": "comfyui-viggle-animate-h3",
+      "ref": "6ae081af5b3175f99ef7cddebd5dfaf93390ab70",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI-WanVideoWrapper": {
       "git": "https://github.com/kijai/ComfyUI-WanVideoWrapper.git",
-      "registry": "ComfyUI-WanVideoWrapper"
+      "registry": "ComfyUI-WanVideoWrapper",
+      "ref": "088128b224242e110d3906c6750e9a3a348a659b",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "installed",
+        "tested": true
+      }
     },
     "ComfyUI_Comfyroll_CustomNodes": {
-      "git": "https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes"
+      "git": "https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes",
+      "ref": "d78b780ae43fcf8c6b7c6505e6ffb4584281ceca",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "ComfyUI_HYWorld2": {
       "git": "https://github.com/AHEKOT/ComfyUI_HYWorld2.git",
-      "registry": "comfyui-hyworld2"
+      "registry": "comfyui-hyworld2",
+      "ref": "a80b011c5a1af0e0f358659c7446822d43cb7d05",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "RES4LYF": {
       "git": "https://github.com/ClownsharkBatwing/RES4LYF.git",
-      "registry": "res4lyf"
+      "registry": "res4lyf",
+      "ref": "056bc24a0450f5d46053535988cea4c719554806",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "WhatDreamsCost-ComfyUI": {
       "git": "https://github.com/WhatDreamsCost/WhatDreamsCost-ComfyUI",
-      "registry": "WhatDreamsCost-ComfyUI"
+      "registry": "WhatDreamsCost-ComfyUI",
+      "ref": "a3c809c8b593a74c2ddcd6c1f83ad85ebebe3c64",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "_disabled_ComfyUI_TRELLIS": {
       "git": "https://github.com/smthemex/ComfyUI_TRELLIS",
-      "registry": "comfyui_trellis"
+      "registry": "comfyui_trellis",
+      "ref": "a257bb6cbcd689333647efabb4314d5c7713c4e3",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "_disabled_comfyui-trellis-hicache": {
-      "registry": "comfyui-trellis-hicache"
+      "registry": "comfyui-trellis-hicache",
+      "version": "0.1.4",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "_disabled_comfyui-trellis2-hicache": {
-      "registry": "comfyui-trellis2-hicache"
+      "registry": "comfyui-trellis2-hicache",
+      "version": "0.1.4",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "bfsnodes": {
-      "registry": "bfsnodes"
+      "registry": "bfsnodes",
+      "version": "1.34.2",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui-art-venture": {
-      "registry": "comfyui-art-venture"
+      "registry": "comfyui-art-venture",
+      "version": "1.1.7",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui-custom-scripts": {
-      "registry": "comfyui-custom-scripts"
+      "registry": "comfyui-custom-scripts",
+      "version": "1.2.5",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui-easy-use": {
-      "registry": "comfyui-easy-use"
+      "registry": "comfyui-easy-use",
+      "version": "1.3.6",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "installed",
+        "tested": true
+      }
     },
     "comfyui-hrnodes": {
       "registry": "comfyui-hrnodes"
     },
     "comfyui-impact-pack": {
-      "registry": "comfyui-impact-pack"
+      "registry": "comfyui-impact-pack",
+      "version": "8.28.3",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui-kjnodes": {
-      "registry": "comfyui-kjnodes"
+      "registry": "comfyui-kjnodes",
+      "version": "1.5.0",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "installed",
+        "tested": true
+      }
     },
     "comfyui-preview360panorama": {
-      "registry": "comfyui-preview360panorama"
+      "registry": "comfyui-preview360panorama",
+      "version": "1.0.2",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui-qwenmultiangle": {
-      "registry": "comfyui-qwenmultiangle"
+      "registry": "comfyui-qwenmultiangle",
+      "version": "0.7.0",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui-sam2": {
-      "registry": "comfyui-sam2"
+      "registry": "comfyui-sam2",
+      "version": "1.0.3",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui-various": {
-      "git": "https://github.com/jamesWalker55/comfyui-various"
+      "git": "https://github.com/jamesWalker55/comfyui-various",
+      "ref": "ddf36c68c5fd6715b35b5c8c9b63e2eef8043bad",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "installed",
+        "tested": true
+      }
     },
     "comfyui-videohelpersuite": {
-      "registry": "comfyui-videohelpersuite"
+      "registry": "comfyui-videohelpersuite",
+      "version": "1.7.9",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "installed",
+        "tested": true
+      }
     },
     "comfyui_GaussianViewer": {
-      "git": "https://github.com/CarlMarkswx/comfyui_GaussianViewer"
+      "git": "https://github.com/CarlMarkswx/comfyui_GaussianViewer",
+      "ref": "65b81282044131b74e03faf9f8936195403bf65f",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui_controlnet_aux": {
-      "registry": "comfyui_controlnet_aux"
+      "registry": "comfyui_controlnet_aux",
+      "version": "1.1.5",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui_essentials": {
-      "registry": "comfyui_essentials"
+      "registry": "comfyui_essentials",
+      "version": "1.1.0",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui_fearnworksnodes": {
-      "registry": "comfyui_fearnworksnodes"
+      "registry": "comfyui_fearnworksnodes",
+      "version": "0.1.2",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "comfyui_segment_anything": {
-      "git": "https://github.com/storyicon/comfyui_segment_anything.git"
+      "git": "https://github.com/storyicon/comfyui_segment_anything.git",
+      "ref": "ab6395596399d5048639cdab7e44ec9fae857a93",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "licon-msr": {
-      "registry": "licon-msr"
+      "registry": "licon-msr",
+      "version": "1.0.0",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "masquerade-nodes-comfyui": {
-      "git": "https://github.com/BadCafeCode/masquerade-nodes-comfyui"
+      "git": "https://github.com/BadCafeCode/masquerade-nodes-comfyui",
+      "ref": "432cb4d146a391b387a0cd25ace824328b5b61cf",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
     },
     "panorama-stickers": {
-      "registry": "panorama-stickers"
+      "registry": "panorama-stickers",
+      "pinned": {
+        "on": "2026-09-22",
+        "from": "installed",
+        "tested": true,
+        "note": "1.5.2 - the panorama graph uses its width-only output_preset, coverage and fps"
+      },
+      "git": "https://github.com/nomadoor/ComfyUI-Panorama-Stickers",
+      "ref": "ef900eb1a0e5b4b104a562ba91ae744d5f22608c"
     },
     "rgthree-comfy": {
-      "registry": "rgthree-comfy"
+      "registry": "rgthree-comfy",
+      "version": "1.0.2606200020",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "installed",
+        "tested": true
+      }
     },
     "was-node-suite-comfyui": {
       "git": "https://github.com/ltdrdata/was-node-suite-comfyui",
-      "registry": "was-ns"
+      "registry": "was-ns",
+      "ref": "44de705818d4663fefefde57ffe0ea5a9ea39df4",
+      "pinned": {
+        "on": "2026-09-23",
+        "from": "upstream",
+        "tested": false
+      }
+    },
+    "comfyui-gsplat-room-viewer": {
+      "manual": "Not published. Serves extensions/comfyui-gsplat-room-viewer/viewer_room.html, which the admin app's splat viewer loads. Copy it from a machine that has it."
+    },
+    "comfyui-rename-file": {
+      "local": "comfyui/custom_nodes/comfyui-rename-file",
+      "note": "Written for this repository to the interface the world flows use; the original pack was never published."
     }
   }
 }

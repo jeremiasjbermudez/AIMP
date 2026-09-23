@@ -287,6 +287,46 @@
     color: var(--color-accent-fg);
   }
 
+  /* The menu in the order a film is made: a heading per step, then the
+     workshop, folded away by default. */
+  .nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .nav-group + .nav-group {
+    margin-top: 0.7rem;
+  }
+  .nav-group-heading {
+    padding: 0 0.7rem 0.2rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-faint);
+  }
+  .side-nav .nav-group-toggle {
+    justify-content: space-between;
+    padding: 0.25rem 0.7rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-faint);
+  }
+  .side-nav .nav-group-toggle:hover {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+  }
+  .nav-group-count {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+  .nav-group-workshop {
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--color-line);
+  }
+
   /* The reference leans on two motifs: a small lavender pill above a heading,
      and a rounded violet tile holding a glyph. Both are recreated from the
      section headings the panels already emit, so no panel markup changes. */
@@ -1281,6 +1321,108 @@
     align-items: start;
   }
 
+  /* A scene's set, step by step: panorama, splat, block-out, cameras. */
+  .set-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    list-style: none;
+    margin: 0.25rem 0 0.6rem;
+    padding: 0;
+    counter-reset: step;
+    font-size: 0.85rem;
+  }
+  .set-steps li {
+    counter-increment: step;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem 0.2rem 0.3rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--text-dim);
+  }
+  .set-steps li::before {
+    content: counter(step);
+    display: inline-grid;
+    place-items: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    border-radius: 50%;
+    background: var(--surface-3);
+    font-size: 0.75rem;
+  }
+  .set-steps li.done { color: var(--text); border-color: var(--ok); }
+  .set-steps li.done::before { content: '✓'; background: var(--ok); color: #fff; }
+  .set-steps button { padding: 0.1rem 0.5rem; font-size: 0.8rem; }
+
+  /* A table wider than the page scrolls inside this box, never the page itself. */
+  .table-scroll { overflow-x: auto; max-width: 100%; }
+
+  /* Blender sets: the plan of the room beside the shot form. */
+  .sets-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) 1fr;
+    gap: 1.25rem;
+    align-items: start;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 760px) {
+    .sets-layout { grid-template-columns: 1fr; }
+  }
+  .sets-plan {
+    width: 100%;
+    height: auto;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .sets-plan-room { fill: var(--surface); stroke: var(--text-dim); stroke-width: 0.04; }
+  .sets-plan-mark { fill: var(--text-dim); }
+  .sets-plan-label { font-size: 0.17px; fill: var(--text-dim); }
+  .sets-plan-cam line { stroke: var(--text-faint); stroke-width: 0.025; stroke-dasharray: 0.08 0.06; }
+  .sets-plan-cam circle { fill: var(--text); }
+  .sets-plan-cam.draft line { stroke: var(--accent); }
+  .sets-plan-cam.draft circle { fill: var(--accent); }
+  .sets-plan-cam.draft .sets-plan-label { fill: var(--accent); }
+  .sets-plan-thing { fill: var(--surface-3); stroke: var(--text-faint); stroke-width: 0.015; }
+  .sets-make { margin: 0.5rem 0 1rem; }
+  .sets-make summary { cursor: pointer; font-weight: 600; margin-bottom: 0.5rem; }
+  .sets-pano { width: 100%; max-width: 720px; border-radius: 6px; display: block; margin: 0.5rem 0; }
+  .sets-revision { margin: 0.5rem 0 1rem; }
+  .sets-compare {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  @media (max-width: 760px) {
+    .sets-compare { grid-template-columns: repeat(2, 1fr); }
+  }
+  .sets-compare figure { margin: 0; display: grid; gap: 0.25rem; }
+  .sets-compare img { width: 100%; border-radius: 4px; display: block; }
+  .sets-compare figcaption { font-size: 0.8rem; color: var(--text-dim); text-align: center; }
+  .clip-grid .beat-card .ui-select { max-width: 100%; min-width: 0; }
+  .clip-grid .beat-card .camera-row label { min-width: 0; max-width: 100%; }
+  .sets-plan-path polyline { fill: none; stroke: var(--ok); stroke-width: 0.035; stroke-linejoin: round; }
+  .sets-plan-path circle { fill: var(--ok); }
+  .sets-take { border-top: 1px solid var(--line); padding: 0.4rem 0; }
+  .sets-take-editor { margin: 0.5rem 0 1rem; }
+  .sets-draft { border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 0.8rem; }
+  .sets-draft-shots { max-height: 11rem; overflow-y: auto; display: grid; gap: 0.2rem; margin: 0.4rem 0; font-size: 0.85rem; }
+  .sets-take-editor summary { cursor: pointer; font-weight: 600; margin-bottom: 0.4rem; }
+  .button-link {
+    display: inline-flex; align-items: center; padding: 0.35rem 0.8rem; border: 1px solid var(--line);
+    border-radius: 6px; color: var(--text); text-decoration: none; font-size: 0.9rem;
+  }
+  .button-link:hover { border-color: var(--accent); }
+  .sets-plates {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+  }
+  .sets-plates img { width: 100%; border-radius: 4px; display: block; }
+
   .clip-grid .beat-card {
     display: flex;
     flex-direction: column;
@@ -1909,6 +2051,17 @@
 .app.railed .site-footer a,
 .app.railed .site-footer-copy {
   display: none;
+}
+/* Icons only: a step's heading becomes a thin rule between its icons. */
+.app.railed .nav-group-heading {
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--color-line);
+}
+.app.railed .side-nav .nav-group-toggle {
+  height: 1rem;
+  font-size: 0;
 }
 .app.railed .side-nav button {
   justify-content: center;

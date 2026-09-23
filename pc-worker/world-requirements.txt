@@ -1,0 +1,28 @@
+# The world ComfyUI's environment (venv-world), on top of ComfyUI's own
+# requirements and ComfyUI_HYWorld2/requirements.txt.
+#
+# HY-World 2's WorldStereo imports these without listing them; the first world
+# build failed on each in turn ("No module named 'loguru'", then 'decord').
+loguru
+# decord has no Windows wheel for Python 3.12; eva-decord is the maintained
+# build and installs the same `decord` module.
+eva-decord
+# worldgen/src/seg_utils imports skimage; traj_generate swallows that ImportError
+# and reports a misleading "cannot import name utils3d_compat from src".
+scikit-image
+easydict
+# The world-expansion stage uses ftfy (imported only if present, then used
+# regardless) and tensorly (lib_bilagrid). pymeshlab is optional but cheap.
+# A scan of every import in the pack against this environment finds the rest
+# missing are optional: flash_attn, sageattention, torch_xla, llama_cpp, the
+# Gradio demo's pieces, and trainer extras behind try/flags.
+ftfy
+tensorly
+pymeshlab
+# ComfyUI_HYWorld2's requirements say plain `utils3d`, which pip resolves to an
+# old, unrelated PyPI package (0.0.2). The real one is EasternJournalist/utils3d,
+# at the commit MoGe pins: MoGe calls utils3d.torch.depth_to_points, which newer
+# commits dropped. HY-World's utils3d_compat then needs one fix for this older
+# API - run patch-hyworld2.py on the pack after installing (it is idempotent).
+# Install with --force-reinstall --no-deps.
+utils3d @ git+https://github.com/EasternJournalist/utils3d.git@c5daf6f6c244d251f252102d09e9b7bcef791a38

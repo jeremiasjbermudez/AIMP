@@ -13,8 +13,11 @@ const insforgeUrl = $insforgeUrl;
 const insforgeApiKey = $insforgeApiKey;
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 
-const PYTHON = 'C:/Users/Alivai/AppData/Local/Programs/Python/Python312/python.exe';
-const WORKER = 'C:/Flowise/face_qa_job.py';
+// ComfyUI's own Python (COMFY_PYTHON in install.env), and the worker from this
+// repository, found beside the installer: no machine's paths written in here.
+const PYTHON = String($comfyPython || 'python');
+const WORKER = path.join(String($installRoot || ''), '..', 'flowise', 'workers', 'face_qa_job.py');
+const COMFY_ROOT = String($comfyRoot || '');
 
 // The qa_* shots exist precisely for this job: head-and-shoulders, whole head in
 // frame, faces around 320px that score 0.69-0.90 against each other. The older
@@ -41,15 +44,16 @@ try {
 }
 
 async function runWorker(payload) {
-  const dir = 'C:/Flowise/_face_qa_jobs';
+  const dir = path.join(require('os').tmpdir(), 'aimp-face-qa');
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, 'qa_' + Date.now() + '.json');
-  fs.writeFileSync(file, JSON.stringify(payload), 'utf8');
+  // Clip and reference paths are relative to ComfyUI's folder.
+  fs.writeFileSync(file, JSON.stringify(Object.assign({ comfyRoot: COMFY_ROOT }, payload)), 'utf8');
   return await new Promise((resolve) => {
     execFile(
       PYTHON,
       [WORKER, '@' + file],
-      { cwd: 'C:/Flowise', timeout: 900000, maxBuffer: 20 * 1024 * 1024 },
+      { cwd: path.dirname(WORKER), timeout: 900000, maxBuffer: 20 * 1024 * 1024 },
       (err, stdout, stderr) => {
         const out = (stdout || '').trim();
         try {

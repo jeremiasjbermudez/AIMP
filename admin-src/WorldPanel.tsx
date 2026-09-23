@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { IMAGE_ACCEPT } from './storage'
 import { insforge, comfyViewUrl, type Movie, type Scene } from './insforge'
-import { triggerFlow, fileToUpload, type RunStatus } from './flowise'
+import { triggerFlow, parseFlowJson, fileToUpload, type RunStatus } from './flowise'
 import { ImageSelect, type ImageGroup } from './ui/ImageSelect'
 import { deleteAssetFiles, keptNote } from './assets'
 import { loadMovieFrames, frameLabel, saveSnapshotToProject } from './frames'
@@ -49,10 +49,52 @@ type SplatFile = {
   in_use_for: string | null
 }
 
+/** A Blender block-out made from a scene's panorama (48-Blender-Sets), newest revision last. */
+type BlockOut = { id: string; location_key: string; revision: string; source: { scenePanoId?: string } | null; created_at: string }
+
+/**
+ * Where a scene's set has got to: panorama, then the splat world, then the
+ * Blender block-out a model builds from the panorama, then cameras staged in it.
+ * Each step can be skipped - a block-out needs only the panorama - so this says
+ * what exists rather than forcing an order.
+ */
+function SetSteps({ pano, splatReady, blockOut, shots, busy, onBlockOut }: {
+  pano: boolean
+  splatReady: boolean
+  blockOut: BlockOut | null
+  shots: number
+  busy: boolean
+  onBlockOut: () => void
+}) {
+  const canBlockOut = !!import.meta.env.VITE_BLENDER_SETS_ID
+  return (
+    <ol className="set-steps">
+      <li className={pano ? 'done' : ''}>Panorama</li>
+      <li className={splatReady ? 'done' : ''}>Splat world</li>
+      <li className={blockOut ? 'done' : ''}>
+        {blockOut ? (
+          <a href="#blendersets">Block-out {blockOut.revision}</a>
+        ) : canBlockOut ? (
+          <button type="button" disabled={!pano || busy} onClick={onBlockOut} title={pano ? 'The language model builds a Blender block-out from the panorama, then checks it against the panorama and fixes it' : 'Needs the panorama first'}>
+            {busy ? 'Building block-out…' : 'Build block-out'}
+          </button>
+        ) : (
+          'Block-out'
+        )}
+      </li>
+      <li className={shots ? 'done' : ''}>
+        {blockOut ? <a href="#blendersets">{shots ? `${shots} camera${shots === 1 ? '' : 's'}` : 'Cameras'}</a> : 'Cameras'}
+      </li>
+    </ol>
+  )
+}
+
 export function WorldPanel({ movie }: { movie: Movie }) {
   const [scenes, setScenes] = useState<Scene[]>([])
   const [panos, setPanos] = useState<Pano[]>([])
   const [splats, setSplats] = useState<Splat[]>([])
+  const [blockOuts, setBlockOuts] = useState<BlockOut[]>([])
+  const [shotCounts, setShotCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // Hand-written panorama prompts, per scene. Empty means "derive it from the
@@ -94,6 +136,24 @@ export function WorldPanel({ movie }: { movie: Movie }) {
     setPanos((p.data ?? []) as Pano[])
     setSplats((v.data ?? []) as Splat[])
     setLoading(false)
+    // Block-outs and their cameras: the world module's Blender sets. Absent
+    // tables (an older install) just leave the last two steps empty.
+    if (import.meta.env.VITE_BLENDER_SETS_ID) {
+      const [b, c] = await Promise.all([
+        insforge.database.from('set_locations').select('id,location_key,revision,source,created_at').eq('movie_id', movie.id).order('created_at', { ascending: true }),
+        insforge.database.from('set_shots').select('set_location_id').eq('movie_id', movie.id).eq('status', 'staged')
+      ])
+      const outs = (b.data ?? []) as BlockOut[]
+      setBlockOuts(outs)
+      // Counted per location across its revisions: a shot staged in v002 is still this set's.
+      const keyOf = new Map(outs.map((o) => [o.id, o.location_key]))
+      const counts: Record<string, number> = {}
+      for (const r of (c.data ?? []) as { set_location_id: string }[]) {
+        const k = keyOf.get(r.set_location_id)
+        if (k) counts[k] = (counts[k] ?? 0) + 1
+      }
+      setShotCounts(counts)
+    }
   }
 
   useEffect(() => {
@@ -106,6 +166,29 @@ export function WorldPanel({ movie }: { movie: Movie }) {
   const scopeOf = (s: Scene) => `A${s.act_number}S${s.scene_number}`
   const panoFor = (s: Scene) => panos.find((p) => p.act_number === s.act_number && p.scene_number === s.scene_number)
   const splatFor = (s: Scene) => splats.find((v) => v.act_number === s.act_number && v.scene_number === s.scene_number)
+  // The newest revision of the block-out made from this scene's panorama.
+  const blockOutFor = (p: Pano | undefined) =>
+    p ? [...blockOuts].reverse().find((b) => b.source?.scenePanoId === p.id) ?? null : null
+
+  async function handleBlockOut(scene: Scene) {
+    const scope = scopeOf(scene)
+    const pano = panoFor(scene)
+    if (!pano) return
+    setBusy(`${scope}-blockout`)
+    setError(null)
+    const r = parseFlowJson<{ action: string; reason?: string }>(
+      await triggerFlow(import.meta.env.VITE_BLENDER_SETS_ID, {
+        action: 'generate_location',
+        movieId: movie.id,
+        scenePanoId: pano.id,
+        name: scene.location_name ?? scene.scene_heading ?? scope
+      })
+    )
+    if (!r.ok) setError(`${scope}: ${r.message}`)
+    else if (r.data.action === 'error') setError(`${scope}: ${r.data.reason}`)
+    setBusy(null)
+    load()
+  }
 
   function report(scope: string, key: string, result: RunStatus) {
     setStatus((prev) => ({ ...prev, [`${scope}-${key}`]: result }))
@@ -452,6 +535,14 @@ export function WorldPanel({ movie }: { movie: Movie }) {
               {pano && <span className="badge">{pano.source ?? 'generated'}</span>}
               {splat?.ply_path && <span className="badge">splat ready</span>}
             </p>
+            <SetSteps
+              pano={!!pano}
+              splatReady={!!splat?.ply_path}
+              blockOut={blockOutFor(pano)}
+              shots={(() => { const b = blockOutFor(pano); return b ? shotCounts[b.location_key] ?? 0 : 0 })()}
+              busy={busy === `${scope}-blockout`}
+              onBlockOut={() => handleBlockOut(scene)}
+            />
 
             {pano ? (
               <img className="shot-preview" src={comfyViewUrl(pano.image_path)} alt={`${scope} panorama`} />

@@ -33,7 +33,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSCommandPath
-. (Join-Path $root 'lib\common.ps1')
+. (Join-Path $root 'lib/common.ps1')
 
 if (-not $Module -and -not $All) { throw 'Name a module with -Module, or pass -All.' }
 
@@ -67,9 +67,9 @@ $modelRoot = Join-Path $comfy 'models'
 # disk. That environment is ComfyUI's own, never whatever `python` is on PATH.
 function Get-ComfyPython {
     foreach ($candidate in @(
-            (Join-Path $comfy '.venv\Scripts\python.exe'),
-            (Join-Path $comfy 'venv\Scripts\python.exe'),
-            (Join-Path (Split-Path -Parent $comfy.TrimEnd('/\')) 'python_embeded\python.exe'))) {
+            (Join-Path $comfy '.venv/Scripts/python.exe'),
+            (Join-Path $comfy 'venv/Scripts/python.exe'),
+            (Join-Path (Split-Path -Parent $comfy.TrimEnd('/\')) 'python_embeded/python.exe'))) {
         if (Test-Path $candidate) { return $candidate }
     }
     $null
@@ -95,16 +95,49 @@ if (-not $ModelsOnly) {
     Write-Step "Node packs: $($wantPacks.Count) needed"
     foreach ($pack in $wantPacks) {
         $dest = Join-Path $packDir $pack
-        if (Test-Path $dest) { Write-Host "  have    $pack" -ForegroundColor DarkGray; continue }
         $info = $assets.packs.$pack
+        if (Test-Path $dest) {
+            # Present is not the same as pinned. Say when it differs, but leave
+            # it: replacing a pack under a running ComfyUI is the user's call.
+            if ($info -and $info.ref -and (Test-Path (Join-Path $dest '.git'))) {
+                $head = (git -C $dest rev-parse HEAD 2>$null)
+                if ($head -and $head -ne $info.ref) {
+                    Write-Warn "  $pack is at $($head.Substring(0, 10)), pinned to $($info.ref.Substring(0, 10))"
+                    Write-Host "    to match: git -C `"$dest`" fetch origin $($info.ref) ; git -C `"$dest`" checkout $($info.ref)" -ForegroundColor DarkGray
+                    continue
+                }
+            }
+            Write-Host "  have    $pack" -ForegroundColor DarkGray
+            continue
+        }
         if (-not $info) {
             Write-Warn "  no source recorded for $pack - install it from the ComfyUI registry by hand"
+            continue
+        }
+        if ($info.local) {
+            # Kept in this repository, versioned with the flows that use it.
+            $from = Join-Path (Split-Path -Parent $root) $info.local
+            if ($PSCmdlet.ShouldProcess($pack, "copy from $($info.local)")) {
+                Write-Step "  copying $pack from the repository"
+                Copy-Item $from $dest -Recurse
+            }
+            continue
+        }
+        if ($info.manual) {
+            Write-Warn "  $pack has no public source. $($info.manual)"
             continue
         }
         if ($info.git) {
             if ($PSCmdlet.ShouldProcess($pack, "git clone $($info.git)")) {
                 Write-Step "  cloning $pack"
-                git clone --depth 1 $info.git $dest
+                if ($info.ref) {
+                    # The pinned commit, not whatever is newest today: an upstream
+                    # release can change a node's inputs and break a graph.
+                    git clone --filter=blob:none --quiet $info.git $dest
+                    if ($LASTEXITCODE -eq 0) { git -C $dest checkout --quiet $info.ref }
+                } else {
+                    git clone --depth 1 $info.git $dest
+                }
                 if ($LASTEXITCODE -ne 0) { Write-Warn "  clone of $pack failed" }
                 else { Install-PackRequirements -Pack $pack -Dir $dest }
             }
@@ -116,9 +149,10 @@ if (-not $ModelsOnly) {
                 Write-Host "    pip install comfy-cli, then: comfy node install $($info.registry)" -ForegroundColor DarkGray
                 continue
             }
-            if ($PSCmdlet.ShouldProcess($pack, "comfy node install $($info.registry)")) {
+            $spec = if ($info.version) { "$($info.registry)@$($info.version)" } else { $info.registry }
+            if ($PSCmdlet.ShouldProcess($pack, "comfy node install $spec")) {
                 Write-Step "  installing $pack from the registry"
-                comfy --skip-prompt node install $info.registry
+                comfy --skip-prompt node install $spec
                 if ($LASTEXITCODE -ne 0) { Write-Warn "  registry install of $pack failed" }
             }
         }
@@ -153,13 +187,16 @@ if (-not $PacksOnly) {
         $size = ($fetchable | ForEach-Object { [double]($_.Info.sizeGb) } | Measure-Object -Sum).Sum
         if ($size -gt 0) { Write-Host ("  about {0:N0} GB to download" -f $size) -ForegroundColor DarkGray }
         $python = 'python'
-        $helper = Join-Path $root 'lib\fetch-model.py'
+        $helper = Join-Path $root 'lib/fetch-model.py'
         foreach ($item in $fetchable) {
             $folder = Join-Path $modelRoot $item.Info.folder
             if ($PSCmdlet.ShouldProcess($item.File, "download from $($item.Info.source.repo)")) {
                 Write-Step "  $($item.File)  <- $($item.Info.source.repo)"
+                $pin = @()
+                if ($item.Info.source.revision) { $pin += @('--revision', $item.Info.source.revision) }
+                if ($item.Info.source.sha256) { $pin += @('--sha256', $item.Info.source.sha256) }
                 & $python $helper --repo $item.Info.source.repo --path $item.Info.source.path `
-                    --file $item.File --into $folder
+                    --file $item.File --into $folder @pin
                 if ($LASTEXITCODE -ne 0) { Write-Warn "  download of $($item.File) failed" }
             }
         }

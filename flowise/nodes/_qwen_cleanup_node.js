@@ -1,3 +1,5 @@
+// @include comfy_jobs
+
 const rawInput = ($flow.input || '').toString();
 let parsed;
 try { parsed = JSON.parse(rawInput); } catch (e) {
@@ -153,16 +155,35 @@ const promptText = (job.prompt && job.prompt.trim())
   ? job.prompt
   : 'Using Gaussian Splatting, refer to the scene graph in Figure 2 to fix the perspective of the scene graph in Figure 1 and fill in the blank areas.';
 
+// @include comfy_models
+
+// Whichever precision of each model this ComfyUI holds, best first. The graph
+// was built on the bf16 edit model and the 2512 Lightning LoRA; a render host
+// with the int8 or 2509 model, or the 2511 Lightning, runs the same graph.
+// Lightning is required: 10 steps at cfg 1 only works with it. Sharp and F2P
+// refine the result and are left out when they are not installed.
+let qwenModels;
+try {
+  qwenModels = {
+    unet: await pickModel('diffusion_models', ['qwen_image_edit_2511_bf16.safetensors', 'qwen_image_edit_2511_int8_convrot.safetensors', 'qwen_image_edit_2509_fp8_e4m3fn.safetensors']),
+    clip: await pickModel('text_encoders', ['qwen/qwen_2.5_vl_7b.safetensors', 'qwen_2.5_vl_7b_fp8_scaled.safetensors', 'qwen2.5vl-7b-bf16.safetensors']),
+    vae: await pickModel('vae', ['qwen-image/qwen_image_vae.safetensors']),
+    sharp: await pickModel('loras', ['Sharp.safetensors'], { optional: true }),
+    lightning: await pickModel('loras', ['Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors', 'Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors', 'Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors']),
+    f2p: await pickModel('loras', ['Qwen-Image-Edit-F2P.safetensors'], { optional: true })
+  };
+} catch (e) {
+  await updateJob({ status: 'failed', error_message: e.message });
+  return { action: 'error', reason: e.message };
+}
+
 // Same graph 6-GS-Cleaner runs, lifted node-for-node so the standalone tab and
 // the shot pipeline can't produce different results from the same inputs.
 const g = {
-  '1': { class_type: 'UNETLoader', inputs: { unet_name: 'qwen_image_edit_2511_bf16.safetensors', weight_dtype: 'default' } },
-  '2': { class_type: 'CLIPLoader', inputs: { clip_name: 'qwen\\qwen_2.5_vl_7b.safetensors', type: 'qwen_image', device: 'default' } },
-  '3': { class_type: 'VAELoader', inputs: { vae_name: 'qwen-image\\qwen_image_vae.safetensors' } },
-  '4': { class_type: 'LoraLoaderModelOnly', inputs: { model: ['1', 0], lora_name: 'Sharp.safetensors', strength_model: 1 } },
-  '5': { class_type: 'LoraLoaderModelOnly', inputs: { model: ['4', 0], lora_name: 'Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors', strength_model: 1 } },
-  '6': { class_type: 'LoraLoaderModelOnly', inputs: { model: ['5', 0], lora_name: 'Qwen-Image-Edit-F2P.safetensors', strength_model: 0.65 } },
-  '7': { class_type: 'ModelSamplingAuraFlow', inputs: { model: ['6', 0], shift: 3 } },
+  '1': { class_type: 'UNETLoader', inputs: { unet_name: qwenModels.unet, weight_dtype: 'default' } },
+  '2': { class_type: 'CLIPLoader', inputs: { clip_name: qwenModels.clip, type: 'qwen_image', device: 'default' } },
+  '3': { class_type: 'VAELoader', inputs: { vae_name: qwenModels.vae } },
+  '7': { class_type: 'ModelSamplingAuraFlow', inputs: { model: ['1', 0], shift: 3 } },
   '8': { class_type: 'CFGNorm', inputs: { model: ['7', 0], strength: 1, pre_cfg: false } },
   '9': { class_type: 'JWImageLoadRGB', inputs: { path: uglyPath } },
   '10': { class_type: 'JWImageLoadRGB', inputs: { path: cleanPath } },
@@ -178,35 +199,37 @@ const g = {
   '20': { class_type: 'SaveImage', inputs: { images: ['19', 0], filename_prefix: movie.slug + '/_qwen_splat_cleanup/standalone_' + cleanupId } }
 };
 
-const r = await axios.post(comfyUrl + '/prompt', { prompt: g });
-const pid = r && r.data && r.data.prompt_id;
+// The LoRA chain, Sharp -> Lightning -> F2P, of whichever are installed.
+{
+  let modelRef = ['1', 0];
+  [['4', qwenModels.sharp, 1], ['5', qwenModels.lightning, 1], ['6', qwenModels.f2p, 0.65]].forEach(([id, name, strength]) => {
+    if (!name) return;
+    g[id] = { class_type: 'LoraLoaderModelOnly', inputs: { model: modelRef, lora_name: name, strength_model: strength } };
+    modelRef = [id, 0];
+  });
+  g['7'].inputs.model = modelRef;
+}
+
+const sub = await comfySubmit(comfyUrl, g);
+const pid = sub.promptId;
 if (!pid) {
-  const msg = 'Qwen cleanup enqueue failed: ' + JSON.stringify((r && r.data && r.data.node_errors) || (r && r.data)).slice(0, 1000);
+  const msg = 'Qwen cleanup enqueue failed: ' + sub.error;
   await updateJob({ status: 'failed', error_message: msg });
   return { action: 'error', reason: msg };
 }
 
-const waitFor = async (promptId, maxTries, everyMs) => {
-  for (let k = 0; k < maxTries; k++) {
-    await sleep(everyMs);
-    try {
-      const h = await axios.get(comfyUrl + '/history/' + promptId);
-      const rec = h && h.data && h.data[promptId];
-      if (rec && rec.status && rec.status.status_str) return rec;
-    } catch (e) {}
-  }
-  return null;
-};
-
-const rec = await waitFor(pid, 150, 5000);
-if (!rec) {
+// Followed to the end - including a job ComfyUI has lost (a restart), which
+// the old loop mistook for one still running (see lib/comfy_jobs.js).
+const waited = await comfyWait(comfyUrl, pid, { timeoutMs: 750000, everyMs: 5000 });
+if (waited.status === 'timeout') {
   return { action: 'pending', reason: 'Qwen cleanup still running past the check window.', promptId: pid, cleanupId };
 }
-if (rec.status.status_str === 'error') {
-  const msg = 'Qwen cleanup failed in ComfyUI: ' + JSON.stringify(rec.status.messages).slice(0, 1000);
+if (waited.status !== 'success') {
+  const msg = 'Qwen cleanup failed in ComfyUI: ' + waited.error;
   await updateJob({ status: 'failed', error_message: msg });
   return { action: 'error', reason: msg };
 }
+const rec = waited.record;
 
 let outRel = null;
 const outputs = rec.outputs || {};

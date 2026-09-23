@@ -19,6 +19,10 @@
  */
 const fs = require('fs')
 const path = require('path')
+// The sources are the only copy anyone edits: flowise/build.js inlines their
+// shared code (`// @include llm`) and knows which source is which step.
+const { buildSource } = require('../../flowise/build.js')
+const SOURCES_MANIFEST = path.join(__dirname, '../../flowise/flows/_sources.json')
 
 function arg(name, fallback) {
   const i = process.argv.indexOf('--' + name)
@@ -58,7 +62,18 @@ const VARIABLES = [
   { variableName: 'insforgeUrl', variableValue: process.env.INSFORGE_URL },
   { variableName: 'insforgeApiKey', variableValue: process.env.INSFORGE_API_KEY },
   { variableName: 'comfyUrl', variableValue: process.env.COMFY_URL },
-  { variableName: 'comfyRoot', variableValue: process.env.COMFY_ROOT }
+  { variableName: 'comfyRoot', variableValue: process.env.COMFY_ROOT },
+  // For a flow that runs another flow itself (Wardrobe runs Image-Edit): where
+  // Flowise is, and the key to call it with, rather than localhost:3010.
+  { variableName: 'flowiseUrl', variableValue: BASE },
+  { variableName: 'flowiseApiKey', variableValue: process.env.FLOWISE_API_KEY },
+  // The render host's worker (pc-worker/), for work that has to happen on that
+  // machine - starting the on-demand world ComfyUI. Blank when there is none.
+  { variableName: 'workerUrl', variableValue: process.env.WORKER_URL || '' },
+  // ComfyUI's own Python, for the flows that run a script with it on this
+  // machine (flowise/workers/: Face QA). Blank means `python` on PATH.
+  { variableName: 'comfyPython', variableValue: process.env.COMFY_PYTHON || '' },
+  { variableName: 'workerToken', variableValue: process.env.WORKER_TOKEN || '' }
 ]
 // The language-model settings go on EVERY flow, always, even when blank.
 // Injecting them only when an Ollama URL happened to be set is what produced
@@ -91,7 +106,7 @@ async function main() {
   // from a source file loses all of it.
   if (SOURCE.endsWith('.json')) return importExported()
 
-  const body = fs.readFileSync(path.resolve(SOURCE), 'utf8')
+  const body = buildSource(path.resolve(SOURCE))
 
   // The node definitions are fetched rather than hardcoded: their input schema
   // changes between Flowise versions, and a stale copy produces a flow that
@@ -125,7 +140,7 @@ async function main() {
     width: 300, height: 100, selected: false, positionAbsolute: { x: 300, y: 0 }, dragging: false
   }
 
-  const flowData = JSON.stringify({
+  const flowDataRaw = JSON.stringify({
     nodes: [startNode, fnNode],
     edges: [{
       source: 'startAgentflow_0', sourceHandle: 'startAgentflow_0-output-startAgentflow',
@@ -136,12 +151,14 @@ async function main() {
   })
 
   if (UPDATE) {
+    const flowData = await resolveFlowRefs(flowDataRaw)
     await send('PUT', '/api/v1/chatflows/' + UPDATE, { flowData })
     console.log('updated ' + NAME)
     console.log(UPDATE)
     return
   }
 
+  const flowData = await resolveFlowRefs(flowDataRaw)
   // A second flow with the same name would be indistinguishable in the list and
   // would leave the installer unsure which id to record, so an existing one is
   // updated in place instead.
@@ -163,6 +180,16 @@ async function main() {
 /** Register a flow from an exported graph, rewriting its per-install variables. */
 async function importExported() {
   const graph = JSON.parse(fs.readFileSync(path.resolve(SOURCE), 'utf8'))
+  // Each code step is rebuilt from its source here, not taken from the export
+  // as committed, so a source edited without re-running flowise/build.js still
+  // installs what the source says.
+  const steps = (JSON.parse(fs.readFileSync(SOURCES_MANIFEST, 'utf8')) || {})[NAME] || {}
+  for (const node of graph.nodes || []) {
+    const inputs = (node.data || {}).inputs
+    if (steps[node.id] && inputs && typeof inputs.customFunctionJavascriptFunction === 'string') {
+      inputs.customFunctionJavascriptFunction = buildSource(steps[node.id])
+    }
+  }
   for (const node of graph.nodes || []) {
     const inputs = (node.data || {}).inputs
     if (!inputs) continue
@@ -218,7 +245,7 @@ async function importExported() {
     process.exit(1)
   }
 
-  const flowData = JSON.stringify(graph)
+  const flowData = await resolveFlowRefs(JSON.stringify(graph))
   const existing = (await get('/api/v1/chatflows')).find((f) => f.name === NAME)
   if (existing) {
     await send('PUT', '/api/v1/chatflows/' + existing.id, { flowData })
@@ -229,6 +256,27 @@ async function importExported() {
   const made = await send('POST', '/api/v1/chatflows', { name: NAME, type: 'AGENTFLOW', flowData, deployed: true })
   console.log('created ' + NAME + ' (from export)')
   console.log(made.id)
+}
+
+/**
+ * Replace every {{flow:NAME}} with the id that flow has on THIS install.
+ *
+ * A flow that runs another one used to carry the other's id from the machine it
+ * was exported on, so on any other install it ran nothing (the orchestrator) or
+ * fell back to a stranger's id (Wardrobe). Flows are referred to by name
+ * instead, and a name that is not installed stops the install here, saying
+ * which, rather than failing the first time the flow runs.
+ */
+async function resolveFlowRefs(text) {
+  const names = [...new Set([...text.matchAll(/\{\{flow:([\w.-]+)\}\}/g)].map((m) => m[1]))]
+  if (!names.length) return text
+  const byName = new Map((await get('/api/v1/chatflows')).map((f) => [f.name, f.id]))
+  const missing = names.filter((n) => !byName.has(n))
+  if (missing.length) {
+    throw new Error(`${NAME} runs ${missing.join(', ')}, which is not installed. ` +
+      'Install the module that owns it first.')
+  }
+  return text.replace(/\{\{flow:([\w.-]+)\}\}/g, (_, n) => byName.get(n))
 }
 
 async function get(route) {

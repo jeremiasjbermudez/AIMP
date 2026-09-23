@@ -14,7 +14,7 @@ const insforgeApiKey = $insforgeApiKey;
 const comfyUrl = $comfyUrl;
 const authHeaders = { Authorization: `Bearer ${insforgeApiKey}` };
 
-const COMFY_ROOT = 'C:/ComfyUI2';
+const COMFY_ROOT = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '');
 const COMFY_INPUT = COMFY_ROOT + '/input';
 
 let parsed;
@@ -174,14 +174,42 @@ const CHECKPOINT = 'Qwen-Rapid-AIO-NSFW-v23.safetensors';
 // output/<slug>/<category>. Keeping to that means one project is one folder.
 const outPrefix = `${movie.slug}/_QwenEdits/edit`;
 
-const wf = {
-  '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: CHECKPOINT } }
-};
+// @include comfy_models
+
+// The all-in-one checkpoint when this ComfyUI has it. Otherwise the same model
+// from its parts - the Qwen edit weights, text encoder and VAE, with the
+// Lightning LoRA that the checkpoint has merged in - so a render host without
+// it can still run this engine. Its sampler settings are tuned to the
+// checkpoint; the parts run with Lightning's own (euler / simple).
+const wf = {};
+let modelRef;
+let clipRef;
+let vaeRef;
+let aio;
+try {
+  aio = await pickModel('checkpoints', [CHECKPOINT], { optional: true });
+  if (aio) {
+    wf['1'] = { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: aio } };
+    modelRef = ['1', 0];
+    clipRef = ['1', 1];
+    vaeRef = ['1', 2];
+  } else {
+    wf['1'] = { class_type: 'UNETLoader', inputs: { unet_name: await pickModel('diffusion_models', ['qwen_image_edit_2511_bf16.safetensors', 'qwen_image_edit_2511_int8_convrot.safetensors', 'qwen_image_edit_2509_fp8_e4m3fn.safetensors']), weight_dtype: 'default' } };
+    wf['11'] = { class_type: 'CLIPLoader', inputs: { clip_name: await pickModel('text_encoders', ['qwen/qwen_2.5_vl_7b.safetensors', 'qwen_2.5_vl_7b_fp8_scaled.safetensors', 'qwen2.5vl-7b-bf16.safetensors']), type: 'qwen_image', device: 'default' } };
+    wf['12'] = { class_type: 'VAELoader', inputs: { vae_name: await pickModel('vae', ['qwen-image/qwen_image_vae.safetensors']) } };
+    wf['13'] = { class_type: 'LoraLoaderModelOnly', inputs: { model: ['1', 0], lora_name: await pickModel('loras', ['Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors', 'Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors', 'Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors']), strength_model: 1 } };
+    wf['14'] = { class_type: 'ModelSamplingAuraFlow', inputs: { model: ['13', 0], shift: 3 } };
+    modelRef = ['14', 0];
+    clipRef = ['11', 0];
+    vaeRef = ['12', 0];
+  }
+} catch (e) {
+  return await fail(e.message);
+}
 
 // LoraLoaderModelOnly, chained. Qwen's LoRAs apply to the model only - the
 // text encoder is not patched - so unlike the Klein graph there is no clip to
 // thread through.
-let modelRef = ['1', 0];
 loras.forEach((l, i) => {
   const id = String(40 + i);
   wf[id] = {
@@ -192,7 +220,7 @@ loras.forEach((l, i) => {
 });
 
 // The references land on the positive encoder as image1..image3.
-const positive = { clip: ['1', 1], vae: ['1', 2], prompt: prompt.slice(0, 1800) };
+const positive = { clip: clipRef, vae: vaeRef, prompt: prompt.slice(0, 1800) };
 staged.forEach((s, i) => {
   const id = String(70 + i);
   wf[id] = { class_type: 'LoadImage', inputs: { image: s.load } };
@@ -203,7 +231,7 @@ Object.assign(wf, {
   '3': { class_type: 'TextEncodeQwenImageEditPlus', inputs: positive },
   // Deliberately empty, as in the saved workflow - this checkpoint is tuned to
   // run with no negative prompt at cfg 1.
-  '4': { class_type: 'TextEncodeQwenImageEditPlus', inputs: { clip: ['1', 1], vae: ['1', 2], prompt: '' } },
+  '4': { class_type: 'TextEncodeQwenImageEditPlus', inputs: { clip: clipRef, vae: vaeRef, prompt: '' } },
   '9': { class_type: 'EmptyLatentImage', inputs: { width: W, height: H, batch_size: 1 } },
   '2': {
     class_type: 'KSampler',
@@ -211,8 +239,8 @@ Object.assign(wf, {
       seed: seed,
       steps: steps,
       cfg: 1,
-      sampler_name: 'sa_solver',
-      scheduler: 'beta',
+      sampler_name: aio ? 'sa_solver' : 'euler',
+      scheduler: aio ? 'beta' : 'simple',
       denoise: 1,
       model: modelRef,
       positive: ['3', 0],
@@ -220,7 +248,7 @@ Object.assign(wf, {
       latent_image: ['9', 0]
     }
   },
-  '5': { class_type: 'VAEDecode', inputs: { samples: ['2', 0], vae: ['1', 2] } },
+  '5': { class_type: 'VAEDecode', inputs: { samples: ['2', 0], vae: vaeRef } },
   // PreviewImage in the saved workflow, which writes to temp and is swept up.
   // The result has to outlive the run to be shown and reused, so it is saved.
   '6': { class_type: 'SaveImage', inputs: { images: ['5', 0], filename_prefix: outPrefix } }

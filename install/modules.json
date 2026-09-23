@@ -212,7 +212,8 @@
     ],
     "needs": [
       "core",
-      "screenplay"
+      "screenplay",
+      "imaging"
     ],
     "modelFiles": [
       "flux-2-klein-9b.safetensors",
@@ -299,7 +300,10 @@
       "scene_panos",
       "scene_splats",
       "hyworlds",
-      "prompt_worlds"
+      "prompt_worlds",
+      "set_locations",
+      "set_shots",
+      "set_takes"
     ],
     "flows": [
       {
@@ -331,6 +335,11 @@
         "source": "_pano_prompt_node.js",
         "name": "27-Pano-Prompt-From-Image",
         "env": "VITE_PANO_PROMPT_ID"
+      },
+      {
+        "source": "_blender_sets_node.js",
+        "name": "48-Blender-Sets",
+        "env": "VITE_BLENDER_SETS_ID"
       }
     ],
     "panels": [
@@ -344,6 +353,12 @@
         "tab": "hyworld",
         "files": [
           "HyWorldPanel.tsx"
+        ]
+      },
+      {
+        "tab": "blendersets",
+        "files": [
+          "BlenderSetsPanel.tsx"
         ]
       }
     ],
@@ -606,7 +621,7 @@
       "flux-2-klein-9b.safetensors",
       "flux2-vae.safetensors",
       "qwen_3_8b_fp8mixed.safetensors",
-      "sam_hq_vit_l (1.25GB)"
+      "sam_hq_vit_l.pth"
     ]
   },
   "colour": {

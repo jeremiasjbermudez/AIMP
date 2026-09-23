@@ -23,7 +23,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSCommandPath
-. (Join-Path $root 'lib\common.ps1')
+. (Join-Path $root 'lib/common.ps1')
 
 $map = Get-ModuleMap
 $installed = Get-InstalledModules

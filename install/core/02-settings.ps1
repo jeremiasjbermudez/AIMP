@@ -44,6 +44,12 @@ Write-Host ""
 
 $settings = [ordered]@{}
 Write-Host "-- Database (InsForge) --" -ForegroundColor Cyan
+# Docker inside WSL rather than on Windows: name the distribution, and every
+# docker command the installers run goes there. Blank when docker is on PATH.
+. (Join-Path $installRoot 'lib/docker-wsl.ps1')
+$wslDefault = if (-not (Get-Command docker -ErrorAction SilentlyContinue) -and (Get-Command wsl.exe -ErrorAction SilentlyContinue)) { 'Ubuntu-24.04' } else { '' }
+$settings.DOCKER_WSL_DISTRO = Ask 'DOCKER_WSL_DISTRO' 'WSL distribution Docker runs in (blank if docker is on PATH)' $wslDefault
+Enable-DockerThroughWsl $settings.DOCKER_WSL_DISTRO
 # Read from Docker, not guessed: InsForge's compose names containers after the
 # directory it was cloned into, so the name differs per install.
 $pgGuess = @(docker ps --format '{{.Names}}' 2>$null | Where-Object { $_ -like '*postgres*' })[0]
@@ -65,6 +71,12 @@ Write-Host ""
 Write-Host "-- Render host (ComfyUI) --" -ForegroundColor Cyan
 $settings.COMFY_URL       = Ask 'COMFY_URL'       'ComfyUI URL' 'http://127.0.0.1:8188'
 $settings.COMFY_ROOT      = Ask 'COMFY_ROOT'      'ComfyUI root folder, with a trailing slash' 'C:/ComfyUI/'
+# The Python ComfyUI runs in: flows that run a script beside it (Face QA) need
+# its packages. Guessed from the usual places; blank when ComfyUI is elsewhere.
+$pyGuess = @((Join-Path $settings.COMFY_ROOT '.venv/Scripts/python.exe'), (Join-Path $settings.COMFY_ROOT 'venv/Scripts/python.exe'),
+             (Join-Path (Split-Path -Parent $settings.COMFY_ROOT.TrimEnd('/', '\')) 'python_embeded/python.exe')) |
+    Where-Object { Test-Path $_ } | Select-Object -First 1
+$settings.COMFY_PYTHON    = Ask 'COMFY_PYTHON'    "ComfyUI's Python (for Face QA; blank if ComfyUI is on another machine)" "$pyGuess"
 
 Write-Host ""
 Write-Host "-- Admin app --" -ForegroundColor Cyan

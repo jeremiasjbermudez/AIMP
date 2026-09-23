@@ -205,6 +205,9 @@ if (length > 362) length = 362;
 const width = clip.width || 864;
 const height = clip.height || 480;
 const strength = Number.isFinite(Number(clip.control_strength)) ? Number(clip.control_strength) : 0.7;
+// How far into the schedule the control video steers: layout and motion are set
+// early, so releasing it lets the model finish the surfaces (camera_lab: 0.5-0.6).
+const controlEnd = Number.isFinite(Number(clip.control_end)) ? Math.max(0.05, Math.min(1, Number(clip.control_end))) : 1;
 
 const g = {
   '119': { class_type: 'VAELoader', inputs: { vae_name: 'minimax_h3_video_vae_fp16.safetensors' } },
@@ -221,10 +224,10 @@ const g = {
     }
   },
   'cn_load': { class_type: 'H3FunControlLoader', inputs: { control_net_name: 'minimax_h3_fun_controlnet_union_pruned_bf16.safetensors' } },
-  // Patches the MODEL. start/end 0..1 = control for the whole schedule.
+  // Patches the MODEL, from the start of the schedule to controlEnd.
   'cn_apply': {
     class_type: 'H3FunControlApply',
-    inputs: { model: ['127', 0], control_net: ['cn_load', 0], vae: ['119', 0], control_video: ['ctrl_video', 0], strength, start_percent: 0, end_percent: 1 }
+    inputs: { model: ['127', 0], control_net: ['cn_load', 0], vae: ['119', 0], control_video: ['ctrl_video', 0], strength, start_percent: 0, end_percent: controlEnd }
   },
   // The pack's reference workflow: shift 12/3, res_multistep, simple, 28 steps.
   'shift': { class_type: 'MiniMaxH3SigmaShift', inputs: { model: ['cn_apply', 0], shift_video: 12, shift_audio: 3 } },
@@ -285,7 +288,9 @@ const waitFor = async (promptId, maxTries, everyMs) => {
   return null;
 };
 
-const rec = await waitFor(pid, 200, 5000);
+// 90 minutes: a long control clip at full size can outlast the 17 minutes this
+// used to wait, and a clip left 'rendering' is never completed by anything else.
+const rec = await waitFor(pid, 1080, 5000);
 if (!rec) return { action: 'pending', reason: 'Still rendering past the check window.', promptId: pid, clipId };
 if (rec.status.status_str === 'error') {
   const msg = 'Render failed in ComfyUI: ' + JSON.stringify(rec.status.messages).slice(0, 1200);
@@ -308,4 +313,4 @@ if (!outRel) {
 
 const videoPath = 'output/' + outRel;
 await updateClip({ status: 'complete', video_path: videoPath, error_message: null });
-return { action: 'complete', clipId, references: refRelPaths.length, length, strength, videoPath, promptId: pid };
+return { action: 'complete', clipId, references: refRelPaths.length, length, strength, controlEnd, videoPath, promptId: pid };

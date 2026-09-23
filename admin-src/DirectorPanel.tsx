@@ -2178,8 +2178,7 @@ export function DirectorPanel({ movie }: { movie: Movie }) {
     <div>
       <p>
         The Director plans {movie.title} as a shot list from its beats and characters, then produces it
-        in stages you approve. Planning, first frames, clips and assemble are built; review and checks
-        are not wired yet.
+        in stages you approve: plan, first frames, review, clips, assemble.
       </p>
 
       {/* Two things a shot list cannot work out for itself. Written once per
@@ -2363,7 +2362,7 @@ export function DirectorPanel({ movie }: { movie: Movie }) {
       <h4>2. Shot list</h4>
       {!plan && <p className="empty">Make a plan to start.</p>}
       {plan && shots.length === 0 && (
-        <p className="empty">No shots yet - the planning pass that fills this list is the next piece to build.</p>
+        <p className="empty">No shots yet. Press <strong>Draft shot list</strong> above to plan them from the beats.</p>
       )}
       {shots.length > 0 && (
         <>
@@ -2527,6 +2526,9 @@ export function DirectorPanel({ movie }: { movie: Movie }) {
             )}
             </p>
           )}
+          {/* The shot list is wider than the page once it has many columns filled; it
+              scrolls in its own box rather than pushing the whole page sideways. */}
+          <div className="table-scroll">
           <table className="data-table director-shots">
             <thead>
               <tr>
@@ -2958,6 +2960,7 @@ export function DirectorPanel({ movie }: { movie: Movie }) {
               ))}
             </tbody>
           </table>
+          </div>
         </>
       )}
 
@@ -3111,7 +3114,7 @@ export function DirectorPanel({ movie }: { movie: Movie }) {
           render each, both skipping shots that already have one. A shot marked <em>continue</em> carries
           the previous clip's picture <em>and sound</em> forward; the rest start from their own frame.
           Assemble joins every clip rendered through Context Loop into one cut and costs no GPU time, so
-          run it again after any redo. Review and checks are not built yet.
+          run it again after any redo.
         </p>
       )}
     </div>

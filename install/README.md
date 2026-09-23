@@ -181,6 +181,9 @@ The video module alone accounts for the largest model downloads in the system.
 | `lib/create-flow.js` | registers one flow from a source file, or imports one from an exported graph. |
 | `lib/deploy-function.js` | deploys one edge function, through the InsForge API or straight into its table when the API route has moved. |
 | `lib/write-registry.js` | rewrites the app's tab registry from the panels present on disk. |
+| `lib/check-repo.js` | the repository against itself: every flow step parses, and the module map, tab list and asset list name only things that exist. Runs in CI. |
+| `lib/check-comfy.js` | a running ComfyUI against a module: every node type its flows use, asked over HTTP so it works on another machine. `install-module.ps1` runs it. |
+| `lib/pin-assets.js` | pins each node pack to a commit or version, and each Hugging Face model to a revision and sha256, in `assets.json`. Re-run it to move to newer versions on purpose. |
 
 Adding a module later means adding an entry to `modules.json`, a `schema.sql`, a `README.md`, and
 the panel files. No installer code changes.
@@ -214,6 +217,12 @@ Node packs are cloned from their own repository, or installed from the ComfyUI r
 is where they came from. Models are pulled from Hugging Face into the folder the graphs load them
 from. Anything already present is skipped, and downloads go through the shared cache, so a second
 machine or a re-run does not transfer them again.
+
+**Everything is pinned.** A pack is cloned at the commit, or installed at the registry version,
+that `assets.json` records - not whatever is newest - because an upstream release can change a
+node's inputs and break a graph without this repository changing. A model is downloaded at a
+recorded repository revision and its sha256 checked before it is put in place. A pack already
+present at a different commit is reported, not replaced.
 
 **It does not guess.** Eighteen of the model files here - community LoRAs and detector weights
 collected by hand - have no recorded origin. Inventing a plausible URL for one of those is how the

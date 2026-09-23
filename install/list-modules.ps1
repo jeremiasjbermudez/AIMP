@@ -11,7 +11,7 @@ param([string]$Module)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSCommandPath
-. (Join-Path $root 'lib\common.ps1')
+. (Join-Path $root 'lib/common.ps1')
 
 $map = Get-ModuleMap
 $installed = Get-InstalledModules
@@ -34,7 +34,7 @@ if ($Module) {
         Write-Host "  models"
         foreach ($m in $s.models) { Write-Host "            $m" -ForegroundColor DarkGray }
     }
-    $doc = Join-Path $root "modules\$Module\README.md"
+    $doc = Join-Path $root "modules/$Module/README.md"
     if (Test-Path $doc) { Write-Host ""; Write-Host "  full documentation: install/modules/$Module/README.md" -ForegroundColor DarkGray }
     Write-Host ""
     return

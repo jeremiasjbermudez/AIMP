@@ -69,13 +69,17 @@ const GPU_FLOWS: Set<string> = new Set(
 /**
  * The Director plans with an LLM and renders with the GPU through the same
  * flow id, so the id alone cannot say which this is. Only the modes that reach
- * ComfyUI queue; drafting a shot list does not wait behind a render.
+ * ComfyUI queue; drafting a shot list does not wait behind a render. Blender
+ * sets are the same: staging renders, listing does not.
  */
 function needsGpu(flowId: string, input: string | object): boolean {
   if (GPU_FLOWS.has(flowId)) return true
+  const fields = typeof input === 'object' && input !== null ? (input as { mode?: string; action?: string }) : {}
+  // Blender sets render on the same GPU (the worker frees ComfyUI's models
+  // first); listing and adding sets does not.
+  if (flowId === import.meta.env.VITE_BLENDER_SETS_ID) return ['stage', 'scout', 'make_clip'].includes(fields.action ?? '')
   if (flowId !== import.meta.env.VITE_DIRECTOR_ID) return false
-  const mode = typeof input === 'object' && input !== null ? (input as { mode?: string }).mode : undefined
-  return mode === 'render' || mode === 'assemble'
+  return fields.mode === 'render' || fields.mode === 'assemble'
 }
 
 // The line itself: a promise chain, so each job starts when the one before it
@@ -98,11 +102,54 @@ function enqueue<T>(work: () => Promise<T>): Promise<T> {
   })
 }
 
+// ---------------------------------------------------------------- the project
+//
+// Which project this window is working on.
+//
+// These flows used to find their project by movies.is_active, a single row
+// flag in the database. With two windows open on different projects, the one
+// that was not "active" silently rendered characters and panoramas into the
+// other. So the app now tells each of them which project it means, as
+// `--movie <id>` on their text input. They still fall back to is_active when
+// no id is given, so a script or a hand-typed run behaves as it always did.
+let currentProjectId = ''
+
+/** Called by the shell whenever the project picker changes. */
+export function setCurrentProject(id: string): void {
+  currentProjectId = id
+}
+
+const PROJECT_SCOPED_FLOWS: Set<string> = new Set(
+  [
+    import.meta.env.VITE_TRIGGER_ORCHESTRATOR_ID,
+    import.meta.env.VITE_CHARACTER_GENERATOR_ID,
+    import.meta.env.VITE_CHARACTER_BIBLE_IMPORT_ID,
+    import.meta.env.VITE_SCENE_IMPORT_ID,
+    import.meta.env.VITE_PANORAMIC_GENERATOR_ID,
+    import.meta.env.VITE_WORLD_BUILDER_ID
+  ].filter(Boolean) as string[]
+)
+
+function withProject(flowId: string, input: string | object): string | object {
+  if (!currentProjectId || typeof input !== 'string' || !PROJECT_SCOPED_FLOWS.has(flowId)) return input
+  if (/--movie\s/i.test(input)) return input
+  return `${input} --movie ${currentProjectId}`.trim()
+}
+
 export async function triggerFlow(
   flowId: string,
   input: string | object,
   uploads?: FlowUpload[]
 ): Promise<RunStatus> {
+  // No id means the flow's module is not installed (its VITE_..._ID is blank).
+  // Sent anyway, Flowise answers 412 "id not provided" - the World tab did that
+  // on every open, asking the camera module's flow for its splat list.
+  if (!flowId) {
+    return { state: 'error', message: 'This needs a module that is not installed yet - add it from the settings page.' }
+  }
+  // Fixed now, not when a queued job finally leaves: switching project while a
+  // render waits in line must not move that render to the new project.
+  input = withProject(flowId, input)
   // GPU work waits its turn; everything else goes straight out as before.
   if (needsGpu(flowId, input)) return enqueue(() => send(flowId, input, uploads))
   return send(flowId, input, uploads)
