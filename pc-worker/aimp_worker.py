@@ -19,6 +19,18 @@ What it does now:
     GET  /world/status
     GET  /health
 
+  Blender sets (blender/ in the repository, from camera_lab). A shot is staged
+  against a versioned Blender block-out of its location: depth, masks, plates
+  and camera matrices for the control-to-video route. Renders take minutes, so
+  they are jobs, run one at a time, each after the main ComfyUI has unloaded its
+  models:
+
+    POST /blender/jobs  {"kind": "stage", "shot": {...shot.json...}, "project": "slug"}
+                        {"kind": "visibility" | "assets", "shotDir": "shots/<project>/<id>"}
+                        {"kind": "scout", "name": "...", "shotDirs": ["shots/...", ...]}
+                        -> {"id": "..."}
+    GET  /blender/jobs/<id> -> {"status": "queued|running|done|error", "result": {...}, "log": "..."}
+
 Every request needs `Authorization: Bearer <token>`, the token in the config.
 
 Config: aimp-worker.json beside this file (or AIMP_WORKER_CONFIG):
@@ -35,10 +47,19 @@ Config: aimp-worker.json beside this file (or AIMP_WORKER_CONFIG):
       "log": "C:/ComfyUI-server/logs/world-comfy.log"
     }
   }
+  and, for Blender sets:
+    "blender": {
+      "exe": "C:/ComfyUI-server/blender-4.5.9/blender.exe",
+      "scripts": "C:/AIMP/blender",
+      "sets_root": "C:/Users/alexk/ComfyUI/input/sets",
+      "scout_python": "<a Python with numpy and Pillow>"
+    }
 """
 import hmac
 import json
 import os
+import queue
+import re
 import subprocess
 import sys
 import threading
@@ -173,6 +194,139 @@ class World:
 WORLD_COMFY = World()
 
 
+class BlenderJobs:
+    """Blender renders for sets, queued and run one at a time."""
+
+    KINDS = ('stage', 'visibility', 'scout', 'assets')
+
+    def __init__(self, cfg):
+        self.cfg = cfg or {}
+        self.jobs = {}
+        self.queue = queue.Queue()
+        self.counter = 0
+
+    @property
+    def root(self):
+        return os.path.realpath(self.cfg['sets_root'])
+
+    def inside(self, rel):
+        """A path under the sets root, or an error: nothing outside it is touched."""
+        full = os.path.realpath(os.path.join(self.root, str(rel)))
+        if full != self.root and not full.startswith(self.root + os.sep):
+            raise ValueError(f'{rel} is outside the sets folder')
+        return full
+
+    def submit(self, body):
+        if not self.cfg:
+            raise RuntimeError('Blender is not configured on this worker (no "blender" in aimp-worker.json)')
+        kind = body.get('kind')
+        if kind not in self.KINDS:
+            raise ValueError(f'kind must be one of {", ".join(self.KINDS)}')
+        if kind == 'stage':
+            shot = body.get('shot') or {}
+            shot_id, project = str(shot.get('shot_id', '')), str(body.get('project', ''))
+            if not re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', shot_id) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', project):
+                raise ValueError('a stage job needs a shot with a plain shot_id, and a plain project name')
+            shot_dir = self.inside(os.path.join('shots', project, shot_id))
+            os.makedirs(shot_dir, exist_ok=True)
+            with open(os.path.join(shot_dir, 'shot.json'), 'w', encoding='utf-8') as f:
+                json.dump(shot, f, indent=2)
+            loc = shot.get('location') or {}
+            blend = self.inside(os.path.join('locations', str(loc.get('id')), str(loc.get('revision')), 'location.blend'))
+            if not os.path.exists(blend):
+                raise FileNotFoundError(f"no location.blend for {loc.get('id')} {loc.get('revision')}")
+            args = [blend, 'blender_stage.py', shot_dir] + ([','.join(body['only'])] if body.get('only') else [])
+        elif kind in ('visibility', 'assets'):
+            shot_dir = self.inside(body.get('shotDir', ''))
+            script = 'visibility.py' if kind == 'visibility' else 'stage_assets.py'
+            extra = [self.inside(os.path.join(os.path.relpath(shot_dir, self.root), 'stage'))] if kind == 'assets' else []
+            args = [os.path.join(shot_dir, 'blender', 'shot.blend'), script, shot_dir] + extra
+        else:
+            dirs = [self.inside(d) for d in body.get('shotDirs') or []]
+            if not dirs:
+                raise ValueError('a scout job needs shotDirs')
+            name = str(body.get('name') or 'scout')
+            if not re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', name):
+                raise ValueError('scout name must be plain')
+            args = ['__scout__', name] + dirs
+        with LOCK:
+            self.counter += 1
+            job_id = f'b{int(time.time())}-{self.counter}'
+            self.jobs[job_id] = {'id': job_id, 'kind': kind, 'status': 'queued', 'queued_at': time.time(), 'log': '', 'result': None}
+        self.queue.put((job_id, kind, args))
+        return job_id
+
+    def get(self, job_id):
+        job = self.jobs.get(job_id)
+        if not job:
+            raise KeyError(job_id)
+        return job
+
+    def run_forever(self):
+        while True:
+            job_id, kind, args = self.queue.get()
+            job = self.jobs[job_id]
+            job['status'] = 'running'
+            job['started_at'] = time.time()
+            try:
+                job['result'] = self._run(job, kind, args)
+                job['status'] = 'done'
+            except Exception as e:
+                job['status'] = 'error'
+                job['error'] = str(e)
+                log(f'blender job {job_id} failed: {e}')
+            job['finished_at'] = time.time()
+
+    def _run(self, job, kind, args):
+        env = dict(os.environ, AIMP_SETS_ROOT=self.root, AIMP_BLENDER=self.cfg['exe'],
+                   PYTHONUTF8='1', PYTHONIOENCODING='utf-8')
+        # The GPU is shared, as for the world ComfyUI: the main one unloads first.
+        try:
+            http_json('POST', CONFIG['main_comfy'].rstrip('/') + '/free', {'unload_models': True, 'free_memory': True}, timeout=10)
+        except Exception:
+            pass
+        flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+        if args[0] == '__scout__':
+            name, dirs = args[1], args[2:]
+            env['AIMP_SCOUT_OUT'] = os.path.join(self.root, 'reviews')
+            cmd = [self.cfg.get('scout_python') or sys.executable, os.path.join(self.cfg['scripts'], 'tech_scout.py'), name] + dirs
+        else:
+            blend, script, shot_dir, *rest = args
+            cmd = [self.cfg['exe'], '-b', blend, '--python', os.path.join(self.cfg['scripts'], script), '--', shot_dir] + rest
+        proc = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace',
+                              env=env, creationflags=flags, timeout=self.cfg.get('timeout_s', 3600))
+        out = (proc.stdout or '') + (proc.stderr or '')
+        job['log'] = out[-4000:]
+        if proc.returncode != 0 or 'Traceback' in out:
+            raise RuntimeError(f'{os.path.basename(cmd[0])} exited {proc.returncode}: ' + out[-800:])
+        rel = lambda p: os.path.relpath(p, self.root).replace(os.sep, '/')
+        if kind == 'scout':
+            return {'sheet': f'reviews/tech_scout_{args[1]}.jpg', 'coverage': self._read(os.path.join(self.root, 'reviews', f'tech_scout_{args[1]}.json'))}
+        shot_dir = args[2]
+        blender_dir = os.path.join(shot_dir, 'blender')
+        if kind == 'stage':
+            manifest = self._read(os.path.join(blender_dir, 'camera_manifest.json')) or {}
+            manifest.pop('frames', None)   # per-frame matrices stay in the file; the summary comes back
+            return {'shotDir': rel(shot_dir), 'blenderDir': rel(blender_dir), 'camera': manifest,
+                    'plates': self._read(os.path.join(blender_dir, 'plates', 'plates_manifest.json')),
+                    'depthFrames': len([f for f in os.listdir(os.path.join(blender_dir, 'depth')) if f.endswith('.png')]) if os.path.isdir(os.path.join(blender_dir, 'depth')) else 0}
+        if kind == 'visibility':
+            vis = self._read(os.path.join(blender_dir, 'visibility.json')) or {}
+            return {k: vis.get(k) for k in ('summary', 'placement', 'background_risk', 'bare_thirds', 'windows_s', 'peak_fraction')}
+        return {'stageDir': rel(os.path.join(shot_dir, 'stage'))}
+
+    @staticmethod
+    def _read(path):
+        try:
+            with open(path, encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return None
+
+
+BLENDER = BlenderJobs(CONFIG.get('blender'))
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body):
         raw = json.dumps(body).encode()
@@ -198,6 +352,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {'url': WORLD_COMFY.start()})
             if method == 'POST' and self.path == '/world/stop':
                 return self._send(200, {'stopped': WORLD_COMFY.stop()})
+            if method == 'POST' and self.path == '/blender/jobs':
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(length) or b'{}') if length else {}
+                return self._send(200, {'id': BLENDER.submit(body)})
+            if method == 'GET' and self.path.startswith('/blender/jobs/'):
+                try:
+                    return self._send(200, BLENDER.get(self.path.rsplit('/', 1)[1]))
+                except KeyError:
+                    return self._send(404, {'error': 'no such job'})
             return self._send(404, {'error': f'no route {method} {self.path}'})
         except Exception as e:
             log(f'{method} {self.path} failed: {e}')
@@ -215,6 +378,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     threading.Thread(target=WORLD_COMFY.reap_idle, daemon=True).start()
+    threading.Thread(target=BLENDER.run_forever, daemon=True).start()
     server = ThreadingHTTPServer(('0.0.0.0', CONFIG.get('port', 8190)), Handler)
     log(f"AIMP worker on port {CONFIG.get('port', 8190)}")
     try:

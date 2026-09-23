@@ -37,7 +37,12 @@ param(
     # The name other machines reach this one by (the Tailscale name, say).
     [string]$PublicHost   = $env:COMPUTERNAME.ToLower(),
     [int]$IdleMinutes     = 10,
-    [string[]]$WorldPacks = @('ComfyUI_HYWorld2', 'comfyui-various', 'comfyui-rename-file', 'ComfyUI-VideoHelperSuite')
+    [string[]]$WorldPacks = @('ComfyUI_HYWorld2', 'comfyui-various', 'comfyui-rename-file', 'ComfyUI-VideoHelperSuite'),
+    # Blender sets (blender/ in the repository). Leave -BlenderExe empty to skip.
+    [string]$BlenderExe   = 'C:\ComfyUI-server\blender-4.5.9\blender.exe',
+    [string]$SetsRoot     = 'C:\Users\alexk\ComfyUI\input\sets',
+    # A Python with numpy and Pillow, for the tech-scout sheet: ComfyUI's own.
+    [string]$ScoutPython  = 'C:\ComfyUI-server\daisy-v2\venv\Scripts\python.exe'
 )
 $ErrorActionPreference = 'Stop'
 
@@ -57,6 +62,7 @@ if (-not $token) {
 }
 
 $logs = Split-Path -Parent $ComfyMain | Split-Path -Parent | Join-Path -ChildPath 'logs'
+$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path | Split-Path -Parent
 $config = [ordered]@{
     port       = $Port
     token      = $token
@@ -81,6 +87,15 @@ $config = [ordered]@{
             '--port', "$WorldPort", '--listen',
             '--disable-comfy-compiler',
             '--disable-all-custom-nodes', '--whitelist-custom-nodes') + $WorldPacks
+    }
+}
+if ($BlenderExe -and (Test-Path $BlenderExe)) {
+    New-Item -ItemType Directory -Force -Path (Join-Path $SetsRoot 'locations'), (Join-Path $SetsRoot 'shots') | Out-Null
+    $config.blender = [ordered]@{
+        exe          = $BlenderExe
+        scripts      = (Join-Path $repoRoot 'blender')
+        sets_root    = $SetsRoot
+        scout_python = $ScoutPython
     }
 }
 if ($PSCmdlet.ShouldProcess($configPath, 'write')) {
