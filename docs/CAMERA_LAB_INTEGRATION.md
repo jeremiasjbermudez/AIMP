@@ -78,9 +78,9 @@ picture. Cameras, control passes and visibility then belong to the camera module
 6. **From a staged shot to a clip. Done.** See [From the set to a clip](#from-the-set-to-a-clip).
    Still to port: Director's Stage (`director_web`) into the Camera tab, writing
    `stageCamera` into the same `stage` action.
-7. **Takes: the performance. Step 1 done.** See [Takes](#takes). Next: the model
-   drafts a take from the beat and the Director's shots; recording camera passes with
-   VirtuCamera on the Mac; a rigged mannequin with walk and turn clips; captured motion.
+7. **Takes: the performance. Done: takes, and drafting them with the model.** See
+   [Takes](#takes). Next: recording camera passes with VirtuCamera on the Mac; a rigged
+   mannequin with walk and turn clips; captured motion.
 8. **Next.** Proposed coverage: from a scene's shot list (the Director tab), place
    cameras on the set's marks (wide, singles, overs), reject angles the visibility
    pass says see only bare wall, and lay them out on a scout sheet for approval.
@@ -239,3 +239,30 @@ the stove with his back to a 28 mm camera, walking toward it and turning to the
 calendar. H3 followed the performance: the back of his head, the turn, the approach,
 and the profile at the end, frame for frame with the depth. The block-out's window
 (a glowing panel) came back looking like a doorway into another room.
+
+### Drafting a take
+
+`draft_take` (the **Draft from shots** box in the take editor) has the language model
+block the performance for consecutive Director shots, up to one clip long:
+
+- **It reads** the set's marks with their coordinates and what each is near (walls
+  left out: they are near everything), the room's shape, who is in the shots, and each
+  shot's action with its start time in the take.
+- **The code places the lines.** "At 00:00.800, TOMAS says: You're early." in a shot
+  that starts 5.2 s into the take is a cue at 6.0 s. A line's time is a fact of the
+  script, as the Director flow already treats it; the model only blocks moves and
+  action cues around the lines.
+- **The flow checks** that every move is on a standing or sitting mark, that facings
+  are marks, that times fit, that nobody walks faster than 1.5 m/s, and that no move
+  repeats; a failing draft goes back once with the problems named, then is refused
+  with them.
+- **The draft fills the editor**, with the model's reading of the scene, to adjust and
+  build.
+
+On Testies, Director shots 2 and 3 ("TOMAS frowns. He looks at the wall calendar";
+"checks his wristwatch … says: You're early."), 10.8 s:
+
+| Model | Draft |
+|---|---|
+| gemma4:e4b | first a take whose reading and moves disagreed and whose line was at the wrong time; with the lines placed by code, twice a take standing him on the calendar: refused |
+| Claude | he studies the calendar, checks his watch at 5.3 s, turns toward the stairwell at 5.8 s and says the line at 6.0 s: "You're early" is said to someone heard but not seen, "the most plausible arrival point is the stairwell". The same blocking on a second draft |
