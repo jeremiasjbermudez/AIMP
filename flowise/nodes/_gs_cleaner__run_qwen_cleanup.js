@@ -71,14 +71,32 @@ const uglyPath = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/
 const cleanPath = String($comfyRoot || 'C:/ComfyUI2').replace(/[\\/]+$/, '') + '/' + panoImagePath;
 const tag = 'shot_' + shotId;
 
+// @include comfy_models
+
+// Whichever precision of each model this ComfyUI holds, best first. The graph
+// was built on the bf16 edit model and the 2512 Lightning LoRA; a render host
+// with the int8 or 2509 model, or the 2511 Lightning, runs the same graph.
+// Lightning is required: 10 steps at cfg 1 only works with it. Sharp and F2P
+// refine the result and are left out when they are not installed.
+let qwenModels;
+try {
+  qwenModels = {
+    unet: await pickModel('diffusion_models', ['qwen_image_edit_2511_bf16.safetensors', 'qwen_image_edit_2511_int8_convrot.safetensors', 'qwen_image_edit_2509_fp8_e4m3fn.safetensors']),
+    clip: await pickModel('text_encoders', ['qwen/qwen_2.5_vl_7b.safetensors', 'qwen_2.5_vl_7b_fp8_scaled.safetensors', 'qwen2.5vl-7b-bf16.safetensors']),
+    vae: await pickModel('vae', ['qwen-image/qwen_image_vae.safetensors']),
+    sharp: await pickModel('loras', ['Sharp.safetensors'], { optional: true }),
+    lightning: await pickModel('loras', ['Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors', 'Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors', 'Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors']),
+    f2p: await pickModel('loras', ['Qwen-Image-Edit-F2P.safetensors'], { optional: true })
+  };
+} catch (e) {
+  return { action: 'error', reason: e.message };
+}
+
 const g = {
-  '1': { class_type: 'UNETLoader', inputs: { unet_name: 'qwen_image_edit_2511_bf16.safetensors', weight_dtype: 'default' } },
-  '2': { class_type: 'CLIPLoader', inputs: { clip_name: 'qwen\\qwen_2.5_vl_7b.safetensors', type: 'qwen_image', device: 'default' } },
-  '3': { class_type: 'VAELoader', inputs: { vae_name: 'qwen-image\\qwen_image_vae.safetensors' } },
-  '4': { class_type: 'LoraLoaderModelOnly', inputs: { model: ['1', 0], lora_name: 'Sharp.safetensors', strength_model: 1 } },
-  '5': { class_type: 'LoraLoaderModelOnly', inputs: { model: ['4', 0], lora_name: 'Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors', strength_model: 1 } },
-  '6': { class_type: 'LoraLoaderModelOnly', inputs: { model: ['5', 0], lora_name: 'Qwen-Image-Edit-F2P.safetensors', strength_model: 0.65 } },
-  '7': { class_type: 'ModelSamplingAuraFlow', inputs: { model: ['6', 0], shift: 3 } },
+  '1': { class_type: 'UNETLoader', inputs: { unet_name: qwenModels.unet, weight_dtype: 'default' } },
+  '2': { class_type: 'CLIPLoader', inputs: { clip_name: qwenModels.clip, type: 'qwen_image', device: 'default' } },
+  '3': { class_type: 'VAELoader', inputs: { vae_name: qwenModels.vae } },
+  '7': { class_type: 'ModelSamplingAuraFlow', inputs: { model: ['1', 0], shift: 3 } },
   '8': { class_type: 'CFGNorm', inputs: { model: ['7', 0], strength: 1, pre_cfg: false } },
   '9': { class_type: 'JWImageLoadRGB', inputs: { path: uglyPath } },
   '10': { class_type: 'JWImageLoadRGB', inputs: { path: cleanPath } },
@@ -101,6 +119,17 @@ const g = {
   '19': { class_type: 'VAEDecode', inputs: { samples: ['18', 0], vae: ['3', 0] } },
   '20': { class_type: 'SaveImage', inputs: { images: ['19', 0], filename_prefix: movieSlug + '/_qwen_splat_cleanup/' + tag } }
 };
+
+// The LoRA chain, Sharp -> Lightning -> F2P, of whichever are installed.
+{
+  let modelRef = ['1', 0];
+  [['4', qwenModels.sharp, 1], ['5', qwenModels.lightning, 1], ['6', qwenModels.f2p, 0.65]].forEach(([id, name, strength]) => {
+    if (!name) return;
+    g[id] = { class_type: 'LoraLoaderModelOnly', inputs: { model: modelRef, lora_name: name, strength_model: strength } };
+    modelRef = [id, 0];
+  });
+  g['7'].inputs.model = modelRef;
+}
 
 const r = await axios.post(comfyUrl + '/prompt', { prompt: g });
 const pid = r && r.data && r.data.prompt_id;
