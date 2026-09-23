@@ -38,7 +38,7 @@ MIN_CLEAR_M = 0.35
 FFMPEG = os.environ.get('AIMP_FFMPEG') or shutil.which('ffmpeg') or 'ffmpeg'
 
 shot = json.loads((SHOT / 'shot.json').read_text(encoding='utf-8'))
-loc = json.loads(_sets.location_json(shot, SHOT).read_text(encoding='utf-8'))
+loc = _sets.location_json(shot, SHOT)
 B = SHOT / 'blender'
 dm = json.loads((B / 'depth' / 'depth_manifest.json').read_text(encoding='utf-8'))
 cm = json.loads((B / 'camera_manifest.json').read_text(encoding='utf-8'))
