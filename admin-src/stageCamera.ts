@@ -27,6 +27,9 @@ export type StageCam = {
   }
   handheld: number          // 0 = locked off .. 1 = a loose shoulder-held camera
   directorShotId?: string
+  // Shot first; the other cameras on the take are given its frames so every angle
+  // shows the same room, light and person. With none marked, the first camera is master.
+  master?: boolean
 }
 
 export const MOTIONS: { value: MotionType; label: string; hint: string }[] = [

@@ -307,10 +307,16 @@ export function StagePanel({ movie }: { movie: Movie }) {
     await load()
   }
 
-  /** Stage every camera on the take and render its clip, one after another. */
+  /** Stage every camera on the take and render its clip, one after another: the master
+   *  first, then the rest given the master's frames so every angle is the same room. */
   async function shootAll(only?: string) {
     if (!take || !loc) return
-    const list = cams.filter((c) => !only || c.id === only)
+    const master = cams.find((c) => c.master) ?? cams[0]
+    const list = cams.filter((c) => !only || c.id === only).sort((a, b) => (a.id === master?.id ? -1 : b.id === master?.id ? 1 : 0))
+    // Shooting one other camera alone matches the master's last finished clip, if there is one.
+    let canonClipId: string | undefined = master && only && only !== master.id
+      ? (lastClip(master)?.status === 'complete' ? lastClip(master)!.id : undefined)
+      : undefined
     setBusy('shoot')
     setError(null)
     setShoot(Object.fromEntries(list.map((c) => [c.id, { state: 'waiting' } as ShootState])))
@@ -329,9 +335,14 @@ export function StagePanel({ movie }: { movie: Movie }) {
         continue
       }
       setShoot((s) => ({ ...s, [c.id]: { state: 'rendering', note: 'the clip…' } }))
-      const cl = parseFlowJson<{ action: string; reason?: string }>(
-        await triggerFlow(flowId, { action: 'make_clip', movieId: movie.id, setShotId: st.data.shotId, directorShotId: c.directorShotId || undefined, render: true })
+      const isMaster = c.id === master?.id
+      const cl = parseFlowJson<{ action: string; reason?: string; clipId?: string }>(
+        await triggerFlow(flowId, {
+          action: 'make_clip', movieId: movie.id, setShotId: st.data.shotId, directorShotId: c.directorShotId || undefined,
+          canonClipId: isMaster ? undefined : canonClipId, render: true
+        })
       )
+      if (isMaster && cl.ok && cl.data.action === 'rendered' && cl.data.clipId) canonClipId = cl.data.clipId
       const ok = cl.ok && (cl.data.action === 'rendered' || cl.data.action === 'rendering')
       setShoot((s) => ({ ...s, [c.id]: ok ? { state: 'done', note: cl.ok && cl.data.action === 'rendering' ? 'still rendering' : undefined } : { state: 'failed', note: cl.ok ? cl.data.reason : cl.message } }))
       await loadShots(take.id)
@@ -526,8 +537,16 @@ export function StagePanel({ movie }: { movie: Movie }) {
                       <Select value={cam.directorShotId ?? ''} onValueChange={(v) => edit({ directorShotId: v })} placeholder="Pick a shot…" items={dshots.map((d) => ({ value: d.id, label: shotLabel(d) }))} />
                     </label>
                   )}
+                  <label className="checkbox">
+                    <input
+                      type="checkbox"
+                      checked={(cams.find((c) => c.master) ?? cams[0])?.id === cam.id}
+                      onChange={(e) => setCams((cs) => cs.map((c) => ({ ...c, master: e.target.checked ? c.id === cam.id : false })))}
+                    />
+                    Master: shot first, the others match it
+                  </label>
                   <button type="button" onClick={() => {
-                    const copy = { ...cam, id: `${cam.id}_c${Date.now().toString(36)}`, name: cam.name + ' 2', position: [cam.position[0] + 0.3, cam.position[1], cam.position[2]] as Vec3 }
+                    const copy = { ...cam, master: false, id: `${cam.id}_c${Date.now().toString(36)}`, name: cam.name + ' 2', position: [cam.position[0] + 0.3, cam.position[1], cam.position[2]] as Vec3 }
                     setCams((cs) => [...cs, copy])
                     setSelected(copy.id)
                   }}>Duplicate</button>

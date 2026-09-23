@@ -103,6 +103,7 @@ function setClipOffFrame(sentences, vis) {
  *   p.action: what happens, from the Director's shot or the beat
  *   p.timeline: sentences from a take (setClipTimeline), when the shot is on one
  *   p.cameraMotion {travel_m, pan_deg}; p.recorded: the camera was operated
+ *   p.canon: how many master-camera frames follow <Picture 1> (before the look pictures)
  *   p.timeOfDay (NIGHT, DAY...), p.lights (the set's light names), p.lookFromScene: the
  *   pictures are the scene's own panorama, so they also set the light and colour
  *   p.visibility: the shot's visibility result
@@ -146,8 +147,14 @@ function setClipPrompt(p) {
   }
   const vis = setClipVisibility(p.visibility);
   if (vis) lines.push(vis);
-  if (p.pictures > 0) {
+  const canonN = Number(p.canon) || 0;
+  if (canonN > 0) {
     const first = p.person ? 2 : 1;
+    const tags = Array.from({ length: canonN }, (_, i) => `<Picture ${first + i}>`).join(', ');
+    lines.push(`${tags} are frames from the master camera filming this same take at the same moments, from another position. This shot must show that same room (its walls, furniture, props, light and colour)${p.person ? ` and that same single ${p.person.name}` : ''}, seen from this camera's viewpoint. Nobody else is in the room.`);
+  }
+  if (p.pictures > 0) {
+    const first = (p.person ? 2 : 1) + canonN;
     const tags = Array.from({ length: p.pictures }, (_, i) => `<Picture ${first + i}>`).join(', ');
     lines.push(`${tags} ${p.pictures === 1 ? 'is a photograph' : 'are photographs'} of this same ${String(p.locationName).toLowerCase()} taken from other positions. They define the room's real materials, furniture, props, windows, walls${p.lookFromScene ? ', light and colour' : ''}. Reproduce that exact room wherever the camera looks; do not invent furniture or fittings that are not in them. They are not camera views for this shot.`);
   }

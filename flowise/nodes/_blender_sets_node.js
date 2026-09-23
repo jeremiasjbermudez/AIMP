@@ -41,7 +41,9 @@
 //       or builds it straight away with build:true
 //   {"action":"make_clip","movieId":"...","setShotId":"...","directorShotId":"...",
 //       "characterId":"...", "controlStrength":1.0, "controlEnd":1.0, "lookPlates":2,
-//       "lookFrom":"scene"|"plates", "render":true}
+//       "lookFrom":"scene"|"plates", "canonClipId":"...", "render":true}
+//       canonClipId: the master camera's clip on the same take; three of its frames are
+//       given as references so this angle shows the same room, light and person
 //       a staged shot as a MiniMax H3 control clip for a Director shot (and so a
 //       beat): the depth as the control video, photographic look plates of the
 //       set, the character's reference, and a prompt from all of it; with
@@ -530,8 +532,11 @@ async function makeClip() {
 
   clipStep = 'making the control video';
   // 1. The control video, and the facts about the camera the prompt needs.
-  // How many look plates the clip is given (0 = none: the character's reference only).
-  const plateCount = parsed.lookPlates === undefined ? 2 : Math.max(0, Math.min(4, Number(parsed.lookPlates) || 0));
+  // How many look pictures the clip is given (0 = none: the character's reference only).
+  // On a take every camera gets the same four views of the room, so the angles agree;
+  // a single shot gets the two it faces.
+  const onTake = !!shotRow.take_id;
+  const plateCount = parsed.lookPlates === undefined ? (onTake ? 4 : 2) : Math.max(0, Math.min(4, Number(parsed.lookPlates) || 0));
   const ctl = await workerJob({ kind: 'control', shotDir: shotRow.stage.shotDir, plateCount: Math.max(1, plateCount) }, { timeoutMs: 20 * 60 * 1000 });
   if (ctl.status !== 'done') return { action: 'error', reason: 'Could not make the control video: ' + ctl.error };
   const m = ctl.result;
@@ -566,6 +571,19 @@ async function makeClip() {
   }
 
   clipStep = 'writing the prompt';
+  // 2b. Canon frames: the master camera's clip of this take, at its start, middle and end.
+  // camera_lab's cross-shot anchor - without it every angle invents its own room.
+  clipStep = 'taking frames from the master camera';
+  const canon = [];
+  if (parsed.canonClipId) {
+    const master = (await rows('minimax_clips', { id: `eq.${parsed.canonClipId}`, movie_id: `eq.${movieId}`, select: 'id,status,video_path,length' }))[0];
+    if (!master || master.status !== 'complete' || !master.video_path) return { action: 'error', reason: 'The master camera has no finished clip to match.' };
+    const n = Number(master.length) || m.frames;
+    const fr = await workerJob({ kind: 'frames', video: master.video_path, outDir: `${shotRow.stage.shotDir}/canon/${master.id.slice(0, 8)}`, frames: [1, Math.round(n / 2), n] }, { timeoutMs: 5 * 60 * 1000 });
+    if (fr.status !== 'done') return { action: 'error', reason: 'Could not take frames from the master camera: ' + fr.error };
+    for (const f of fr.result.frames) canon.push('input/sets/' + f);
+  }
+
   // 3. The prompt. A shot on a take gets the take's action with its times.
   const sh = shotRow.shot || {};
   const takeRow = shotRow.take_id ? (await rows('set_takes', { id: `eq.${shotRow.take_id}`, select: 'take' }))[0] : null;
@@ -576,7 +594,7 @@ async function makeClip() {
   const prompt = setClipPrompt({
     locationName: loc.name || loc.location_key, roomPrompt: facts.room_prompt, lensMm: m.lens_mm || (sh.camera || {}).lens_mm,
     frames: m.frames, fps: m.fps, person: character ? { name: character.name, look: character.visual_anchor } : null,
-    pictures: plates.length, view: m.view, trajectory: m.trajectory,
+    pictures: plates.length, canon: canon.length, view: m.view, trajectory: m.trajectory,
     action: action || (beat ? beat.summary : ''), visibility: shotRow.visibility,
     timeline: takeRow ? setClipTimeline(takeRow.take) : null,
     cameraMotion: m.camera_motion, recorded: !!((sh.camera || {}).path),
@@ -592,7 +610,7 @@ async function makeClip() {
     // A Director shot finds its clip through director_shots.clip_id, set below.
     movie_id: movieId, beat_id: (dshot && dshot.beat_id) || shotRow.beat_id || null,
     mode: 'control', prompt, width: size[0], height: size[1], length: m.frames, status: 'queued',
-    reference_image_paths: [identity, ...plates].filter(Boolean),
+    reference_image_paths: [identity, ...canon, ...plates].filter(Boolean).slice(0, 9),
     control_video_path: 'input/sets/' + m.video, control_type: 'depth',
     // Full strength for the whole schedule. camera_lab's 0.7, released at 0.5-0.6,
     // was for a different control node and came with frame anchors; on this one

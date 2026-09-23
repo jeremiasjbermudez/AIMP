@@ -198,7 +198,7 @@ WORLD_COMFY = World()
 class BlenderJobs:
     """Blender renders for sets, queued and run one at a time."""
 
-    KINDS = ('stage', 'visibility', 'scout', 'assets', 'pano_views', 'build', 'export', 'control', 'take')
+    KINDS = ('stage', 'visibility', 'scout', 'assets', 'pano_views', 'build', 'export', 'control', 'take', 'frames')
 
     def __init__(self, cfg):
         self.cfg = cfg or {}
@@ -291,6 +291,15 @@ class BlenderJobs:
                 if os.path.exists(os.path.join(out, stale)):
                     os.remove(os.path.join(out, stale))
             args = {'cmd': blender + [blend, '--python', script('build_take.py'), '--', out], 'out': out}
+        elif kind == 'frames':
+            # Still frames of a rendered clip (canon frames for the other cameras on a take).
+            video = self.comfy_file(body.get('video', '').replace('\\', '/'))
+            out = self.inside(body.get('outDir', ''))
+            frames = [int(f) for f in body.get('frames') or []][:12]
+            if not frames:
+                raise ValueError('frames needs frame numbers')
+            args = {'cmd': [self.cfg.get('scout_python') or sys.executable, script('extract_frames.py'), video, out] + [str(f) for f in frames],
+                    'out': out, 'frames': frames}
         elif kind == 'control':
             # A staged shot's depth as the control video a clip is driven by.
             shot_dir = self.inside(body.get('shotDir', ''))
@@ -413,6 +422,9 @@ class BlenderJobs:
             report['previews'] = [f'{rel(args["out"])}/{p}' for p in report.get('previews', [])]
             return {'dir': rel(args['out']), 'blend': rel(os.path.join(args['out'], 'location.blend')),
                     'report': report, 'location': self._read(os.path.join(args['out'], 'location.json'))}
+        if kind == 'frames':
+            names = sorted(f for f in os.listdir(args['out']) if f.endswith('.png'))
+            return {'frames': [rel(os.path.join(args['out'], n)) for n in names if int(n[1:5]) in args['frames']]}
         if kind == 'take':
             if not os.path.exists(os.path.join(args['out'], 'take.blend')):
                 raise RuntimeError('the take was not built: ' + out[-800:])
