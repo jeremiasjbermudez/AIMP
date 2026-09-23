@@ -607,7 +607,7 @@
       "flux-2-klein-9b.safetensors",
       "flux2-vae.safetensors",
       "qwen_3_8b_fp8mixed.safetensors",
-      "sam_hq_vit_l (1.25GB)"
+      "sam_hq_vit_l.pth"
     ]
   },
   "colour": {

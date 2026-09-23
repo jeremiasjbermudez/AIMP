@@ -107,8 +107,19 @@ foreach ($opt in @($spec.optional)) {
 # disk checks below cannot be made here: fetch-assets.ps1 on that machine does them.
 $comfyLocal = [bool](Test-Path -LiteralPath $env:COMFY_ROOT -ErrorAction SilentlyContinue)
 if (-not $comfyLocal -and (@($spec.packs).Count -or @($spec.modelFiles).Count)) {
-    Write-Host "  ComfyUI's folder ($env:COMFY_ROOT) is not on this machine; node packs and models" -ForegroundColor DarkGray
-    Write-Host "  are not checked here. On the ComfyUI machine:  .\fetch-assets.ps1 -Module $Module" -ForegroundColor DarkGray
+    Write-Host "  ComfyUI's folder ($env:COMFY_ROOT) is not on this machine; its models are not" -ForegroundColor DarkGray
+    Write-Host "  checked here. On the ComfyUI machine:  .\fetch-assets.ps1 -Module $Module" -ForegroundColor DarkGray
+}
+# Node types are asked of ComfyUI itself, over HTTP, so this works wherever it
+# runs - and a pack that is on disk but failed to load is caught too.
+$checker = Join-Path $root 'lib/check-comfy.js'
+$comfyReport = node $checker --module $Module 2>&1
+if ($LASTEXITCODE -eq 1) {
+    Write-Warn "ComfyUI cannot run all of this module's graphs yet:"
+    $comfyReport | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
+    Write-Host "  Fetch the packs:  .\fetch-assets.ps1 -Module $Module   (on the ComfyUI machine), then restart it." -ForegroundColor DarkGray
+} elseif ($LASTEXITCODE -eq 2) {
+    Write-Host "  ComfyUI did not answer, so its node types were not checked." -ForegroundColor DarkGray
 }
 $missingPacks = @()
 foreach ($pack in @($spec.packs | Where-Object { $comfyLocal })) {

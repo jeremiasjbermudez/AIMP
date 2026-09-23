@@ -1,0 +1,74 @@
+# Checks that need no GPU, no database and no install, on every push.
+#
+# What they catch is what has broken installs here: flow exports drifting from
+# their sources, a flow step that does not parse, the module map naming files
+# that are not there, a panel that no longer type-checks against the shell, an
+# installer script PowerShell cannot parse, an unpinned node pack.
+#
+# Whether a running ComfyUI has the node types a module needs cannot be checked
+# here; install/lib/check-comfy.js does that against the real one, and
+# install-module.ps1 runs it on every install.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  flows-and-modules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Flow exports match their sources
+        run: node flowise/build.js --check
+      - name: Flow steps parse, module map is consistent
+        run: node install/lib/check-repo.js
+      - name: Python helpers compile
+        run: python3 -m py_compile install/lib/*.py flowise/nodes/*.py
+
+  installer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell scripts parse
+        shell: pwsh
+        run: |
+          $bad = 0
+          foreach ($f in Get-ChildItem -Recurse -Filter *.ps1) {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$errors) | Out-Null
+            foreach ($e in @($errors)) {
+              Write-Host "::error file=$($f.FullName),line=$($e.Extent.StartLineNumber)::$($e.Message)"
+              $bad++
+            }
+          }
+          if ($bad) { exit 1 }
+          Write-Host 'every .ps1 parses'
+
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: admin
+      # A clean checkout has the shell and no panels; an install copies in the
+      # ones it has. CI installs all of them, so every tab is type-checked
+      # against the shell it will run in.
+      - name: Every module's panels, and a registry listing all their tabs
+        run: |
+          cp -R admin-src/. admin/src/
+          ADMIN_DIR="$PWD/admin" node install/lib/write-registry.js
+      - name: Type-check
+        run: npx tsc -b --noEmit
+        working-directory: admin
+      - name: Build
+        run: npx vite build --logLevel error
+        working-directory: admin

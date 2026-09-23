@@ -95,16 +95,40 @@ if (-not $ModelsOnly) {
     Write-Step "Node packs: $($wantPacks.Count) needed"
     foreach ($pack in $wantPacks) {
         $dest = Join-Path $packDir $pack
-        if (Test-Path $dest) { Write-Host "  have    $pack" -ForegroundColor DarkGray; continue }
         $info = $assets.packs.$pack
+        if (Test-Path $dest) {
+            # Present is not the same as pinned. Say when it differs, but leave
+            # it: replacing a pack under a running ComfyUI is the user's call.
+            if ($info -and $info.ref -and (Test-Path (Join-Path $dest '.git'))) {
+                $head = (git -C $dest rev-parse HEAD 2>$null)
+                if ($head -and $head -ne $info.ref) {
+                    Write-Warn "  $pack is at $($head.Substring(0, 10)), pinned to $($info.ref.Substring(0, 10))"
+                    Write-Host "    to match: git -C `"$dest`" fetch origin $($info.ref) ; git -C `"$dest`" checkout $($info.ref)" -ForegroundColor DarkGray
+                    continue
+                }
+            }
+            Write-Host "  have    $pack" -ForegroundColor DarkGray
+            continue
+        }
         if (-not $info) {
             Write-Warn "  no source recorded for $pack - install it from the ComfyUI registry by hand"
+            continue
+        }
+        if ($info.manual) {
+            Write-Warn "  $pack has no public source. $($info.manual)"
             continue
         }
         if ($info.git) {
             if ($PSCmdlet.ShouldProcess($pack, "git clone $($info.git)")) {
                 Write-Step "  cloning $pack"
-                git clone --depth 1 $info.git $dest
+                if ($info.ref) {
+                    # The pinned commit, not whatever is newest today: an upstream
+                    # release can change a node's inputs and break a graph.
+                    git clone --filter=blob:none --quiet $info.git $dest
+                    if ($LASTEXITCODE -eq 0) { git -C $dest checkout --quiet $info.ref }
+                } else {
+                    git clone --depth 1 $info.git $dest
+                }
                 if ($LASTEXITCODE -ne 0) { Write-Warn "  clone of $pack failed" }
                 else { Install-PackRequirements -Pack $pack -Dir $dest }
             }
@@ -116,9 +140,10 @@ if (-not $ModelsOnly) {
                 Write-Host "    pip install comfy-cli, then: comfy node install $($info.registry)" -ForegroundColor DarkGray
                 continue
             }
-            if ($PSCmdlet.ShouldProcess($pack, "comfy node install $($info.registry)")) {
+            $spec = if ($info.version) { "$($info.registry)@$($info.version)" } else { $info.registry }
+            if ($PSCmdlet.ShouldProcess($pack, "comfy node install $spec")) {
                 Write-Step "  installing $pack from the registry"
-                comfy --skip-prompt node install $info.registry
+                comfy --skip-prompt node install $spec
                 if ($LASTEXITCODE -ne 0) { Write-Warn "  registry install of $pack failed" }
             }
         }
@@ -158,8 +183,11 @@ if (-not $PacksOnly) {
             $folder = Join-Path $modelRoot $item.Info.folder
             if ($PSCmdlet.ShouldProcess($item.File, "download from $($item.Info.source.repo)")) {
                 Write-Step "  $($item.File)  <- $($item.Info.source.repo)"
+                $pin = @()
+                if ($item.Info.source.revision) { $pin += @('--revision', $item.Info.source.revision) }
+                if ($item.Info.source.sha256) { $pin += @('--sha256', $item.Info.source.sha256) }
                 & $python $helper --repo $item.Info.source.repo --path $item.Info.source.path `
-                    --file $item.File --into $folder
+                    --file $item.File --into $folder @pin
                 if ($LASTEXITCODE -ne 0) { Write-Warn "  download of $($item.File) failed" }
             }
         }

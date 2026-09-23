@@ -68,3 +68,7 @@ admin/src/ui/ShotCameraBadge.tsx
 admin/src/ui/WorstFrames.tsx
 admin/src/videoKinds.ts
 admin/src/WorldPanel.tsx
+
+# Python bytecode, written whenever a helper is run or compiled.
+__pycache__/
+*.pyc
