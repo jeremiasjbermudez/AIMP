@@ -76,7 +76,11 @@ function setClipPrompt(p) {
     const tags = Array.from({ length: p.pictures }, (_, i) => `<Picture ${first + i}>`).join(', ');
     lines.push(`${tags} ${p.pictures === 1 ? 'is a photograph' : 'are photographs'} of this same ${String(p.locationName).toLowerCase()} taken from other positions. They define the room's real materials, furniture, props, windows and walls. Reproduce that exact room wherever the camera looks; do not invent furniture or fittings that are not in them. They are not camera views for this shot.`);
   }
-  if (p.roomPrompt) lines.push('The room: ' + p.roomPrompt);
+  // No room description here: it names everything in the room (the window, the
+  // stove), and H3 then puts them in shots whose camera never sees them. The
+  // room reaches the clip through the look plates, which carry it as pictures,
+  // and the visibility sentences say what this camera sees. camera_lab's prompts
+  // kept it out too.
   lines.push('');
   const total = Number(tr.total_s || p.frames / p.fps);
   const hold = Number(tr.hold_until_s || 0);
