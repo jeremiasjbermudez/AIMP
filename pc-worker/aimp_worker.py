@@ -112,8 +112,11 @@ class World:
             os.makedirs(os.path.dirname(WORLD['log']), exist_ok=True)
             out = open(WORLD['log'], 'ab')
             flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+            # UTF-8, because output goes to a file: on Windows Python then writes
+            # cp1252, and the first emoji a node pack logs kills ComfyUI.
+            env = dict(os.environ, PYTHONUTF8='1', PYTHONIOENCODING='utf-8')
             self.proc = subprocess.Popen([WORLD['python'], *WORLD['args']], stdout=out, stderr=subprocess.STDOUT,
-                                         cwd=WORLD.get('cwd'), creationflags=flags)
+                                         cwd=WORLD.get('cwd'), creationflags=flags, env=env)
             log(f'started world ComfyUI, pid {self.proc.pid}')
             deadline = time.time() + WORLD.get('start_timeout', 300)
             while time.time() < deadline:
