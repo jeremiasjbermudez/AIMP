@@ -1,3 +1,5 @@
+// @include comfy_jobs
+
 const rawInput = ($flow.input || '').toString();
 let parsed;
 try { parsed = JSON.parse(rawInput); } catch (e) {
@@ -208,35 +210,26 @@ const g = {
   g['7'].inputs.model = modelRef;
 }
 
-const r = await axios.post(comfyUrl + '/prompt', { prompt: g });
-const pid = r && r.data && r.data.prompt_id;
+const sub = await comfySubmit(comfyUrl, g);
+const pid = sub.promptId;
 if (!pid) {
-  const msg = 'Qwen cleanup enqueue failed: ' + JSON.stringify((r && r.data && r.data.node_errors) || (r && r.data)).slice(0, 1000);
+  const msg = 'Qwen cleanup enqueue failed: ' + sub.error;
   await updateJob({ status: 'failed', error_message: msg });
   return { action: 'error', reason: msg };
 }
 
-const waitFor = async (promptId, maxTries, everyMs) => {
-  for (let k = 0; k < maxTries; k++) {
-    await sleep(everyMs);
-    try {
-      const h = await axios.get(comfyUrl + '/history/' + promptId);
-      const rec = h && h.data && h.data[promptId];
-      if (rec && rec.status && rec.status.status_str) return rec;
-    } catch (e) {}
-  }
-  return null;
-};
-
-const rec = await waitFor(pid, 150, 5000);
-if (!rec) {
+// Followed to the end - including a job ComfyUI has lost (a restart), which
+// the old loop mistook for one still running (see lib/comfy_jobs.js).
+const waited = await comfyWait(comfyUrl, pid, { timeoutMs: 750000, everyMs: 5000 });
+if (waited.status === 'timeout') {
   return { action: 'pending', reason: 'Qwen cleanup still running past the check window.', promptId: pid, cleanupId };
 }
-if (rec.status.status_str === 'error') {
-  const msg = 'Qwen cleanup failed in ComfyUI: ' + JSON.stringify(rec.status.messages).slice(0, 1000);
+if (waited.status !== 'success') {
+  const msg = 'Qwen cleanup failed in ComfyUI: ' + waited.error;
   await updateJob({ status: 'failed', error_message: msg });
   return { action: 'error', reason: msg };
 }
+const rec = waited.record;
 
 let outRel = null;
 const outputs = rec.outputs || {};
