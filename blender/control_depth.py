@@ -9,7 +9,6 @@ flows. Reads <shot dir>/shot.json and <shot dir>/blender/, writes:
 
     control/control_depth.mp4    inverse depth, near = white, one range for the
                                  whole clip (0.5-99.5 percentile of every frame),
-                                 lifted by a gamma when the clip is mostly black,
                                  8-bit RGB, lossless, exactly the shot's frames
     control/control_manifest.json the range, the check below, the coverage plates
                                  facing the way this camera faces, and where the
@@ -73,20 +72,11 @@ if too_close:
 inverse = lambda row: 1.0 / np.clip(depth_m(depth_file(row)), near, far)
 lo = min(float(np.percentile(inverse(r), 0.5)) for r in dm['frames'])
 hi = max(float(np.percentile(inverse(r), 99.5)) for r in dm['frames'])
-# A close camera sets the white end on the actor's face, and inverse depth then squeezes
-# the whole room into the bottom few grey levels: most of the picture is black, H3 gets
-# no shape for the room and fills it (with a second person, in testing). When the clip's
-# median sits below MEDIAN_TARGET, a gamma lifts it there; the order of depths is kept.
-MEDIAN_TARGET = 0.25
-norm = lambda row: np.clip((inverse(row) - lo) / max(hi - lo, 1e-9), 0, 1)
-sample = dm['frames'][::max(1, len(dm['frames']) // 12)]
-median = float(np.median(np.concatenate([norm(r)[::4, ::4].ravel() for r in sample])))
-gamma = 1.0 if median >= MEDIAN_TARGET else max(0.4, math.log(MEDIAN_TARGET) / math.log(max(median, 1e-4)))
 out = SHOT / 'control'
 (out / 'frames').mkdir(parents=True, exist_ok=True)
 written = []
 for row in dm['frames']:
-    inv = norm(row) ** gamma
+    inv = np.clip((inverse(row) - lo) / max(hi - lo, 1e-9), 0, 1)
     f = out / 'frames' / f'frame_{row["frame"]:04d}.png'
     Image.fromarray(np.stack([(inv * 255 + 0.5).astype(np.uint8)] * 3, -1)).save(f)
     written.append(f)
@@ -173,8 +163,8 @@ pan = max(math.degrees(math.acos(max(-1.0, min(1.0, float(np.dot(forward_xy(r['m
 manifest = {
     'camera_motion': {'travel_m': round(travel, 3), 'pan_deg': round(pan, 1)},
     'video': 'control/control_depth.mp4', 'frames': frames, 'fps': fps, 'size': shot['clock']['size'],
-    'convention': 'inverse depth, one clip-wide range (0.5-99.5 percentile of all frames), gamma-lifted when mostly black, near=white, 8-bit RGB, lossless',
-    'range_inverse_m': [lo, hi], 'median': round(median, 3), 'gamma': round(gamma, 3), 'near_m': near, 'far_m': far,
+    'convention': 'inverse depth, one clip-wide range (0.5-99.5 percentile of all frames), near=white, 8-bit RGB, lossless',
+    'range_inverse_m': [lo, hi], 'near_m': near, 'far_m': far,
     'plates': plates, 'plate_scores': {c: round(score[c], 3) for c in plates},
     # Which way the camera looks (x, y) at the start, middle and end: to pick the
     # panorama views that show what this camera faces.
