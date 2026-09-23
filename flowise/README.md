@@ -36,6 +36,7 @@ it is clear in Flowise's editor where it came from and that it is not edited the
 | Include | What it is |
 |---|---|
 | `llm` | the language-model shim: reads the model picker's choice, talks to Ollama or any OpenAI-compatible API (including the Claude Code bridge) |
+| `worker_jobs` | `workerCall`, `workerJob`: a request to the render host's worker, and a job submitted to it and followed to the end |
 | `comfy_world` | `worldComfyUrl()`: the address of the ComfyUI that runs HY-World graphs - the on-demand one the render host's worker starts, or the main one when no worker is configured |
 | `comfy_jobs` | `comfySubmit`, `comfyWait`, `comfyErrorText`: queue a graph without throwing on a rejection, follow it to success, error, timeout or "lost" (ComfyUI restarted), and say what failed in one line |
 | `comfy_paths` | `ensureSaveDirs(graph)`: creates the folders the graph's JWImageSaveToPath / RenameFile nodes write into, which those nodes do not do themselves |

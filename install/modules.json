@@ -300,7 +300,9 @@
       "scene_panos",
       "scene_splats",
       "hyworlds",
-      "prompt_worlds"
+      "prompt_worlds",
+      "set_locations",
+      "set_shots"
     ],
     "flows": [
       {
@@ -332,6 +334,11 @@
         "source": "_pano_prompt_node.js",
         "name": "27-Pano-Prompt-From-Image",
         "env": "VITE_PANO_PROMPT_ID"
+      },
+      {
+        "source": "_blender_sets_node.js",
+        "name": "48-Blender-Sets",
+        "env": "VITE_BLENDER_SETS_ID"
       }
     ],
     "panels": [
